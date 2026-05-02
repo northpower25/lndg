@@ -67,6 +67,7 @@ class AutoFeesForm(AutoRebalanceForm):
 class GUIForm(AutoFeesForm):
     gui_graphLinks = forms.CharField(label='gui_graphLinks', required=False)
     gui_netLinks = forms.CharField(label='gui_netLinks', required=False)
+    gui_numberFormat = forms.CharField(label='gui_numberFormat', required=False, max_length=2)
 
 class LocalSettingsForm(GUIForm):
     lnd_cleanPayments = forms.IntegerField(label='lnd_cleanPayments', required=False)

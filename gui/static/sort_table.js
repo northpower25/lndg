@@ -1,5 +1,10 @@
 function euToNum(str) {
-    // Convert European formatted number (1.000,50) to a JS parseable number (1000.50)
+    // Convert a locale-formatted number string to a JS-parseable float.
+    // 'de' (European): thousands='.', decimal=',' → 1.000,50  → remove '.', replace ',' with '.'
+    // 'en' (English):  thousands=',', decimal='.' → 1,000.50  → remove ','
+    if (typeof NUMBER_FORMAT !== 'undefined' && NUMBER_FORMAT !== 'de') {
+        return str.replace(/,/g, '');
+    }
     return str.replace(/\./g, '').replace(/,/g, '.');
 }
 
