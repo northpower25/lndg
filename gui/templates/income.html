@@ -62,7 +62,7 @@
                       if(diff < 1) diff = diff.toFixed(2)
                     }
                     if (Math.abs(diff) > 1000) diff = parseInt(diff)
-                    if (diff != 0.0) ct.formattedValue += ` (${sign}${diff.toLocaleString('de-DE')})`
+                    if (diff != 0.0) ct.formattedValue += ` (${sign}${Number(diff).toLocalFixed(2)})`
                   }
                   return `${event.time.toLocaleString('de-DE')}`+ (event.count > 1 ? ` (${event.count})` : '')
                 }

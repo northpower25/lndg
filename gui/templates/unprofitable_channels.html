@@ -213,21 +213,21 @@
 
       // Handle Stuck Index column (index 11) - parseFloat
       if (n === 11) {
-        xValue = parseFloat(x.innerHTML.replace(/\./g, '').replace(/,/g, '.').replace(/%/g, ''));
-        yValue = parseFloat(y.innerHTML.replace(/\./g, '').replace(/,/g, '.').replace(/%/g, ''));
+        xValue = parseFloat(euToNum(x.innerHTML.replace(/%/g, '')));
+        yValue = parseFloat(euToNum(y.innerHTML.replace(/%/g, '')));
       }
       // Handle Age column (index 9) - parseInt with N/A check
       else if (n === 9) {
-        const xValueStr = x.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, '');
-        const yValueStr = y.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, '');
+        const xValueStr = euToNum(x.innerHTML.replace(/%/g, ''));
+        const yValueStr = euToNum(y.innerHTML.replace(/%/g, ''));
         // Treat N/A as Infinity for ascending sort, -Infinity for descending
         xValue = (xValueStr === 'N/A') ? (dir === "asc" ? Infinity : -Infinity) : parseInt(xValueStr);
         yValue = (yValueStr === 'N/A') ? (dir === "asc" ? Infinity : -Infinity) : parseInt(yValueStr);
       }
       // Handle other integer columns - parseInt
       else if (type === 'int') {
-        xValue = parseInt(x.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, ''));
-        yValue = parseInt(y.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, ''));
+        xValue = parseInt(euToNum(x.innerHTML.replace(/%/g, '')));
+        yValue = parseInt(euToNum(y.innerHTML.replace(/%/g, '')));
       }
       // Handle string columns
       else {

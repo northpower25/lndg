@@ -23,8 +23,8 @@
   }
   function update_total(input){
     let total = [...document.querySelectorAll('[id^="amt"]')].map(i => parseInt(i.value) || 0).reduce((prev, curr) => prev + curr)
-    document.getElementById("remaining").innerHTML = "Remaining Onchain Balance: " + ({{balances.total_balance}} - total).toLocaleString('de-DE')
-    document.getElementById("total").innerHTML = "Total: " + total.toLocaleString('de-DE')
+    document.getElementById("remaining").innerHTML = "Remaining Onchain Balance: " + ({{balances.total_balance}} - total).intcomma()
+    document.getElementById("total").innerHTML = "Total: " + total.intcomma()
   }
 </script>
 <div class="w3-container w3-padding-small">
