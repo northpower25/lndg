@@ -114,14 +114,14 @@ def check_budget():
         return True  # fail open
 
 async def estimate_route_ppm(stub, target_pubkey, value, outgoing_chan_ids):
-    """Use QueryRoutes to estimate the PPM cost of a circular rebalance.
+    """Use QueryRoutes to estimate the PPM cost of routing to target_pubkey.
     Returns estimated PPM or 0 if estimation failed.
+    A returned PPM > 0 that exceeds AR-MaxPPM means the rebalance is too expensive.
     """
     try:
         response = stub.QueryRoutes(ln.QueryRoutesRequest(
             pub_key=target_pubkey,
             amt=value,
-            last_hop_pubkey=bytes.fromhex(target_pubkey),
         ))
         if response.routes:
             best_fees = min(r.total_fees for r in response.routes)

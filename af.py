@@ -196,6 +196,9 @@ def main(channels):
         market_median_ppm = None
         market_p25_ppm    = None
 
+    # local_fee_rate must be in group_df before the adjustment functions reference it
+    group_df['local_fee_rate'] = channels_df.groupby('remote_pubkey')['local_fee_rate'].first()
+
     # --- Define outbound adjustment calculation function ---
     def compute_outbound_adjustment(row):
         base_adj = 0
@@ -275,7 +278,6 @@ def main(channels):
 
         return base_adj
 
-    group_df['local_fee_rate'] = channels_df.groupby('remote_pubkey')['local_fee_rate'].first()
     group_df['adjustment'] = group_df.apply(compute_outbound_adjustment, axis=1)
     group_df['inbound_adjustment'] = group_df.apply(compute_inbound_adjustment, axis=1)
 

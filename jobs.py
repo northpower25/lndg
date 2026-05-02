@@ -16,6 +16,9 @@ django.setup()
 from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency
 import af
 
+HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
+EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
+
 def update_payments(stub):
     self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey
     inflight_payments = Payments.objects.filter(status=1).order_by('index')
@@ -709,8 +712,8 @@ def update_channel_efficiency():
         for ch in channels:
             earned_7d = earned_map.get(ch.chan_id, 0.0)
             rebal_costs_7d = rebal_map.get(ch.remote_pubkey, 0.0)
-            efficiency_score = earned_7d / (rebal_costs_7d + 1)
-            revenue_per_sat_hour = (earned_7d / max(ch.capacity, 1) / 168.0) * 1_000_000
+            efficiency_score = earned_7d / (rebal_costs_7d + EFFICIENCY_MIN_DIVISOR)
+            revenue_per_sat_hour = (earned_7d / max(ch.capacity, 1) / HOURS_IN_WEEK) * 1_000_000
             try:
                 eff, _ = ChannelEfficiency.objects.get_or_create(
                     chan_id=ch.chan_id,
