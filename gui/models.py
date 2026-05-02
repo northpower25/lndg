@@ -352,3 +352,20 @@ class TradeSales(models.Model):
     secret = models.CharField(null=True, max_length=1000)
     sale_limit = models.IntegerField(null=True)
     sale_count = models.IntegerField(default=0)
+
+class RebalanceBudget(models.Model):
+    date = models.DateField(default=timezone.now)
+    spent_sats = models.BigIntegerField(default=0)
+    class Meta:
+        app_label = 'gui'
+
+class ChannelEfficiency(models.Model):
+    chan_id = models.CharField(max_length=20, primary_key=True)
+    peer_alias = models.CharField(max_length=32)
+    efficiency_score = models.FloatField(default=0.0)
+    earned_7d = models.FloatField(default=0.0)
+    rebal_costs_7d = models.FloatField(default=0.0)
+    revenue_per_sat_hour = models.FloatField(default=0.0)
+    updated = models.DateTimeField(default=timezone.now)
+    class Meta:
+        app_label = 'gui'
