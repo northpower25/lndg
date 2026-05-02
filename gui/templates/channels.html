@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Channels{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if channels %}
 <div class="w3-container w3-padding-small">
   <h2>Channel Performance</h2>
@@ -34,16 +34,16 @@
       <tr>
         <td title="{{ channel.funding_txid }}:{{ channel.output_index }}"><a href="/channel?={{ channel.chan_id }}" target="_blank">{{ channel.short_chan_id }}</a></td>
         <td title="{{ channel.remote_pubkey }}"><a href="{{ graph_links }}/{{ network }}node/{{ channel.remote_pubkey }}" target="_blank">{% if channel.alias == '' %}{{ channel.remote_pubkey|slice:":12" }}{% else %}{{ channel.alias }}{% endif %}</a></td>
-        <td title="Local Balance: {{ channel.local_balance|intcomma }}">{{ channel.mil_capacity }}M</td>
-        <td>{{ channel.amt_routed_out_7day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_out_7day }}</small> | {{ channel.amt_routed_in_7day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_in_7day }}</small></td>
-        <td>{{ channel.amt_rebal_in_7day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_in_7day }}</small> | {{ channel.amt_rebal_out_7day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_out_7day }}</small></td>
+        <td title="Local Balance: {{ channel.local_balance|eucomma }}">{{ channel.mil_capacity }}M</td>
+        <td>{{ channel.amt_routed_out_7day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_out_7day }}</small> | {{ channel.amt_routed_in_7day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_in_7day }}</small></td>
+        <td>{{ channel.amt_rebal_in_7day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_in_7day }}</small> | {{ channel.amt_rebal_out_7day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_out_7day }}</small></td>
         <td><small class="w3-round w3-border-small w3-border-grey">{{ channel.apy_7day }}%</small> <small class="w3-round w3-border-small w3-border-grey">{{ channel.cv_7day }}%</small></td>
-        <td>{{ channel.revenue_7day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.profits_7day|intcomma }}</small> | {{ channel.revenue_assist_7day|intcomma }}</td>
-        <td>{{ channel.amt_routed_out_30day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_out_30day }}</small> | {{ channel.amt_routed_in_30day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_in_30day }}</small></td>
-        <td>{{ channel.amt_rebal_in_30day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_in_30day }}</small> | {{ channel.amt_rebal_out_30day|intcomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_out_30day }}</small></td>
+        <td>{{ channel.revenue_7day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.profits_7day|eucomma }}</small> | {{ channel.revenue_assist_7day|eucomma }}</td>
+        <td>{{ channel.amt_routed_out_30day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_out_30day }}</small> | {{ channel.amt_routed_in_30day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.routed_in_30day }}</small></td>
+        <td>{{ channel.amt_rebal_in_30day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_in_30day }}</small> | {{ channel.amt_rebal_out_30day|eucomma }}M <small class="w3-round w3-border-small w3-border-grey">{{ channel.rebal_out_30day }}</small></td>
         <td><small class="w3-round w3-border-small w3-border-grey">{{ channel.apy_30day }}%</small> <small class="w3-round w3-border-small w3-border-grey">{{ channel.cv_30day }}%</small></td>
-        <td>{{ channel.revenue_30day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.profits_30day|intcomma }}</small> | {{ channel.revenue_assist_30day|intcomma }}</td>
-        <td title="Update Count: {{ channel.num_updates|intcomma }}">{{ channel.updates }}%</td>
+        <td>{{ channel.revenue_30day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.profits_30day|eucomma }}</small> | {{ channel.revenue_assist_30day|eucomma }}</td>
+        <td title="Update Count: {{ channel.num_updates|eucomma }}">{{ channel.updates }}%</td>
         <td title="Block Opened: {{ channel.open_block }}">{% if channel.initiator == True %}Local{% else %}Remote{% endif %}</td>
       </tr>
       {% endfor %}

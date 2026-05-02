@@ -1,3 +1,8 @@
+function euToNum(str) {
+    // Convert European formatted number (1.000,50) to a JS parseable number (1000.50)
+    return str.replace(/\./g, '').replace(/,/g, '.');
+}
+
 function sortTable(header, n, type, skip=0, tag="td") {
     var switching, i, curr_row, next_row, shouldSwitch, dir, switchcount = 0;
     var upArrow = " ▲", downArrow = " ▼";
@@ -18,16 +23,16 @@ function sortTable(header, n, type, skip=0, tag="td") {
             }   
             if (dir == "asc") {
                 if (type == "String" && curr_row.innerHTML.toLowerCase() > next_row.innerHTML.toLowerCase()
-                    || type == "int" && parseFloat(curr_row.innerHTML.replace(/,/g, '')) > parseFloat(next_row.innerHTML.replace(/,/g, ''))
-                    || type != "String" && type != "int" && Number(curr_row.innerHTML.toLowerCase().split(type)[0].replace(/,/g, '')) > Number(next_row.innerHTML.toLowerCase().split(type)[0].replace(/,/g, ''))) 
+                    || type == "int" && parseFloat(euToNum(curr_row.innerHTML)) > parseFloat(euToNum(next_row.innerHTML))
+                    || type != "String" && type != "int" && Number(euToNum(curr_row.innerHTML.toLowerCase().split(type)[0])) > Number(euToNum(next_row.innerHTML.toLowerCase().split(type)[0]))) 
                 {
                     shouldSwitch = true;
                     break;
                 }
             } else if (dir == "desc") {
                 if (type == "String" && curr_row.innerHTML.toLowerCase() < next_row.innerHTML.toLowerCase()
-                    || type == "int" && parseFloat(curr_row.innerHTML.replace(/,/g, '')) < parseFloat(next_row.innerHTML.replace(/,/g, ''))
-                    || type != "String" && type != "int" && Number(curr_row.innerHTML.toLowerCase().split(type)[0].replace(/,/g, '')) < Number(next_row.innerHTML.toLowerCase().split(type)[0].replace(/,/g, ''))) 
+                    || type == "int" && parseFloat(euToNum(curr_row.innerHTML)) < parseFloat(euToNum(next_row.innerHTML))
+                    || type != "String" && type != "int" && Number(euToNum(curr_row.innerHTML.toLowerCase().split(type)[0])) < Number(euToNum(next_row.innerHTML.toLowerCase().split(type)[0]))) 
                 {
                     shouldSwitch = true;
                     break;

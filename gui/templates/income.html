@@ -3,7 +3,7 @@
 {% block title %} {{ block.super }} - P&L{% endblock %}
 {% block content %}
 <script src="{% static 'charts.js' %}"></script>
-{% load humanize %}
+{% load euformat %}
 <div class="w3-container w3-padding-small">
   <h2>P&L Statement For <a href="{{ graph_links }}/{{ network }}node/{{ node_info.identity_pubkey }}" target="_blank">{% if node_info.alias != "" %}{{ node_info.alias }}</a> <small class="w3-round w3-border-small w3-border-grey">{{ node_info.identity_pubkey }}</small>{% else %}{{ node_info.identity_pubkey }}</a>{% endif %}</h2>
   <span class="input" data-unit="%"><label title="Aggregate events with `cost`, `offchain` or `onchain` < minimum `step`% value">Step > </label> <input id="step" value="0.01" min="0" step="0.1" max="100" type="number"/></span>
@@ -62,9 +62,9 @@
                       if(diff < 1) diff = diff.toFixed(2)
                     }
                     if (Math.abs(diff) > 1000) diff = parseInt(diff)
-                    if (diff != 0.0) ct.formattedValue += ` (${sign}${diff.toLocaleString()})`
+                    if (diff != 0.0) ct.formattedValue += ` (${sign}${diff.toLocaleString('de-DE')})`
                   }
-                  return `${event.time.toLocaleString()}`+ (event.count > 1 ? ` (${event.count})` : '')
+                  return `${event.time.toLocaleString('de-DE')}`+ (event.count > 1 ? ` (${event.count})` : '')
                 }
               }
             },
@@ -177,59 +177,59 @@
     </tr>
     <tr>
       <td>Payments Routed</td>
-      <td>{{ forward_count_1day|intcomma }}</td>
-      <td>{{ forward_count_7day|intcomma }}</td>
-      <td>{{ forward_count_30day|intcomma }}</td>
-      <td>{{ forward_count_90day|intcomma }}</td>
-      <td>{{ forward_count|intcomma }}</td>
+      <td>{{ forward_count_1day|eucomma }}</td>
+      <td>{{ forward_count_7day|eucomma }}</td>
+      <td>{{ forward_count_30day|eucomma }}</td>
+      <td>{{ forward_count_90day|eucomma }}</td>
+      <td>{{ forward_count|eucomma }}</td>
     </tr>
     <tr>
       <td>Value Routed</td>
-      <td>{{ forward_amount_1day|intcomma }}</td>
-      <td>{{ forward_amount_7day|intcomma }}</td>
-      <td>{{ forward_amount_30day|intcomma }}</td>
-      <td>{{ forward_amount_90day|intcomma }}</td>
-      <td>{{ forward_amount|intcomma }}</td>
+      <td>{{ forward_amount_1day|eucomma }}</td>
+      <td>{{ forward_amount_7day|eucomma }}</td>
+      <td>{{ forward_amount_30day|eucomma }}</td>
+      <td>{{ forward_amount_90day|eucomma }}</td>
+      <td>{{ forward_amount|eucomma }}</td>
     </tr>
     <tr>
       <td>Revenue Earned</td>
-      <td>{{ total_revenue_1day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_1day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_revenue_7day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_7day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_revenue_30day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_30day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_revenue_90day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_90day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_revenue|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm|intcomma }}ₚₚₘ</small></td>
+      <td>{{ total_revenue_1day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_1day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_revenue_7day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_7day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_revenue_30day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_30day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_revenue_90day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm_90day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_revenue|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_revenue_ppm|eucomma }}ₚₚₘ</small></td>
     </tr>
     <tr>
       <td>Onchain Costs</td>
-      <td>{{ onchain_costs_1day|intcomma }}</td>
-      <td>{{ onchain_costs_7day|intcomma }}</td>
-      <td>{{ onchain_costs_30day|intcomma }}</td>
-      <td>{{ onchain_costs_90day|intcomma }}</td>
-      <td>{{ onchain_costs|intcomma }}</td>
+      <td>{{ onchain_costs_1day|eucomma }}</td>
+      <td>{{ onchain_costs_7day|eucomma }}</td>
+      <td>{{ onchain_costs_30day|eucomma }}</td>
+      <td>{{ onchain_costs_90day|eucomma }}</td>
+      <td>{{ onchain_costs|eucomma }}</td>
     </tr>
     <tr>
       <td>Offchain Costs</td>
-      <td>{{ total_fees_1day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_1day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_fees_7day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_7day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_fees_30day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_30day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_fees_90day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_90day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ total_fees|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm|intcomma }}ₚₚₘ</small></td>
+      <td>{{ total_fees_1day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_1day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_fees_7day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_7day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_fees_30day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_30day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_fees_90day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm_90day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ total_fees|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ total_fees_ppm|eucomma }}ₚₚₘ</small></td>
     </tr>
     <tr>
       <td>Percent Cost</td>
-      <td>{{ percent_cost_1day|intcomma }}%</td>
-      <td>{{ percent_cost_7day|intcomma }}%</td>
-      <td>{{ percent_cost_30day|intcomma }}%</td>
-      <td>{{ percent_cost_90day|intcomma }}%</td>
-      <td>{{ percent_cost|intcomma }}%</td>
+      <td>{{ percent_cost_1day|eucomma }}%</td>
+      <td>{{ percent_cost_7day|eucomma }}%</td>
+      <td>{{ percent_cost_30day|eucomma }}%</td>
+      <td>{{ percent_cost_90day|eucomma }}%</td>
+      <td>{{ percent_cost|eucomma }}%</td>
     </tr>
     <tr>
       <td>Profits</td>
-      <td>{{ profits_1day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_1day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ profits_7day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_7day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ profits_30day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_30day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ profits_90day|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_90day|intcomma }}ₚₚₘ</small></td>
-      <td>{{ profits|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm|intcomma }}ₚₚₘ</small></td>
+      <td>{{ profits_1day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_1day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ profits_7day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_7day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ profits_30day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_30day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ profits_90day|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm_90day|eucomma }}ₚₚₘ</small></td>
+      <td>{{ profits|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ profits_ppm|eucomma }}ₚₚₘ</small></td>
     </tr>
   </table>
 </div>

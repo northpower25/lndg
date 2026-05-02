@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Addresses{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if address_data %}
 {% for addresses in address_data.account_with_addresses reversed %}
 <div class="w3-container w3-padding-small">
@@ -15,7 +15,7 @@
     {% for address in addresses.addresses reversed %}
     <tr>
       <td>{{ address.is_internal }}</td>
-      <td>{% if address.balance == 0 %}---{% else %}{{ address.balance|intcomma }}{% endif %}</td>
+      <td>{% if address.balance == 0 %}---{% else %}{{ address.balance|eucomma }}{% endif %}</td>
       <td><a href="{{ network_links }}/{{ network }}address/{{ address.address }}" target="_blank">{{ address.address }}</a></td>
     </tr>
     {% endfor %}

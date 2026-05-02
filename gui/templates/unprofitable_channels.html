@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Unprofitable Channels{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 
 <div class="w3-container w3-padding-small">
   <h2>Unprofitable Channels ({{ timeframe_name }})</h2>
@@ -44,16 +44,16 @@
           <tr>
             <td><a href="/channel?={{ channel.chan_id }}" target="_blank">{{ channel.chan_id }}</a></td>
             <td>{% if channel.alias == '' %}---{% else %}{{ channel.alias }}{% endif %}</td>
-            <td>{{ channel.routed_out_sats|add:"0"|intcomma }}</td>
+            <td>{{ channel.routed_out_sats|add:"0"|eucomma }}</td>
             <td>{% if channel.last_routing %}
-                {{ channel.last_routing.date|date:"M d, Y" }} ({{ channel.last_routing.amount|intcomma }} sats)
+                {{ channel.last_routing.date|date:"M d, Y" }} ({{ channel.last_routing.amount|eucomma }} sats)
                 {% else %}N/A{% endif %}</td>
-            <td>{{ channel.rebalanced_out_sats|add:"0"|intcomma }}</td>
+            <td>{{ channel.rebalanced_out_sats|add:"0"|eucomma }}</td>
             <td>{% if channel.last_rebalance %}
-                {{ channel.last_rebalance.date|date:"M d, Y" }} ({{ channel.last_rebalance.amount|floatformat:0|intcomma }} sats)
+                {{ channel.last_rebalance.date|date:"M d, Y" }} ({{ channel.last_rebalance.amount|floatformat:0|eucomma }} sats)
                 {% else %}N/A{% endif %}</td>
-            <td {% if channel.profit < 0 %}style="color: red;"{% endif %}>{{ channel.profit|add:"0"|intcomma }}</td>
-            <td>{{ channel.assisted_revenue|add:"0"|intcomma }}</td>
+            <td {% if channel.profit < 0 %}style="color: red;"{% endif %}>{{ channel.profit|add:"0"|eucomma }}</td>
+            <td>{{ channel.assisted_revenue|add:"0"|eucomma }}</td>
             <td>{% if channel.initiator %}Local{% else %}Remote{% endif %}</td>
             <td>{{ channel.age_days }}</td>
             <td>{{ channel.local_ratio }}% ({{ channel.capacity_millions }}M)</td>
@@ -213,21 +213,21 @@
 
       // Handle Stuck Index column (index 11) - parseFloat
       if (n === 11) {
-        xValue = parseFloat(x.innerHTML.replace(/,/g, '').replace(/%/g, ''));
-        yValue = parseFloat(y.innerHTML.replace(/,/g, '').replace(/%/g, ''));
+        xValue = parseFloat(x.innerHTML.replace(/\./g, '').replace(/,/g, '.').replace(/%/g, ''));
+        yValue = parseFloat(y.innerHTML.replace(/\./g, '').replace(/,/g, '.').replace(/%/g, ''));
       }
       // Handle Age column (index 9) - parseInt with N/A check
       else if (n === 9) {
-        const xValueStr = x.innerHTML.replace(/,/g, '').replace(/%/g, '');
-        const yValueStr = y.innerHTML.replace(/,/g, '').replace(/%/g, '');
+        const xValueStr = x.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, '');
+        const yValueStr = y.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, '');
         // Treat N/A as Infinity for ascending sort, -Infinity for descending
         xValue = (xValueStr === 'N/A') ? (dir === "asc" ? Infinity : -Infinity) : parseInt(xValueStr);
         yValue = (yValueStr === 'N/A') ? (dir === "asc" ? Infinity : -Infinity) : parseInt(yValueStr);
       }
       // Handle other integer columns - parseInt
       else if (type === 'int') {
-        xValue = parseInt(x.innerHTML.replace(/,/g, '').replace(/%/g, ''));
-        yValue = parseInt(y.innerHTML.replace(/,/g, '').replace(/%/g, ''));
+        xValue = parseInt(x.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, ''));
+        yValue = parseInt(y.innerHTML.replace(/\./g, '').replace(/,/g, '').replace(/%/g, ''));
       }
       // Handle string columns
       else {

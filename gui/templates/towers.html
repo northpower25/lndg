@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Watch Towers{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if stats %}
 <div class="w3-container w3-padding-small">
   <h2>Watch Tower Stats</h2>
@@ -12,23 +12,23 @@
     </tr>
     <tr>
       <td>Total Backups</td>
-      <td>{{ stats.num_backups|intcomma }}</td>
+      <td>{{ stats.num_backups|eucomma }}</td>
     </tr>
     <tr>
       <td>Pending Backups</td>
-      <td>{{ stats.num_pending_backups|intcomma }}</td>
+      <td>{{ stats.num_pending_backups|eucomma }}</td>
     </tr>
     <tr>
       <td>Failed Backups</td>
-      <td>{{ stats.num_failed_backups|intcomma }}</td>
+      <td>{{ stats.num_failed_backups|eucomma }}</td>
     </tr>
     <tr>
       <td>Sessions Acquired</td>
-      <td>{{ stats.num_sessions_acquired|intcomma }}</td>
+      <td>{{ stats.num_sessions_acquired|eucomma }}</td>
     </tr>
     <tr>
       <td>Sessions Exhausted</td>
-      <td>{{ stats.num_sessions_exhausted|intcomma }}</td>
+      <td>{{ stats.num_sessions_exhausted|eucomma }}</td>
     </tr>
   </table>
 </div>
@@ -47,7 +47,7 @@
     <tr>
       <td>{{ tower.pubkey }}</td>
       <td>{{ tower.address }}</td>
-      <td>{{ tower.num_sessions|intcomma }}</td>
+      <td>{{ tower.num_sessions|eucomma }}</td>
       <td>
         <form action="/removetower/" method="post">
           {% csrf_token %}
@@ -75,7 +75,7 @@
     <tr>
       <td>{{ tower.pubkey }}</td>
       <td>{{ tower.address }}</td>
-      <td>{{ tower.num_sessions|intcomma }}</td>
+      <td>{{ tower.num_sessions|eucomma }}</td>
       <td>
         <form action="/addtower/" method="post">
           {% csrf_token %}
