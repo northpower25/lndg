@@ -1,4 +1,4 @@
-FROM python:3-alpine
+FROM python:3.13-alpine
 ENV PYTHONUNBUFFERED=1
 RUN apk add git g++ linux-headers libffi-dev rust cargo && git clone https://github.com/cryptosharks131/lndg /app
 WORKDIR /app
