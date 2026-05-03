@@ -53,7 +53,7 @@ https://github.com/northpower25/lndg
 
 The app requires an active LND node (the built-in Umbrel Lightning node is supported). After installation, LNDg is available at `http://umbrel.local:8889`.
 
-See `umbrel/` for the manifest and docker-compose files used by Umbrel.
+See `northpower25-lndg/` for the manifest and docker-compose files used by Umbrel.
 
 ### 1-Click Installation
 

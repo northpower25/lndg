@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: northpower25-lndg_web_1
+      APP_PORT: 8000
+
+  web:
+    image: ghcr.io/northpower25/lndg:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_LIGHTNING_NODE_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/app/data:rw
+      - ${APP_DATA_DIR}/logs/lndg-controller.log:/var/log/lndg-controller.log:rw
+    environment:
+      - LND_TLS_PATH=/lnd/tls.cert
+      - LND_MACAROON_PATH=/lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
+      - LND_RPC_SERVER=${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
+      - LND_NETWORK=${APP_BITCOIN_NETWORK}
+    command:
+      - sh
+      - -c
+      - >
+        python initialize.py
+        -tls /lnd/tls.cert
+        -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
+        -rpc ${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
+        -net '${APP_BITCOIN_NETWORK}'
+        -wn &&
+        python controller.py runserver 0.0.0.0:8000 > /var/log/lndg-controller.log 2>&1
+    ports: []
