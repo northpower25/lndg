@@ -23,7 +23,7 @@ dependencies:
   - lightning
 repo: https://github.com/northpower25/lndg
 support: https://github.com/northpower25/lndg/issues
-port: 8889
+port: 8890
 icon: https://raw.githubusercontent.com/northpower25/lndg/master/northpower25-lndg/icon.svg
 gallery:
   - https://user-images.githubusercontent.com/38626122/148699177-d10d412e-641e-4676-acac-2047e7e2d7a6.png

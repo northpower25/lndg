@@ -3,7 +3,7 @@ version: "3.7"
 services:
   app_proxy:
     environment:
-      APP_HOST: lndg_web_1
+      APP_HOST: northpower25-lndg-legacy_web_1
       APP_PORT: 8000
 
   web:
