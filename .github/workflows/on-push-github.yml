@@ -47,6 +47,7 @@ jobs:
           --output "type=registry" ./
 
       - name: Make package public
+        continue-on-error: true
         run: |
           gh api --method PATCH /user/packages/container/$IMAGE_NAME \
             -f visibility=public
