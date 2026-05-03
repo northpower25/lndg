@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Fee Rates{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if channels %}
 <div class="w3-container w3-padding-small">
   <h2>Suggested Fee Rates</h2>
@@ -43,19 +43,19 @@
       <tr>
         <td title="{{ channel.funding_txid }}:{{ channel.output_index }}"><a href="/channel?={{ channel.chan_id }}" target="_blank">{{ channel.short_chan_id }}</a></td>
         <td title="{{ channel.remote_pubkey }}">{% if channel.private == False %}<a href="{{ graph_links }}/{{ network }}node/{{ channel.remote_pubkey }}" target="_blank">{% endif %}{% if channel.alias == '' %}{{ channel.remote_pubkey|slice:":12" }}{% else %}{{ channel.alias }}{% endif %}{% if channel.private == False %}</a>{% endif %}</td>
-        <td>{{ channel.local_balance|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.out_percent }}%</small></td>
+        <td>{{ channel.local_balance|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.out_percent }}%</small></td>
         <td>
-          <label>{{channel.capacity|intcomma}}</label>
+          <label>{{channel.capacity|eucomma}}</label>
           <div class="progress w3-round w3-grey">
             <span class="value w3-round w3-blue" style="width:{{channel.out_percent|default:"0"}}%"></span>
           </div>
         </td>
-        <td>{{ channel.remote_balance|intcomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.in_percent }}%</small></td>
+        <td>{{ channel.remote_balance|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.in_percent }}%</small></td>
         <td>{% if channel.net_routed_7day != 0 %}{{ channel.net_routed_7day }} <small class="w3-round w3-border-small w3-border-grey">{% if channel.net_routed_7day > 0 %}OUT{% else %}IN{% endif %}</small>{% else %}0{% endif %}</td>
         <td>{{ channel.adjustment }}</td>
-        <td>{{ channel.new_rate|intcomma }}</td>
-        <td>{{ channel.inbound_adjustment|intcomma }}</td>
-        <td>{{ channel.new_inbound_rate|intcomma }}</td>
+        <td>{{ channel.new_rate|eucomma }}</td>
+        <td>{{ channel.inbound_adjustment|eucomma }}</td>
+        <td>{{ channel.new_inbound_rate|eucomma }}</td>
         <td>
           <form action="/update_channel/" method="post">
             {% csrf_token %}
@@ -73,8 +73,8 @@
           </form>
         </td>
         <td {% if channel.auto_rebalance == True %}style="background-color: rgba(56,139,253,0.15)"{% endif %}>{{ channel.ar_max_cost }}%</td>
-        <td>{{ channel.remote_fee_rate|intcomma }}</td>
-        <td>{{ channel.remote_inbound_fee_rate|intcomma }}</td>
+        <td>{{ channel.remote_fee_rate|eucomma }}</td>
+        <td>{{ channel.remote_inbound_fee_rate|eucomma }}</td>
         <td {% if channel.eligible == True %}style="background-color: rgba(248,81,73,0.15);"{% else %}style="background-color: rgba(56,139,253,0.15)"{% endif %}>{{ channel.fees_updated|naturaltime }}</td>
         <td {% if channel.auto_fees == False %}style="background-color: rgba(248,81,73,0.15);"{% else %}style="background-color: rgba(56,139,253,0.15)"{% endif %}>
           <form action="/update_channel/" method="post">

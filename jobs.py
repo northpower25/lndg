@@ -1,8 +1,8 @@
 import django
 from time import sleep
 from django.db.models import Max, Sum, Avg, Count
-from django.db.models.functions import TruncDay
-from datetime import datetime, timedelta
+from django.db.models.functions import TruncDay, TruncHour
+from datetime import datetime, timedelta, date
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import signer_pb2 as lns
@@ -13,8 +13,11 @@ from os import environ
 from requests import get
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents
+from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency
 import af
+
+HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
+EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
 
 def update_payments(stub):
     self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey
@@ -679,6 +682,166 @@ def agg_failed_htlcs():
     agg_htlcs(FailedHTLCs.objects.filter(timestamp__lte=time_filter, failure_detail=99)[:100], 'downstream')
     agg_htlcs(FailedHTLCs.objects.filter(timestamp__lte=time_filter).exclude(failure_detail__in=[6, 99])[:100], 'other')
 
+def update_channel_efficiency():
+    """2.6 Compute and persist ChannelEfficiency records for all open channels.
+
+    efficiency_score = earned_7d / (rebal_costs_7d + 1)
+    revenue_per_sat_hour = (earned_7d / capacity / 168) * 1_000_000
+    """
+    try:
+        filter_7day = datetime.now() - timedelta(days=7)
+        channels = Channels.objects.filter(is_open=True, is_active=True, private=False)
+        # Forwarding revenue earned via outbound leg
+        fwd_out = (
+            Forwards.objects
+            .filter(forward_date__gte=filter_7day, amt_out_msat__gte=1_000_000)
+            .values('chan_id_out')
+            .annotate(earned=Sum('fee'))
+        )
+        earned_map = {r['chan_id_out']: float(r['earned']) for r in fwd_out}
+        # Rebalancing costs paid over the last 7 days
+        rebal_costs = (
+            Rebalancer.objects
+            .filter(status=2, stop__gte=filter_7day)
+            .values('last_hop_pubkey')
+            .annotate(costs=Sum('fees_paid'))
+        )
+        # Map rebal costs by pubkey then distribute to channel
+        rebal_map = {r['last_hop_pubkey']: float(r['costs'] or 0) for r in rebal_costs}
+
+        for ch in channels:
+            earned_7d = earned_map.get(ch.chan_id, 0.0)
+            rebal_costs_7d = rebal_map.get(ch.remote_pubkey, 0.0)
+            efficiency_score = earned_7d / (rebal_costs_7d + EFFICIENCY_MIN_DIVISOR)
+            revenue_per_sat_hour = (earned_7d / max(ch.capacity, 1) / HOURS_IN_WEEK) * 1_000_000
+            try:
+                eff, _ = ChannelEfficiency.objects.get_or_create(
+                    chan_id=ch.chan_id,
+                    defaults={'peer_alias': ch.alias}
+                )
+                eff.peer_alias = ch.alias
+                eff.earned_7d = earned_7d
+                eff.rebal_costs_7d = rebal_costs_7d
+                eff.efficiency_score = efficiency_score
+                eff.revenue_per_sat_hour = revenue_per_sat_hour
+                eff.updated = datetime.now()
+                eff.save()
+            except Exception as e:
+                print(f"{datetime.now().strftime('%c')} : [Data] : Error updating efficiency for {ch.chan_id}: {str(e)}")
+    except Exception as e:
+        print(f"{datetime.now().strftime('%c')} : [Data] : Error in update_channel_efficiency: {str(e)}")
+
+def predictive_schedule():
+    """2.2 Predictive rebalancing: for each auto-rebalance-enabled channel,
+    analyze the last 30 days of hourly forwarding patterns to determine if this
+    hour-of-day/weekday combination historically drains outbound liquidity.
+    If so, and if the channel is currently near the threshold, pre-schedule a rebalance.
+    """
+    try:
+        if not LocalSettings.objects.filter(key='AR-Enabled').exists():
+            return
+        if int(LocalSettings.objects.filter(key='AR-Enabled')[0].value) == 0:
+            return
+
+        # Predictive scheduling is opt-in
+        pred_obj = LocalSettings.objects.filter(key='AR-Predictive').first()
+        if pred_obj is None:
+            LocalSettings(key='AR-Predictive', value='0').save()
+            return
+        if int(pred_obj.value) == 0:
+            return
+
+        filter_30day = datetime.now() - timedelta(days=30)
+        now_hour = datetime.now().hour
+        now_weekday = datetime.now().weekday()
+
+        ar_channels = Channels.objects.filter(is_open=True, is_active=True, private=False, auto_rebalance=True)
+        if not ar_channels.exists():
+            return
+
+        if LocalSettings.objects.filter(key='AR-MaxFeeRate').exists():
+            max_fee_rate = int(LocalSettings.objects.filter(key='AR-MaxFeeRate')[0].value)
+        else:
+            max_fee_rate = 500
+
+        for ch in ar_channels:
+            # Skip channels already scheduled
+            if Rebalancer.objects.filter(last_hop_pubkey=ch.remote_pubkey, status=0).exists():
+                continue
+
+            # Compute net outbound flow per hour-of-week from 30-day history
+            out_vol = (
+                Forwards.objects
+                .filter(chan_id_out=ch.chan_id, forward_date__gte=filter_30day)
+                .annotate(hr=TruncHour('forward_date'))
+                .values('hr')
+                .annotate(vol=Sum('amt_out_msat'))
+            )
+            in_vol = (
+                Forwards.objects
+                .filter(chan_id_in=ch.chan_id, forward_date__gte=filter_30day)
+                .annotate(hr=TruncHour('forward_date'))
+                .values('hr')
+                .annotate(vol=Sum('amt_out_msat'))
+            )
+            out_by_hour = {}
+            for r in out_vol:
+                h = r['hr'].hour if hasattr(r['hr'], 'hour') else 0
+                out_by_hour[h] = out_by_hour.get(h, 0) + (r['vol'] or 0)
+            in_by_hour = {}
+            for r in in_vol:
+                h = r['hr'].hour if hasattr(r['hr'], 'hour') else 0
+                in_by_hour[h] = in_by_hour.get(h, 0) + (r['vol'] or 0)
+
+            # Net flow per hour: positive = net outbound drain
+            net_drain = out_by_hour.get(now_hour, 0) - in_by_hour.get(now_hour, 0)
+            total_out = sum(out_by_hour.values()) or 1
+            drain_fraction = net_drain / total_out
+
+            # Only pre-schedule if this hour historically accounts for >10% of net drain
+            if drain_fraction < 0.10:
+                continue
+
+            # Check current liquidity – only act if we're approaching the threshold
+            capacity = ch.capacity or 1
+            current_out_pct = (ch.local_balance + ch.pending_outbound) * 100 / capacity
+            threshold = ch.ar_out_target + 10  # within 10% of the out target
+            if current_out_pct > threshold:
+                continue
+
+            # Construct a predictive rebalance request
+            target_fee_rate = min(max_fee_rate, int(ch.local_fee_rate * (ch.ar_max_cost / 100)))
+            if target_fee_rate <= 0:
+                continue
+            target_value = ch.ar_amt_target
+            target_fee = round(target_fee_rate * target_value * 0.000001, 3)
+            if target_fee == 0:
+                continue
+
+            # Find suitable outbound channels
+            outbound_cans = list(
+                Channels.objects
+                .filter(is_active=True, is_open=True, private=False, auto_rebalance=False)
+                .annotate(pct_out=((Sum('local_balance') + Sum('pending_outbound')) * 100) / Sum('capacity'))
+                .filter(pct_out__gte=ch.ar_out_target)
+                .exclude(remote_pubkey=ch.remote_pubkey)
+                .values_list('chan_id', flat=True)
+            )
+            if not outbound_cans:
+                continue
+
+            print(f"{datetime.now().strftime('%c')} : [Data] : Predictive rebalance for {ch.alias} (drain_fraction={drain_fraction:.2f}, out%={current_out_pct:.1f})")
+            Rebalancer(
+                value=target_value,
+                fee_limit=target_fee,
+                outgoing_chan_ids=str(outbound_cans).replace("'", ""),
+                last_hop_pubkey=ch.remote_pubkey,
+                target_alias=ch.alias,
+                duration=5,
+            ).save()
+    except Exception as e:
+        print(f"{datetime.now().strftime('%c')} : [Data] : Error in predictive_schedule: {str(e)}")
+
 def main():
     while True:
         print(f"{datetime.now().strftime('%c')} : [Data] : Starting data execution...")
@@ -696,6 +859,8 @@ def main():
             clean_payments(stub)
             auto_fees(stub)
             agg_failed_htlcs()
+            update_channel_efficiency()
+            predictive_schedule()
         except Exception as e:
             print(f"{datetime.now().strftime('%c')} : [Data] : Error processing background data: {str(e)}")
         print(f"{datetime.now().strftime('%c')} : [Data] : Data execution completed...sleeping for 20 seconds")

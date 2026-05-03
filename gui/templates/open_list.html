@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Opens{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if open_list %}
 <div class="w3-container w3-padding-small">
   <h2>Suggested Open List</h2>
@@ -22,11 +22,11 @@
         <td><a href="{{ graph_links }}/{{ network }}node/{{ node.node_pubkey }}" target="_blank">{{ node.node_pubkey }}</a></td>
         <td>{% if node.alias == '' %}---{% else %}{{ node.alias }}{% endif %}</td>
         <td><a href="/routes?={{ node.node_pubkey }}" target="_blank">{{ node.count }}</a></td>
-        <td>{{ node.amount|add:"0"|intcomma }}</td>
-        <td>{{ node.fees|add:"0"|intcomma }}</td>
-        <td>{{ node.ppm|add:"0"|intcomma }}</td>
+        <td>{{ node.amount|add:"0"|eucomma }}</td>
+        <td>{{ node.fees|add:"0"|eucomma }}</td>
+        <td>{{ node.ppm|add:"0"|eucomma }}</td>
         <td>{{ node.score }}</td>
-        <td>{{ node.sum_cost_to|add:"0"|intcomma }}</td>
+        <td>{{ node.sum_cost_to|add:"0"|eucomma }}</td>
       </tr>
       {% endfor %}
     </table>

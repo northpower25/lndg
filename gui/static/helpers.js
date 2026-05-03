@@ -1,8 +1,13 @@
 //HELPER FUNCTIONS
 function byId(id){ return document.getElementById(id) }
-String.prototype.toInt = function(){ return parseInt(this.replace(/,/g,''))}
+String.prototype.toInt = function(){ return parseInt(this.replace(/\./g,'').replace(/,/g,''))}
 String.prototype.toBool = function(if_false = 0){ return this && /^true$/i.test(this) ? 1 : if_false}
-Number.prototype.intcomma = function(){ return parseInt(this).toLocaleString() }
+Number.prototype.intcomma = function(){
+  return parseInt(this).toLocaleString(NUMBER_FORMAT === 'de' ? 'de-DE' : 'en-US')
+}
+Number.prototype.toLocalFixed = function(decimals){
+  return this.toLocaleString(NUMBER_FORMAT === 'de' ? 'de-DE' : 'en-US', {minimumFractionDigits: decimals, maximumFractionDigits: decimals})
+}
 HTMLElement.prototype.defaultCloneNode = HTMLElement.prototype.cloneNode
 HTMLElement.prototype.cloneNode = function(attrs){
   const el = this.defaultCloneNode(this)

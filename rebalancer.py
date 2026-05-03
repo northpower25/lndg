@@ -2,7 +2,7 @@ import django, json, secrets, asyncio
 from time import sleep
 from asgiref.sync import sync_to_async
 from django.db.models import Sum, F
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
@@ -13,7 +13,7 @@ from typing import List
 
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot
+from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency
 
 @sync_to_async
 def get_out_cans(rebalance, auto_rebalance_channels):
@@ -50,6 +50,87 @@ def check_and_set_allow_multishards():
     
     return allow_multishards
 
+@sync_to_async
+def get_ar_max_ppm():
+    """Return the AR-MaxPPM setting, creating it with default 0 (disabled) if absent."""
+    obj = LocalSettings.objects.filter(key='AR-MaxPPM').first()
+    if obj is None:
+        LocalSettings(key='AR-MaxPPM', value='0').save()
+        return 0
+    return int(obj.value)
+
+@sync_to_async
+def record_rebalance_spend(fees_paid_sats):
+    """Add fees_paid_sats to today's RebalanceBudget record."""
+    try:
+        today = date.today()
+        budget, _ = RebalanceBudget.objects.get_or_create(date=today)
+        budget.spent_sats += int(fees_paid_sats)
+        budget.save()
+    except Exception as e:
+        print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error recording budget spend: {str(e)}")
+
+@sync_to_async
+def check_budget():
+    """Return True if spending is within daily and weekly budget, False if exceeded."""
+    try:
+        daily_budget = 0
+        weekly_budget = 0
+        obj = LocalSettings.objects.filter(key='AR-DailyBudget').first()
+        if obj is None:
+            LocalSettings(key='AR-DailyBudget', value='0').save()
+        else:
+            daily_budget = int(obj.value)
+        obj = LocalSettings.objects.filter(key='AR-WeeklyBudget').first()
+        if obj is None:
+            LocalSettings(key='AR-WeeklyBudget', value='0').save()
+        else:
+            weekly_budget = int(obj.value)
+
+        # No budget limits configured → always allow
+        if daily_budget == 0 and weekly_budget == 0:
+            return True
+
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+
+        if daily_budget > 0:
+            today_record = RebalanceBudget.objects.filter(date=today).first()
+            spent_today = today_record.spent_sats if today_record else 0
+            if spent_today >= daily_budget:
+                print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Daily budget of {daily_budget} sats exhausted ({spent_today} spent), pausing rebalancer")
+                return False
+
+        if weekly_budget > 0:
+            week_records = RebalanceBudget.objects.filter(date__gte=week_start)
+            spent_this_week = sum(r.spent_sats for r in week_records)
+            if spent_this_week >= weekly_budget:
+                print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Weekly budget of {weekly_budget} sats exhausted ({spent_this_week} spent), pausing rebalancer")
+                return False
+
+        return True
+    except Exception as e:
+        print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error checking budget: {str(e)}")
+        return True  # fail open
+
+async def estimate_route_ppm(stub, target_pubkey, value, outgoing_chan_ids):
+    """Use QueryRoutes to estimate the PPM cost of routing to target_pubkey.
+    Returns estimated PPM or 0 if estimation failed.
+    A returned PPM > 0 that exceeds AR-MaxPPM means the rebalance is too expensive.
+    """
+    try:
+        response = stub.QueryRoutes(ln.QueryRoutesRequest(
+            pub_key=target_pubkey,
+            amt=value,
+        ))
+        if response.routes:
+            best_fees = min(r.total_fees for r in response.routes)
+            return int(best_fees * 1_000_000 / value) if value > 0 else 0
+    except Exception:
+        pass
+    return 0
+
+
 async def run_rebalancer(rebalance, worker):
     try:
         # Check if LocalSetting LND-EnableMPP exists and set allow_mpp accordingly
@@ -74,6 +155,17 @@ async def run_rebalancer(rebalance, worker):
             routerstub = lnrouter.RouterStub(async_lnd_connect())
             chan_ids = json.loads(rebalance.outgoing_chan_ids)
             timeout = rebalance.duration * 60
+            # 2.1 Cost gate: check estimated route PPM before attempting payment
+            if not rebalance.manual:
+                ar_max_ppm = await get_ar_max_ppm()
+                if ar_max_ppm > 0 and rebalance.value > 0:
+                    estimated_ppm = await estimate_route_ppm(stub, rebalance.last_hop_pubkey, rebalance.value, chan_ids)
+                    if estimated_ppm > 0 and estimated_ppm > ar_max_ppm:
+                        print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} estimated PPM {estimated_ppm} > AR-MaxPPM {ar_max_ppm} for {rebalance.target_alias}, aborting")
+                        rebalance.status = 409
+                        rebalance.stop = datetime.now()
+                        await save_record(rebalance)
+                        return None
             invoice_response = stub.AddInvoice(ln.Invoice(value=rebalance.value, expiry=timeout))
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} starting rebalance for {rebalance.target_alias} {rebalance.last_hop_pubkey} for {rebalance.value} sats and duration {rebalance.duration}, using {len(chan_ids)} outbound channels")
             async for payment_response in routerstub.SendPaymentV2(lnr.SendPaymentRequest(payment_request=str(invoice_response.payment_request), fee_limit_msat=int(rebalance.fee_limit*1000), outgoing_chan_ids=chan_ids, last_hop_pubkey=bytes.fromhex(rebalance.last_hop_pubkey), timeout_seconds=(timeout-5), allow_self_payment=True, max_parts=max_parts), timeout=(timeout+60)):
@@ -120,6 +212,8 @@ async def run_rebalancer(rebalance, worker):
             inc=1.21
             dec=2
             if rebalance.status ==2:
+                # 2.5 Record spend against the daily/weekly budget
+                await record_rebalance_spend(rebalance.fees_paid or 0)
                 await update_channels(stub, rebalance.last_hop_pubkey, successful_out)
                 #Reduce potential rebalance value in percent out to avoid going below AR-OUT-Target
                 auto_rebalance_channels = Channels.objects.filter(is_active=True, is_open=True, private=False).annotate(percent_outbound=((Sum('local_balance')+Sum('pending_outbound')-rebalance.value*inc)*100)/Sum('capacity')).annotate(inbound_can=(((Sum('remote_balance')+Sum('pending_inbound'))*100)/Sum('capacity'))/Sum('ar_in_target'))
@@ -237,7 +331,43 @@ def auto_schedule() -> List[Rebalancer]:
             LocalSettings(key='AR-Target%', value='3').save()
         if not LocalSettings.objects.filter(key='AR-MaxCost%').exists():
             LocalSettings(key='AR-MaxCost%', value='65').save()
+
+        # 2.5 Budget check: abort if daily or weekly budget is exhausted
+        budget_ok = True
+        daily_budget = 0
+        weekly_budget = 0
+        obj = LocalSettings.objects.filter(key='AR-DailyBudget').first()
+        if obj is None:
+            LocalSettings(key='AR-DailyBudget', value='0').save()
+        else:
+            daily_budget = int(obj.value)
+        obj = LocalSettings.objects.filter(key='AR-WeeklyBudget').first()
+        if obj is None:
+            LocalSettings(key='AR-WeeklyBudget', value='0').save()
+        else:
+            weekly_budget = int(obj.value)
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+        if daily_budget > 0:
+            today_record = RebalanceBudget.objects.filter(date=today).first()
+            if today_record and today_record.spent_sats >= daily_budget:
+                print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Daily budget exhausted, skipping scheduling")
+                budget_ok = False
+        if weekly_budget > 0 and budget_ok:
+            spent_this_week = sum(r.spent_sats for r in RebalanceBudget.objects.filter(date__gte=week_start))
+            if spent_this_week >= weekly_budget:
+                print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Weekly budget exhausted, skipping scheduling")
+                budget_ok = False
+        if not budget_ok:
+            return []
+
         for target in inbound_cans:
+            # 2.6 Efficiency score filter: skip channels with score < 0.5
+            eff = ChannelEfficiency.objects.filter(chan_id=target.chan_id).first()
+            if eff is not None and eff.efficiency_score < 0.5:
+                print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Skipping {target.alias} (efficiency {eff.efficiency_score:.2f} < 0.5)")
+                continue
+
             target_fee_rate = min(max_fee_rate, int(target.local_fee_rate * (target.ar_max_cost/100)))
             if target_fee_rate > 0 and target_fee_rate > target.remote_fee_rate:
                 target_value = int(target.ar_amt_target+(target.ar_amt_target*((secrets.choice(range(-1000,1001))/1000)*variance/100)))

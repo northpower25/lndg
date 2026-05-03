@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 {% load static %}
+{% load euformat %}
 <html>
   <style>
   </style>
+  {% get_number_format as num_fmt %}
+  <script>const NUMBER_FORMAT = "{{ num_fmt }}";</script>
   <script id="api" data-token="{{csrf_token}}" src="{% static 'api.js' %}"></script>
   <script src="{% static 'sort_table.js' %}"></script>
   <script src="{% static 'helpers.js' %}"></script>
@@ -24,17 +27,17 @@
       "amt_in": f => ({innerHTML: f.amt_in > 1000 ? f.amt_in.intcomma() : f.amt_in, style: {paddingRight: "0px", width: "160px"} }),
       "symbolIn": f => ({innerHTML: "●━━━", style: {paddingRight: "0px", paddingLeft: "0px", textAlign: 'right'} }),
       "symbolOut": f => ({innerHTML: "━━━○", style: {paddingLeft: "0px", paddingRight: "0px", textAlign: 'left'} }),
-      "amt_out": f => ({innerHTML: (f.amt_out > 1000 ? f.amt_out.intcomma() : f.amt_out) + ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">+${f.fee.intcomma().toLocaleString()}</small>`, style: {paddingLeft: "0px", width: "160px"} }),
+      "amt_out": f => ({innerHTML: (f.amt_out > 1000 ? f.amt_out.intcomma() : f.amt_out) + ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">+${f.fee.intcomma()}</small>`, style: {paddingLeft: "0px", width: "160px"} }),
       "chan_out_alias": f => ({innerHTML: f.chan_out_alias || f.chan_id_out}),
       "chan_id_out": f => ({innerHTML: `<a href="/channel?=${f.chan_id_out}" target="_blank">${(BigInt(f.chan_id_out)>>40n)+'x'+(BigInt(f.chan_id_out)>>16n & BigInt('0xFFFFFF'))+'x'+(BigInt(f.chan_id_out) & BigInt('0xFFFF'))}</a>`}),
-      "fee": f => ({innerHTML: parseFloat(f.fee.toFixed(3)).toLocaleString() + (f.inbound_fee > 0 ? ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">-${f.inbound_fee.toLocaleString()}</small>` : ``)}),
-      "ppm": f => ({innerHTML: parseInt(f.ppm.toFixed(0)).toLocaleString() + (f.inbound_fee > 0 ? ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">-${((f.inbound_fee/(f.inbound_fee+f.fee))*100).intcomma().toLocaleString()}%</small>` : ``)}),
+      "fee": f => ({innerHTML: parseFloat(f.fee.toFixed(3)).toLocalFixed(3) + (f.inbound_fee > 0 ? ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">-${f.inbound_fee.toLocalFixed(3)}</small>` : ``)}),
+      "ppm": f => ({innerHTML: parseInt(f.ppm.toFixed(0)).intcomma() + (f.inbound_fee > 0 ? ` <small class="w3-round w3-border-small w3-border-grey w3-tiny">-${((f.inbound_fee/(f.inbound_fee+f.fee))*100).intcomma()}%</small>` : ``)}),
     }
     let {fee, ppm} = routed_template
     const payments_template = Object.assign({}, {
       "creation_date": p => ({innerHTML: formatDate(p.creation_date), title: adjustTZ(p.creation_date) }),
       "value": p => ({innerHTML: p.value.intcomma()}),
-      "fee": p => ({innerHTML: parseFloat(p.fee.toFixed(3)).toLocaleString()})
+      "fee": p => ({innerHTML: parseFloat(p.fee.toFixed(3)).toLocalFixed(3)})
       }, {ppm}, {
       "status": p => ({innerHTML: ['Unknown', 'In-Flight', 'Succeeded', 'Failed'][p.status]}),
       "chan_out_alias": p => ({innerHTML: p.chan_out_alias||'---'}),
@@ -68,7 +71,7 @@
       "chan_out_liq": htlc => ({innerHTML: `${(htlc.chan_out_liq || 0).intcomma()} <small title="Pending at HTLC time" class="w3-round w3-border-small w3-border-grey">${htlc.chan_out_pending}</small>`, style: {paddingLeft: "0px", width: "160px"} }),
       "chan_out_alias": htlc => ({innerHTML: `<a href="/failed_htlcs?=${htlc.chan_id_out}_O" target="_blank">${htlc.chan_out_alias || htlc.chan_id_out}</a>`}),
       "chan_id_out": htlc => ({innerHTML: `<a href="/channel?=${htlc.chan_id_out}" target="_blank">${(BigInt(htlc.chan_id_out)>>40n)+'x'+(BigInt(htlc.chan_id_out)>>16n & BigInt('0xFFFFFF'))+'x'+(BigInt(htlc.chan_id_out) & BigInt('0xFFFF'))}</a>`}),
-      "missed_fee": htlc => ({innerHTML: parseFloat(htlc.missed_fee.toFixed(3)).toLocaleString()}),
+      "missed_fee": htlc => ({innerHTML: parseFloat(htlc.missed_fee.toFixed(3)).toLocalFixed(3)}),
       "wire_failure": htlc => ({innerHTML: htlc.wire_failure > wire_failures.length ? htlc.wire_failure : `${wire_failures[htlc.wire_failure]}${htlc.wire_failure===12?` (${Math.ceil(htlc.missed_fee/htlc.amount*1000000)})`:''}`}),
       "failure_detail": htlc => ({innerHTML: htlc.failure_detail > failure_details.length ? htlc.failure_detail : failure_details[htlc.failure_detail]}),
     }

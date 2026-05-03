@@ -43,6 +43,18 @@ Welcome to LNDg, an advanced web interface designed for analyzing Lightning Netw
 
 Choose your preferred installation method:
 
+### Umbrel Community App Store
+
+To install this fork via an Umbrel Community App Store, add the following repository URL in your Umbrel dashboard under **App Store → Community App Stores**:
+
+```
+https://github.com/northpower25/lndg
+```
+
+The app requires an active LND node (the built-in Umbrel Lightning node is supported). After installation, LNDg is available at `http://umbrel.local:8889`.
+
+See `northpower25-lndg/` for the manifest and docker-compose files used by Umbrel.
+
 ### 1-Click Installation
 
 Easily install LNDg directly from popular platforms like Umbrel, Citadel, Start9, and RaspiBlitz. Follow the instructions provided by your chosen platform.

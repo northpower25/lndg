@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - HTLCs{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if outgoing_htlcs %}
 <div class="w3-container w3-padding-small">
   <h2>Outgoing HTLCs</h2>
@@ -21,8 +21,8 @@
       <td>{% if htlc.alias == '' %}---{% else %}{{ htlc.alias }}{% endif %}</td>
       <td>{% if htlc.forwarding_channel == '0' %}Self{% else %}<a href="/channel?={{ htlc.forwarding_channel }}" target="_blank">{{ htlc.forwarding_channel }}</a>{% endif %}</td>
       <td>{% if htlc.forwarding_alias == '' %}---{% else %}{{ htlc.forwarding_alias }}{% endif %}</td>
-      <td>{{ htlc.amount|intcomma }}</td>
-      <td title="{{ htlc.blocks_til_expiration|intcomma }} blocks to {{ htlc.expiration_height|intcomma }}">{{ htlc.hours_til_expiration }} hours</td>
+      <td>{{ htlc.amount|eucomma }}</td>
+      <td title="{{ htlc.blocks_til_expiration|eucomma }} blocks to {{ htlc.expiration_height|eucomma }}">{{ htlc.hours_til_expiration }} hours</td>
       <td><a href="/route?={{ htlc.hash_lock }}" target="_blank">{{ htlc.hash_lock }}</a></td>
     </tr>
     {% endfor %}
@@ -48,8 +48,8 @@
       <td>{% if htlc.alias == '' %}---{% else %}{{ htlc.alias }}{% endif %}</td>
       <td>{% if htlc.forwarding_channel == '0' %}Self{% else %}<a href="/channel?={{ htlc.forwarding_channel }}" target="_blank">{{ htlc.forwarding_channel }}</a>{% endif %}</td>
       <td>{% if htlc.forwarding_alias == '' %}---{% else %}{{ htlc.forwarding_alias }}{% endif %}</td>
-      <td>{{ htlc.amount|intcomma }}</td>
-      <td title="{{ htlc.blocks_til_expiration|intcomma }} blocks to {{ htlc.expiration_height|intcomma }}">{{ htlc.hours_til_expiration }} hours</td>
+      <td>{{ htlc.amount|eucomma }}</td>
+      <td title="{{ htlc.blocks_til_expiration|eucomma }} blocks to {{ htlc.expiration_height|eucomma }}">{{ htlc.hours_til_expiration }} hours</td>
       <td><a href="/route?={{ htlc.hash_lock }}" target="_blank">{{ htlc.hash_lock }}</a></td>
     </tr>
     {% endfor %}

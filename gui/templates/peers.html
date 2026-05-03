@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Peers{% endblock %}
 {% block content %}
-{% load humanize %}
+{% load euformat %}
 {% if peers %}
 <div class="w3-container w3-padding-small">
   <h2>Peers List <small id="peer_count" class="w3-round w3-border-small w3-border-grey">{{ num_peers }}</small></h2>
@@ -21,10 +21,10 @@
       <td><a href="{{ graph_links }}/{{ network }}node/{{ peer.pubkey }}" target="_blank">{{ peer.pubkey }}</a></td>
       <td>{% if peer.alias != '' %}{{ peer.alias }}{% else %}---{% endif %}</td>
       <td>{{ peer.address }}</td>
-      <td>{{ peer.ping_time|intcomma }}</td>
+      <td>{{ peer.ping_time|eucomma }}</td>
       <td>{{ peer.inbound }}</td>
-      <td>{{ peer.sat_sent|intcomma }}</td>
-      <td>{{ peer.sat_recv|intcomma }}</td>
+      <td>{{ peer.sat_sent|eucomma }}</td>
+      <td>{{ peer.sat_recv|eucomma }}</td>
       <td><button onclick="disconnectPeer(this.parentElement.parentElement)" title="Disconnect from this peer">❌</button></td>
     </tr>
     {% endfor %}
