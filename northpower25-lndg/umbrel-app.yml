@@ -2,7 +2,7 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.10.2"
+version: "1.10.3"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is a lite GUI web interface designed to assist users with operating their LND node
