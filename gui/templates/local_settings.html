@@ -8,7 +8,13 @@
         {% if sett.form_id != 'update_channels' %}
         <div class="w3-quarter w3-container w3-row">
           <label for="{{sett.form_id}}" class="w3-col" title="{{ sett.title }}">{{ sett.label }}</label>
-          {% if sett.min == 0 and sett.max == 1 %}
+          {% if sett.options %}
+          <select style="height:27px" class="w3-col" name="{{sett.form_id}}" id="{{sett.form_id}}">
+            {% for opt in sett.options %}
+            <option value="{{ opt.0 }}" {% if sett.value == opt.0 %}selected{% endif %}>{{ opt.1 }}</option>
+            {% endfor %}
+          </select>
+          {% elif sett.min == 0 and sett.max == 1 %}
           <select style="height:27px" class="w3-col" name="{{sett.form_id}}" id="{{sett.form_id}}">
             <option value="0" {% if sett.value == "0" %}selected{% endif %}>Off</option>
             <option value="1" {% if sett.value == "1" %}selected{% endif %}>On</option>
