@@ -2,6 +2,7 @@
 {% block title %} {{ block.super }} - Inbound Fee Log{% endblock %}
 {% block content %}
 {% load euformat %}
+{% load humanize %}
 {% if inbound_fee_log %}
 <div class="w3-container w3-padding-small">
   <h2><a href="/inbound-fee-log/">Inbound Fee Log</a></h2>
