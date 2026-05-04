@@ -7,12 +7,12 @@
   <h2><a href="/autopilot/">Autopilot Logs</a></h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Timestamp</th>
-      <th>Channel ID</th>
-      <th>Peer Alias</th>
-      <th>Setting</th>
-      <th>Old Value</th>
-      <th>New Value</th>
+      <th title="When the autopilot action was taken">Timestamp</th>
+      <th title="Short channel ID of the channel that was modified">Channel ID</th>
+      <th title="Alias of the remote peer for this channel">Peer Alias</th>
+      <th title="Which setting was changed (e.g. auto_rebalance)">Setting</th>
+      <th title="Previous value of the setting before the autopilot change">Old Value</th>
+      <th title="New value applied by autopilot">New Value</th>
     </tr>
     {% for log in autopilot %}
     <tr>

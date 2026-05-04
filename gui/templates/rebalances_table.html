@@ -3,19 +3,19 @@
     <h2>{% if status == 2 %}Successful{% elif  status == 0 %}Pending{% elif status == 1 %}In-Flight{% else %}Last{% endif %} {{title}}</h2>
     <table id="rebalsTable_{{status}}" class="w3-table-all w3-centered w3-hoverable">
       <tr>
-        <th>Requested</th>
-        <th>Start</th>
-        <th>Stop</th>
-        <th>Scheduled for</th>
-        <th>Elapsed</th>
-        <th>Value</th>
-        <th>Fee Limit</th>
-        <th>Target PPM</th>
-        <th>Fees Paid</th>
-        <th>Last Hop</th>
-        <th>Status</th>
-        <th>Hash</th>
-        <th>Action</th>
+        <th title="When this rebalance was requested">Requested</th>
+        <th title="When the rebalance attempt started executing">Start</th>
+        <th title="When the rebalance attempt finished">Stop</th>
+        <th title="Scheduled execution window for this request">Scheduled for</th>
+        <th title="How long the rebalance attempt took">Elapsed</th>
+        <th title="Rebalance amount in sats">Value</th>
+        <th title="Maximum fee allowed for this rebalance (sats)">Fee Limit</th>
+        <th title="Target fee rate in parts-per-million: fee limit × 1,000,000 ÷ value">Target PPM</th>
+        <th title="Actual fees paid for a successful rebalance (sats)">Fees Paid</th>
+        <th title="Alias of the last-hop target peer (for targeted rebalances)">Last Hop</th>
+        <th title="Current status: Pending / In-Flight / Successful / Timeout / No-Route / Error">Status</th>
+        <th title="Payment hash of the rebalance — click to view route">Hash</th>
+        <th title="Repeat or cancel this rebalance request">Action</th>
       </tr>
       <tbody id="rebalances_{{status}}">
       </tbody>

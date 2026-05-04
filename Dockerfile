@@ -1,7 +1,7 @@
 FROM python:3.13-alpine
 ENV PYTHONUNBUFFERED=1
-RUN apk add git g++ linux-headers libffi-dev rust cargo openssl-dev pkgconf make && git clone https://github.com/cryptosharks131/lndg /app
+RUN apk add g++ linux-headers libffi-dev rust cargo openssl-dev pkgconf make
 WORKDIR /app
-RUN git checkout "master"
+COPY . /app
 RUN pip install -r requirements.txt
 RUN pip install supervisor whitenoise

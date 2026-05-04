@@ -7,12 +7,12 @@
   <h2>Top 21 Failed Downstream Routes</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Chan In ID</th>
-      <th>Chan Out ID</th>
-      <th>Chan In Alias</th>
-      <th>Chan Out Alias</th>
-      <th>Count</th>
-      <th>Volume</th>
+      <th title="Short channel ID of the incoming channel">Chan In ID</th>
+      <th title="Short channel ID of the outgoing channel where the HTLC failed">Chan Out ID</th>
+      <th title="Alias of the peer on the incoming channel">Chan In Alias</th>
+      <th title="Alias of the peer on the outgoing channel where the HTLC failed">Chan Out Alias</th>
+      <th title="Number of failed HTLC attempts on this route in the last 7 days">Count</th>
+      <th title="Total value of failed HTLCs on this route (sats)">Volume</th>
     </tr>
     {% for failed_htlc in agg_failed_htlcs %}
     <tr>
@@ -36,16 +36,16 @@
   <h2>Last Failed HTLCs</h2>
   <table id="failedhtlcsTable" class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Timestamp</th>
-      <th>Chan In ID</th>
-      <th>Chan In Alias</th>
-      <th colspan="2">Forward Amount</th>
-      <th colspan="2">Actual Outbound</th>
-      <th>Chan Out Alias</th>
-      <th>Chan Out ID</th>
-      <th>Potential Fee</th>
-      <th>HTLC Failure</th>
-      <th>Failure Detail</th>
+      <th title="When the HTLC failure occurred">Timestamp</th>
+      <th title="Short channel ID of the incoming channel">Chan In ID</th>
+      <th title="Alias of the peer on the incoming channel">Chan In Alias</th>
+      <th title="Attempted forwarding amount (sats)" colspan="2">Forward Amount</th>
+      <th title="Outbound liquidity on the failing channel at the time of failure (sats)" colspan="2">Actual Outbound</th>
+      <th title="Alias of the peer on the outgoing channel where the HTLC failed">Chan Out Alias</th>
+      <th title="Short channel ID of the outgoing channel where the HTLC failed">Chan Out ID</th>
+      <th title="Fee that would have been earned if this HTLC had succeeded (sats)">Potential Fee</th>
+      <th title="Protocol-level failure code returned by LND">HTLC Failure</th>
+      <th title="More specific failure detail code">Failure Detail</th>
     </tr>
     <tfoot id="loadMoreFailedHTLCs">
       <tr style="background-color:transparent;cursor:pointer;">

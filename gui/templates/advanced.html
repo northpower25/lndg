@@ -95,13 +95,13 @@
         <th onclick="sortTable(event.target, 3, 'int', 1, 'label')">Capacity</th>
         <th onclick="sortTable(event.target, 4, 'int', 1, 'small')">Inbound Liquidity</th>
         <th>Channel State</th>
-        <th>oRate</th>
-        <th>oBase</th>
-        <th>iRate</th>
-        <th>iBase</th>
-        <th>oCLTV</th>
-        <th>minHTLC</th>
-        <th>maxHTLC</th>
+        <th title="Your outgoing fee rate charged to forward payments through this channel (ppm)">oRate</th>
+        <th title="Your outgoing base fee charged per payment regardless of amount (msat)">oBase</th>
+        <th title="Your inbound fee rate applied on received liquidity — negative values are discounts (ppm)">iRate</th>
+        <th title="Your inbound base fee applied on received liquidity — negative values are discounts (msat)">iBase</th>
+        <th title="Delta in blocks added to the CLTV time-lock for outgoing HTLCs on this channel">oCLTV</th>
+        <th title="Minimum HTLC size this channel will accept (sats)">minHTLC</th>
+        <th title="Maximum HTLC size this channel will accept (sats)">maxHTLC</th>
         <th onclick="sortTable(event.target, 13, 'int', 1)">Peer iRate</th>
         <th onclick="sortTable(event.target, 14, 'int', 1)">Peer iBase</th>
         <th onclick="sortTable(event.target, 15, 'int', 1)">Peer oRate</th>

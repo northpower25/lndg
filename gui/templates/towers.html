@@ -38,10 +38,10 @@
   <h2>Active Towers</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Pubkey</th>
-      <th>Address</th>
-      <th>Sessions</th>
-      <th>Remove</th>
+      <th title="Public key of the watchtower node">Pubkey</th>
+      <th title="Network address of the watchtower (host:port)">Address</th>
+      <th title="Number of active backup sessions with this tower">Sessions</th>
+      <th title="Remove this watchtower">Remove</th>
     </tr>
     {% for tower in active_towers %}
     <tr>
@@ -65,11 +65,11 @@
   <h2>Inactive Towers</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Pubkey</th>
-      <th>Address</th>
-      <th>Sessions</th>
-      <th>Enable</th>
-      <th>Delete</th>
+      <th title="Public key of the watchtower node">Pubkey</th>
+      <th title="Network address of the watchtower (host:port)">Address</th>
+      <th title="Number of backup sessions with this tower">Sessions</th>
+      <th title="Re-enable this watchtower">Enable</th>
+      <th title="Permanently delete this watchtower">Delete</th>
     </tr>
     {% for tower in inactive_towers %}
     <tr>
@@ -107,7 +107,7 @@
     <form action="/addtower/" method="post">
       {% csrf_token %}
       <label for="tower">Tower Connection String: </label>
-      <input id="tower" type="text" name="tower">
+      <input id="tower" type="text" name="tower" title="Connection string in format: pubkey@host:port">
       <input type="submit" value="OK">
     </form>
   </div>

@@ -7,11 +7,11 @@
   <h2>Resolutions For Channel: {{ chan_id }}</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Resolution Type</th>
-      <th>Outcome</th>
-      <th>Outpoint</th>
-      <th>Amount</th>
-      <th>Sweep TX</th>
+      <th title="Type of on-chain output being resolved (e.g. Anchor, HTLC, Commit)">Resolution Type</th>
+      <th title="Outcome of the resolution process (e.g. Claimed, Unclaimed, Timeout)">Outcome</th>
+      <th title="Transaction outpoint (txid:index) of the output being resolved">Outpoint</th>
+      <th title="Amount recovered in this resolution (sats)">Amount</th>
+      <th title="Transaction ID of the sweep that claimed this output">Sweep TX</th>
     </tr>
     {% for resolution in resolutions %}
     <tr>
