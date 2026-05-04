@@ -13,7 +13,6 @@ services:
     volumes:
       - ${APP_LIGHTNING_NODE_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/app/data:rw
-      - ${APP_DATA_DIR}/logs/lndg-controller.log:/var/log/lndg-controller.log:rw
     environment:
       - LND_TLS_PATH=/lnd/tls.cert
       - LND_MACAROON_PATH=/lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
@@ -29,5 +28,5 @@ services:
         -rpc ${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
         -net '${APP_BITCOIN_NETWORK}'
         -wn &&
-        python controller.py runserver 0.0.0.0:8000 > /var/log/lndg-controller.log 2>&1
+        python controller.py runserver 0.0.0.0:8000 > /app/data/lndg-controller.log 2>&1
     ports: []
