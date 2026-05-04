@@ -8,9 +8,9 @@
   <h2>{% if addresses.address_type == 1 %}Legacy{% elif addresses.address_type == 4 %}Taproot{% else %}{{ addresses.address_type }}{% endif %} Addresses</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th width="25%">Change</th>
-      <th width="25%">Balance</th>
-      <th>Address</th>
+      <th width="25%" title="Whether this is a change (internal) address used for transaction change outputs">Change</th>
+      <th width="25%" title="Current balance at this address (sats)">Balance</th>
+      <th title="Bitcoin address — click to view on the block explorer">Address</th>
     </tr>
     {% for address in addresses.addresses reversed %}
     <tr>

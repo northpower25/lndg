@@ -7,16 +7,16 @@
   <h2>Last 150 Payments</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Timestamp</th>
-      <th width=28%>Hash</th>
-      <th width=6%>Value</th>
-      <th width=6%>Fee Paid</th>
-      <th width=6%>PPM Paid</th>
-      <th width=6%>Status</th>
-      <th width=12%>Chan Out Alias</th>
-      <th width=12%>Chan Out ID</th>
-      <th width=4%>Route</th>
-      <th width=6%>Keysend</th>
+      <th title="When the payment was initiated">Timestamp</th>
+      <th width=28% title="SHA-256 payment hash — click to view the full route">Hash</th>
+      <th width=6% title="Payment amount (sats)">Value</th>
+      <th width=6% title="Routing fee paid to intermediate nodes for this payment (sats)">Fee Paid</th>
+      <th width=6% title="Fee rate paid in parts-per-million: fee × 1,000,000 ÷ amount">PPM Paid</th>
+      <th width=6% title="Payment status: In-Flight / Succeeded / Failed">Status</th>
+      <th width=12% title="Alias of the first outgoing channel peer">Chan Out Alias</th>
+      <th width=12% title="Short channel ID of the first outgoing channel">Chan Out ID</th>
+      <th width=4% title="View the full payment route">Route</th>
+      <th width=6% title="Whether this is a Keysend payment — hover for embedded message">Keysend</th>
     </tr>
     {% for payment in payments %}
     <tr>

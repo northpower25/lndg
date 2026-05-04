@@ -7,12 +7,12 @@
   <h2><a href="/inbound-fee-log/">Inbound Fee Log</a></h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Timestamp</th>
-      <th>Channel ID</th>
-      <th>Peer Alias</th>
-      <th>Setting</th>
-      <th>Old Value</th>
-      <th>New Value</th>
+      <th title="When the inbound fee was automatically updated">Timestamp</th>
+      <th title="Short channel ID of the channel whose inbound fee was updated">Channel ID</th>
+      <th title="Alias of the remote peer for this channel">Peer Alias</th>
+      <th title="Which fee setting was changed">Setting</th>
+      <th title="Previous inbound fee rate before the update (ppm)">Old Value</th>
+      <th title="New inbound fee rate set by Auto-Fees (ppm) — green = increased, red = decreased">New Value</th>
     </tr>
     {% for log in inbound_fee_log %}
     <tr>

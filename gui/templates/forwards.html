@@ -6,15 +6,15 @@
   <h2>Last Forwards</h2>
   <table id="forwardsTable" class="w3-table-all w3-centered w3-hoverable">
     <tr>
-      <th>Timestamp</th>
-      <th>Channel In Id</th>
-      <th>Channel In Alias</th>
-      <th colspan="2">Amount In</th>
-      <th colspan="2">Amount Out</th> 
-      <th>Channel Out Alias</th>
-      <th>Channel Out Id</th>
-      <th>Fees Earned</th>
-      <th>PPM Earned</th>
+      <th title="When the payment was routed through your node">Timestamp</th>
+      <th title="Short channel ID of the incoming channel (block×tx×output)">Channel In Id</th>
+      <th title="Alias of the peer on the incoming channel">Channel In Alias</th>
+      <th title="Amount received on the incoming channel (sats)" colspan="2">Amount In</th>
+      <th title="Amount forwarded out on the outgoing channel (sats)" colspan="2">Amount Out</th>
+      <th title="Alias of the peer on the outgoing channel">Channel Out Alias</th>
+      <th title="Short channel ID of the outgoing channel (block×tx×output)">Channel Out Id</th>
+      <th title="Routing fee collected for this forward (sats)">Fees Earned</th>
+      <th title="Fee rate in parts-per-million: fee × 1,000,000 ÷ amount out">PPM Earned</th>
     </tr>
     <tfoot id="loadMoreForwards">
       <tr style="background-color:transparent;cursor:pointer;">

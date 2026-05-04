@@ -23,19 +23,19 @@
     <table id="unprofitableChannelsTable" class="w3-table-all w3-centered w3-hoverable">
       <thead>
         <tr>
-          <th onclick="sortTable(event.target, 0, 'String', 1)">Channel ID</th>
-          <th onclick="sortTable(event.target, 1, 'String', 1)" width=15%>Alias</th>
-          <th onclick="sortTable(event.target, 2, 'int', 1)" width=10%>Routed Out (sats)</th>
-          <th onclick="sortTable(event.target, 3, 'String', 1)" width=10%>Last Routing</th>
-          <th onclick="sortTable(event.target, 4, 'int', 1)" width=10%>Rebalanced Out (sats)</th>
-          <th onclick="sortTable(event.target, 5, 'String', 1)" width=10%>Last Rebalance</th>
-          <th onclick="sortTable(event.target, 6, 'int', 1)" width=8%>Profit</th>
-          <th onclick="sortTable(event.target, 7, 'int', 1)" width=8%>Assisted Revenue</th>
-          <th onclick="sortTable(event.target, 8, 'String', 1)" width=7%>Initiator</th>
-          <th onclick="sortTable(event.target, 9, 'int', 1)" width=7%>Age (Days)</th>
-          <th onclick="sortTable(event.target, 10, 'int', 1)" width=7%>Local Ratio</th>
-          <th onclick="sortTable(event.target, 11, 'int', 1)" width=7%>Stuck Index</th>
-          <th width=10%>Actions</th>
+          <th onclick="sortTable(event.target, 0, 'String', 1)" title="Unique identifier for this Lightning channel">Channel ID</th>
+          <th onclick="sortTable(event.target, 1, 'String', 1)" width=15% title="Alias of the remote peer for this channel">Alias</th>
+          <th onclick="sortTable(event.target, 2, 'int', 1)" width=10% title="Total satoshis routed outbound through this channel in the selected timeframe">Routed Out (sats)</th>
+          <th onclick="sortTable(event.target, 3, 'String', 1)" width=10% title="Date and amount of the most recent routing event">Last Routing</th>
+          <th onclick="sortTable(event.target, 4, 'int', 1)" width=10% title="Total satoshis spent on rebalancing this channel in the selected timeframe">Rebalanced Out (sats)</th>
+          <th onclick="sortTable(event.target, 5, 'String', 1)" width=10% title="Date and amount of the most recent rebalancing operation">Last Rebalance</th>
+          <th onclick="sortTable(event.target, 6, 'int', 1)" width=8% title="Net profit: fees earned from routing minus rebalancing costs (sats)">Profit</th>
+          <th onclick="sortTable(event.target, 7, 'int', 1)" width=8% title="Fees earned from forwards where this channel was the inbound channel (sats)">Assisted Revenue</th>
+          <th onclick="sortTable(event.target, 8, 'String', 1)" width=7% title="Whether you (Local) or your peer (Remote) opened this channel">Initiator</th>
+          <th onclick="sortTable(event.target, 9, 'int', 1)" width=7% title="Approximate age of the channel in days since its opening block">Age (Days)</th>
+          <th onclick="sortTable(event.target, 10, 'int', 1)" width=7% title="Percentage of the channel capacity held on your side (outbound liquidity ratio)">Local Ratio</th>
+          <th onclick="sortTable(event.target, 11, 'int', 1)" width=7% title="Measure of how stuck a channel is: 0 = very active, 1 = completely inactive/stuck">Stuck Index</th>
+          <th width=10% title="Available actions: copy channel ID to clipboard">Actions</th>
         </tr>
       </thead>
       <tbody>

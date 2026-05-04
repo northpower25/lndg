@@ -52,7 +52,7 @@
         </td>
         <td>{{ channel.remote_balance|eucomma }} <small class="w3-round w3-border-small w3-border-grey">{{ channel.in_percent }}%</small></td>
         <td>{% if channel.net_routed_7day != 0 %}{{ channel.net_routed_7day }} <small class="w3-round w3-border-small w3-border-grey">{% if channel.net_routed_7day > 0 %}OUT{% else %}IN{% endif %}</small>{% else %}0{% endif %}</td>
-        <td>{{ channel.adjustment }}</td>
+        <td>{{ channel.adjustment|eucomma }}</td>
         <td>{{ channel.new_rate|eucomma }}</td>
         <td>{{ channel.inbound_adjustment|eucomma }}</td>
         <td>{{ channel.new_inbound_rate|eucomma }}</td>
