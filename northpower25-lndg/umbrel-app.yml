@@ -33,7 +33,7 @@ releaseNotes: >-
   v1.10.2: Bug fixes and stability improvements. Fork maintained by northpower25
   with Umbrel Community App Store support.
 path: ""
-defaultUsername: ""
-defaultPassword: ""
+defaultUsername: "lndg-admin"
+defaultPassword: "$APP_PASSWORD"
 submitter: northpower25
 submission: https://github.com/northpower25/lndg

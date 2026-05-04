@@ -27,6 +27,7 @@ services:
         -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
         -rpc ${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
         -net '${APP_BITCOIN_NETWORK}'
+        -pw '${APP_PASSWORD}'
         -wn &&
         python controller.py runserver 0.0.0.0:8000 > /app/data/lndg-controller.log 2>&1
     ports: []
