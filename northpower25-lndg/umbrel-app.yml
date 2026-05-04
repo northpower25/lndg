@@ -2,7 +2,7 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.10.6"
+version: "1.10.7"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is a lite GUI web interface designed to assist users with operating their LND node
@@ -30,9 +30,9 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.10.5: Fix build process to use fork source code instead of upstream repo.
-  All custom features (Number Format setting, locale-aware number formatting,
-  Umbrel credentials dialog) are now correctly included in the container image.
+  v1.10.7: Fix missing naturaltime template filter (resolves 500 errors on /fees/, /advanced/,
+  /autopilot/, /opens/, /keysends/ and template errors on /closures/, /autofees/, /inbound-fee-log/).
+  Fix log file path for Docker deployments. Always write initial password to data/lndg-admin.txt.
 path: ""
 defaultUsername: "lndg-admin"
 defaultPassword: "$APP_PASSWORD"

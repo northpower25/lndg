@@ -232,7 +232,14 @@ def logs(request):
         try:
             count = request.GET.get('tail', 20)
             grep = request.GET.get('grep', None)
-            logfile = '/var/log/lndg-controller.log'
+            docker_logfile = '/app/data/lndg-controller.log'
+            supervisord_logfile = '/var/log/lndg-controller.log'
+            if path.exists(docker_logfile):
+                logfile = docker_logfile
+            elif path.exists(supervisord_logfile):
+                logfile = supervisord_logfile
+            else:
+                return render(request, 'error.html', {'error': 'Log file not found. Expected at ' + docker_logfile + ' or ' + supervisord_logfile})
             file_size = path.getsize(logfile)-2
             if file_size == 0:
                 logs = ['Logs are empty....']

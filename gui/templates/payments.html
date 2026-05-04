@@ -2,6 +2,7 @@
 {% block title %} {{ block.super }} - Payments{% endblock %}
 {% block content %}
 {% load euformat %}
+{% load humanize %}
 {% if payments %}
 <div class="w3-container w3-padding-small">
   <h2>Last 150 Payments</h2>

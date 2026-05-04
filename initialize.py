@@ -267,15 +267,14 @@ def initialize_django(adminuser, adminpw):
                 login_pw = secrets.token_urlsafe(16) if adminpw is None else adminpw
                 admin.set_password(login_pw)
                 admin.save()
-                if adminpw is None:
-                    try:
-                        Path(os.path.join(DATA_DIR, 'lndg-admin.txt')).touch()
-                        f = open('data/lndg-admin.txt', 'w')
+                try:
+                    pw_file = os.path.join(DATA_DIR, 'lndg-admin.txt')
+                    Path(pw_file).touch()
+                    with open(pw_file, 'w') as f:
                         f.write(login_pw)
-                        f.close()
-                    except Exception as e:
-                        print('Error writing password file:', str(e))
-                    print('FIRST TIME LOGIN PASSWORD:' + login_pw)
+                except Exception as e:
+                    print('Error writing password file:', str(e))
+                print('FIRST TIME LOGIN PASSWORD:' + login_pw)
             except Exception as e:
                 print('Error setting up initial user:', str(e))
     except Exception as e:

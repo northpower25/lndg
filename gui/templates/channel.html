@@ -2,6 +2,7 @@
 {% block title %} {{ block.super }} - Channel Card{% endblock %}
 {% block content %}
 {% load euformat %}
+{% load humanize %}
 {% if channel %}
 <div class="w3-container w3-padding-small">
   <h3><a href="{{ graph_links }}/{{ network }}node/{{ channel.remote_pubkey }}" target="_blank">{% if channel.alias != "" %}{{ channel.alias }}</a> | {{ channel.remote_pubkey }}{% else %}{{ channel.remote_pubkey }}</a>{% endif %}
