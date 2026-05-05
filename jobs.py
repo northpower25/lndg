@@ -213,6 +213,7 @@ def update_channels(stub):
     get_info = stub.GetInfo(ln.GetInfoRequest())
     block_height = get_info.block_height
     version = get_info.version
+    notify_cfg = NotificationSettings.load()
     for channel in channels:
         if Channels.objects.filter(chan_id=channel.chan_id).exists():
             #Update the channel record with the most current data
@@ -294,7 +295,7 @@ def update_channels(stub):
                 PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='Connection', old_value=1, new_value=0, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
                 # Notify on channel going inactive
                 try:
-                    if NotificationSettings.load().notify_channel_inactive:
+                    if notify_cfg.notify_channel_inactive:
                         alias = db_channel.alias or db_channel.remote_pubkey[:12]
                         _safe_notify(
                             f'⚠️ <b>Channel inactive</b>\n'
@@ -628,6 +629,7 @@ def auto_fees(stub):
     else:
         LocalSettings(key='AF-InboundFees', value='0').save()
         inbound_enabled = False
+    notify_cfg = NotificationSettings.load()
     try:
         channels = Channels.objects.filter(is_open=True, is_active=True, private=False, auto_fees=True)
         results_df = af.main(channels)
@@ -661,7 +663,7 @@ def auto_fees(stub):
                         channel.local_fee_rate = target_channel['new_rate']
                         Autofees(chan_id=channel.chan_id, peer_alias=channel.alias, setting=(f"AF [ {target_channel['net_routed_7day']}:{target_channel['in_percent']}:{target_channel['out_percent']} ]"), old_value=target_channel['local_fee_rate'], new_value=target_channel['new_rate']).save()
                         try:
-                            if NotificationSettings.load().notify_autofee:
+                            if notify_cfg.notify_autofee:
                                 _safe_notify(
                                     f'💸 <b>Auto-fee update</b>\n'
                                     f'Channel: {channel.alias} ({channel.chan_id})\n'

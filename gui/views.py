@@ -3825,7 +3825,7 @@ def notification_settings(request):
         cfg.notify_autofee = _bool('notify_autofee')
         cfg.save()
         messages.success(request, 'Notification settings saved.')
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+        return redirect('home')
     # GET – redirect to home (settings are embedded there)
     return redirect('home')
 
@@ -3847,8 +3847,8 @@ def test_notification(request):
         if not summary:
             return Response({'message': 'No notification backends enabled. Configure Telegram or NOSTR first.'}, status=400)
         return Response({'message': 'Test notification dispatched.', 'results': summary})
-    except Exception as exc:
-        return Response({'error': str(exc)}, status=500)
+    except Exception:
+        return Response({'error': 'Notification test failed. Check server logs for details.'}, status=500)
 
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
@@ -3861,6 +3861,6 @@ def nostr_pubkey(request):
         if not cfg.nostr_privkey:
             return Response({'error': 'No NOSTR private key configured.'}, status=400)
         pubkey = notify_module.nostr_pubkey_from_privkey(cfg.nostr_privkey)
-        return Response({'pubkey': pubkey, 'npub': 'npub1' + pubkey})
-    except Exception as exc:
-        return Response({'error': str(exc)}, status=500)
+        return Response({'pubkey': pubkey})
+    except Exception:
+        return Response({'error': 'Failed to derive NOSTR public key. Check server logs.'}, status=500)

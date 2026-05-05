@@ -43,8 +43,8 @@
             NOSTR Private Key (hex)
           </label>
           <input class="w3-col" type="password" name="nostr_privkey" maxlength="64"
-                 placeholder="64-char hex private key"
-                 value="{% if notification_cfg.nostr_privkey %}{{ notification_cfg.nostr_privkey }}{% endif %}"/>
+                 placeholder="{% if notification_cfg.nostr_privkey %}Key is set – paste to replace{% else %}64-char hex private key{% endif %}"
+                 autocomplete="new-password"/>
           {% if notification_cfg.nostr_privkey %}
           <small>
             Pubkey:

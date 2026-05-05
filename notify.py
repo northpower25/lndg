@@ -70,7 +70,7 @@ def _schnorr_sign(msg: bytes, privkey: bytes) -> bytes:
     aux_rand = secrets.token_bytes(32)
     d0 = int.from_bytes(privkey, "big")
     if not (1 <= d0 < _N):
-        raise ValueError("Invalid NOSTR private key")
+        raise ValueError("NOSTR private key value is out of the valid range [1, N-1]")
     point = _point_mul(_G, d0)
     # negate key if Y is odd
     d = d0 if point[1] % 2 == 0 else _N - d0
@@ -78,7 +78,7 @@ def _schnorr_sign(msg: bytes, privkey: bytes) -> bytes:
     rand = _tagged_hash("BIP0340/nonce", t + point[0].to_bytes(32, "big") + msg)
     k0 = int.from_bytes(rand, "big") % _N
     if k0 == 0:
-        raise ValueError("k0 == 0, BIP-340 signing failed")
+        raise ValueError("NOSTR signature generation failed. Please try again or use a different private key.")
     R = _point_mul(_G, k0)
     k = k0 if R[1] % 2 == 0 else _N - k0
     e_bytes = R[0].to_bytes(32, "big") + point[0].to_bytes(32, "big") + msg
@@ -156,6 +156,10 @@ def _publish_nostr_event(event: dict, relays: list, timeout: int = 8) -> dict:
 
 def _send_telegram(bot_token: str, chat_id: str, message: str, timeout: int = 10) -> bool:
     """Send *message* via the Telegram Bot API."""
+    # Basic sanity check: bot tokens look like NNN:AAA... (no spaces or slashes)
+    if not bot_token or ':' not in bot_token or '/' in bot_token or ' ' in bot_token:
+        print(f"{datetime.now().strftime('%c')} : [Notify] : Telegram bot token appears invalid")
+        return False
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     try:
         resp = requests.post(
