@@ -172,8 +172,8 @@
 
     links.forEach(link => {
       if (!leftPos[link.source] || !rightPos[link.target]) return;
-      const totalVal = totalFlow || 1;
-      const lh = Math.max(1, (link.value/totalFlow) * (availH - nodePad*(Math.max(leftNodes.length,rightNodes.length)-1)));
+      const safeTotal = totalFlow || 1;
+      const lh = Math.max(1, (link.value/safeTotal) * (availH - nodePad*(Math.max(leftNodes.length,rightNodes.length)-1)));
       const lPos = leftPos[link.source];
       const rPos = rightPos[link.target];
 

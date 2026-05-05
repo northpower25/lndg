@@ -3556,7 +3556,7 @@ def sankey_data(request):
         flow_dict = defaultdict(int)
         for p in qs.values('chan_out_alias', 'rebal_chan', 'value'):
             src = p['chan_out_alias'] or 'Unknown'
-            tgt = chan_id_to_alias.get(str(p['rebal_chan']), str(p['rebal_chan']) or 'Unknown')
+            tgt = chan_id_to_alias.get(str(p['rebal_chan']), str(p['rebal_chan']) if p['rebal_chan'] is not None else 'Unknown')
             amt = int(p['value'] or 0)
             if src != tgt and amt > 0:
                 flow_dict[(src, tgt)] += amt
