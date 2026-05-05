@@ -38,6 +38,11 @@
       Diagram: ribbon width = total sats between two channels. Hover for details. Click a node to highlight its flows, click again to reset.
     </span>
   </div>
+  <div id="matrixLegend" class="w3-container w3-padding-small w3-small" style="display:none;color:#888;">
+    <span title="Rows are source channels, columns are destination channels. Cell colour intensity scales with flow volume. Hover a cell for the exact amount.">
+      Matrix Table: rows = source channels, columns = destination channels. Cell colour intensity scales with volume. Hover a cell for the exact amount.
+    </span>
+  </div>
 
   <!-- Sankey Diagram -->
   <div id="sankeyView">
@@ -69,6 +74,8 @@
     currentView = v;
     document.getElementById('sankeyView').style.display = v === 'diagram' ? '' : 'none';
     document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
+    document.getElementById('sankeyLegend').style.display = v === 'diagram' ? '' : 'none';
+    document.getElementById('matrixLegend').style.display = v === 'table' ? '' : 'none';
     document.getElementById('btnDiagram').className = v === 'diagram' ? 'w3-button w3-blue' : 'w3-button w3-light-grey';
     document.getElementById('btnTable').className = v === 'table' ? 'w3-button w3-blue' : 'w3-button w3-light-grey';
     if (currentData) {

@@ -3554,12 +3554,33 @@ def sankey_data(request):
             qs = qs.filter(creation_date__gte=filter_date)
         chan_id_to_alias = {str(c.chan_id): c.alias for c in Channels.objects.filter(is_open=True)}
         flow_dict = defaultdict(int)
-        for p in qs.values('chan_out_alias', 'rebal_chan', 'value'):
+        # Non-MPP payments: attribute directly via chan_out_alias
+        for p in qs.exclude(chan_out='MPP').values('chan_out_alias', 'rebal_chan', 'value'):
             src = p['chan_out_alias'] or 'Unknown'
             tgt = chan_id_to_alias.get(str(p['rebal_chan']), str(p['rebal_chan']) if p['rebal_chan'] is not None else 'Unknown')
             amt = int(p['value'] or 0)
             if src != tgt and amt > 0:
                 flow_dict[(src, tgt)] += amt
+        # MPP payments: use first-hop PaymentHops records to attribute volume to the actual outgoing channels
+        mpp_payments = list(qs.filter(chan_out='MPP').values('payment_hash', 'rebal_chan'))
+        if mpp_payments:
+            mpp_hash_to_rebal = {p['payment_hash']: p['rebal_chan'] for p in mpp_payments}
+            first_hops = PaymentHops.objects.filter(
+                payment_hash_id__in=list(mpp_hash_to_rebal.keys()),
+                step=1
+            ).values('payment_hash_id', 'alias', 'amt')
+            for hop in first_hops:
+                rebal_chan_id = mpp_hash_to_rebal.get(hop['payment_hash_id'])
+                if rebal_chan_id is None:
+                    continue
+                tgt = chan_id_to_alias.get(str(rebal_chan_id), str(rebal_chan_id) if rebal_chan_id is not None else 'Unknown')
+                src = hop['alias'] or 'Unknown'
+                # Strip any appended status annotation (e.g. "[ 2-1-0-0 ]") from the alias
+                if '[' in src:
+                    src = src[:src.index('[')].strip()
+                amt = int(hop['amt'] or 0)
+                if src and src != tgt and amt > 0:
+                    flow_dict[(src, tgt)] += amt
         for (src, tgt), amt in flow_dict.items():
             links.append({'source': src, 'target': tgt, 'value': amt})
             nodes_set.add(src)
