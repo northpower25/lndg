@@ -98,5 +98,7 @@ urlpatterns = [
     path('api/forwards_summary/', views.forwards_summary, name='forwards-summary'),
     path('api/sign_message/', views.sign_message, name='sign-message'),
     path('api/reset/', views.reset_api, name='reset-api'),
+    path('sankey/', views.sankey, name='sankey'),
+    path('api/sankey_data/', views.sankey_data, name='sankey-data'),
     path('lndg-admin/', admin.site.urls),
 ]

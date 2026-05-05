@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value, FloatField, ExpressionWrapper, DateTimeField, DurationField
 from django.db.models.functions import Round, TruncDay, Coalesce
 from django.contrib.auth.decorators import login_required
+from collections import defaultdict
 from django_filters import FilterSet, CharFilter, DateTimeFilter, NumberFilter
 from datetime import datetime, timedelta
 from rest_framework import viewsets
@@ -2022,6 +2023,9 @@ def get_local_settings(*prefixes):
         form.append({'unit': '', 'form_id': 'autopilot', 'value': 0, 'label': 'Autopilot', 'id': 'AR-Autopilot', 'title': 'This enables or disables the Auto-Rebalance function for individual channels based on flow (automatically acts upon suggestions on this page: /actions)', 'min':0, 'max':1})
         form.append({'unit': 'days', 'form_id': 'autopilotdays', 'value': 7, 'label': 'Autopilot Days', 'id': 'AR-APDays', 'title': 'Number of days to consider for autopilot calculations. Default 7', 'min':0, 'max':100})
         form.append({'unit': '', 'form_id': 'workers', 'value': 1, 'label': 'Workers', 'id': 'AR-Workers', 'title': 'Number of concurrent rebalance workers to run at once (use a proper value for your hardware, this will increase the load on the lnd server). Default 1', 'min':1, 'max':12})
+        form.append({'unit': 'ppm', 'form_id': 'ar_maxPPM', 'value': 0, 'label': 'AR Max PPM', 'id': 'AR-MaxPPM', 'title': 'Maximum estimated PPM cost for a rebalance attempt. 0 = disabled (no limit). Default 0', 'min':0, 'max':5000})
+        form.append({'unit': 'sats', 'form_id': 'ar_dailyBudget', 'value': 0, 'label': 'AR Daily Budget', 'id': 'AR-DailyBudget', 'title': 'Maximum sats to spend on rebalancing fees per day. 0 = unlimited. Default 0', 'min':0, 'max':10000000})
+        form.append({'unit': 'sats', 'form_id': 'ar_weeklyBudget', 'value': 0, 'label': 'AR Weekly Budget', 'id': 'AR-WeeklyBudget', 'title': 'Maximum sats to spend on rebalancing fees per week. 0 = unlimited. Default 0', 'min':0, 'max':10000000})
     if 'AF-' in prefixes:
         form.append({'unit': '', 'form_id': 'af_enabled', 'value': 0, 'label': 'Autofee', 'id': 'AF-Enabled', 'title': 'Enable/Disable All Auto-fee functionality', 'min':0, 'max':1})
         form.append({'unit': '', 'form_id': 'af_inbound', 'value': 0, 'label': 'Inbound Fees', 'id': 'AF-InboundFees', 'title': 'Enable/Disable Inbound Auto-fee functionality', 'min':0, 'max':1})
@@ -2033,6 +2037,9 @@ def get_local_settings(*prefixes):
         form.append({'unit': 'hours', 'form_id': 'af_updateHours', 'value': 24, 'label': 'AF Update', 'id': 'AF-UpdateHours', 'title': 'Minimum number of hours between fee updates for an individual channel. Default 24', 'min':1, 'max':100})
         form.append({'unit': '%', 'form_id': 'af_lowliq', 'value': 15, 'label': 'AF LowLiq', 'id': 'AF-LowLiqLimit', 'title': 'Limit for running low liq AF rules (increase when failed htlcs + no inbound). Default 15', 'min':0, 'max':100})
         form.append({'unit': '%', 'form_id': 'af_excess', 'value': 95, 'label': 'AF Excess', 'id': 'AF-ExcessLimit', 'title': 'Limit for running excess liq AF rules (decrease for stagnant channels and those with assisting revenues). Default 95', 'min':0, 'max':100})
+        form.append({'unit': '', 'form_id': 'af_timeOfDay', 'value': 0, 'label': 'AF Time of Day', 'id': 'AF-TimeOfDay', 'title': 'Enable time-of-day fee adjustments (peak-hour discounts). Default Off', 'min':0, 'max':1})
+        form.append({'unit': '%', 'form_id': 'af_liqRewardFactor', 'value': 20, 'label': 'AF Liq Reward', 'id': 'AF-LiquidityRewardFactor', 'title': 'Percentage discount applied to inbound fee for channels with low inbound liquidity to incentivise routing. Default 20', 'min':0, 'max':100})
+        form.append({'unit': '', 'form_id': 'af_competitorFees', 'value': 0, 'label': 'AF Competitor Fees', 'id': 'AF-CompetitorFees', 'title': 'Enable competitor-fee awareness: consider peer fee rates when adjusting fees. Default Off', 'min':0, 'max':1})
     if 'GUI-' in prefixes:
         form.append({'unit': '', 'form_id': 'gui_graphLinks', 'value': 'https://mempool.space/lightning', 'label': 'Graph URL', 'id': 'GUI-GraphLinks', 'title': 'Preferred Graph URL. Default https://mempool.space/lightning'})
         form.append({'unit': '', 'form_id': 'gui_netLinks', 'value': 'https://mempool.space', 'label': 'NET URL', 'id': 'GUI-NetLinks', 'title': 'Preferred NET URL. Default https://mempool.space'})
@@ -2040,6 +2047,7 @@ def get_local_settings(*prefixes):
     if 'LND-' in prefixes:
         form.append({'unit': '', 'form_id': 'lnd_cleanPayments', 'value': 0, 'label': 'LND Clean Payments', 'id': 'LND-CleanPayments', 'title': 'Clean LND Payments (toggles failed payment clean-up routine)', 'min':0, 'max':1})
         form.append({'unit': 'days', 'form_id': 'lnd_retentionDays', 'value': 30, 'label': 'LND Retention', 'id': 'LND-RetentionDays', 'title': 'LND Retention days for failed payment data', 'min':1, 'max':1000})
+        form.append({'unit': '', 'form_id': 'lnd_disableMPP', 'value': 0, 'label': 'Disable MPP', 'id': 'LND-DisableMPP', 'title': 'Disable Multi-Path Payments (MPP) for rebalancing. Default Off', 'min':0, 'max':1})
 
     for prefix in prefixes:
         ar_settings = LocalSettings.objects.filter(key__contains=prefix).values('key', 'value').order_by('key')
@@ -2076,6 +2084,13 @@ def update_settings(request):
                     {'form_id': 'af_updateHours', 'value': 24, 'parse': lambda x: int(x),'id': 'AF-UpdateHours'},
                     {'form_id': 'af_lowliq', 'value': 15, 'parse': lambda x: int(x),'id': 'AF-LowLiqLimit'},
                     {'form_id': 'af_excess', 'value': 95, 'parse': lambda x: int(x),'id': 'AF-ExcessLimit'},
+                    {'form_id': 'af_timeOfDay', 'value': 0, 'parse': lambda x: int(x),'id': 'AF-TimeOfDay'},
+                    {'form_id': 'af_liqRewardFactor', 'value': 20, 'parse': lambda x: int(x),'id': 'AF-LiquidityRewardFactor'},
+                    {'form_id': 'af_competitorFees', 'value': 0, 'parse': lambda x: int(x),'id': 'AF-CompetitorFees'},
+                    #AR budget/ppm
+                    {'form_id': 'ar_maxPPM', 'value': 0, 'parse': lambda x: int(x),'id': 'AR-MaxPPM'},
+                    {'form_id': 'ar_dailyBudget', 'value': 0, 'parse': lambda x: int(x),'id': 'AR-DailyBudget'},
+                    {'form_id': 'ar_weeklyBudget', 'value': 0, 'parse': lambda x: int(x),'id': 'AR-WeeklyBudget'},
                     #GUI
                     {'form_id': 'gui_graphLinks', 'value': 'https://mempool.space/lightning', 'parse': lambda x: str(x),'id': 'GUI-GraphLinks'},
                     {'form_id': 'gui_netLinks', 'value': 'https://mempool.space', 'parse': lambda x: str(x),'id': 'GUI-NetLinks'},
@@ -2083,6 +2098,7 @@ def update_settings(request):
                     #LND
                     {'form_id': 'lnd_cleanPayments', 'value': 0, 'parse': lambda x: int(x), 'id': 'LND-CleanPayments'},
                     {'form_id': 'lnd_retentionDays', 'value': 30, 'parse': lambda x: int(x), 'id': 'LND-RetentionDays'},
+                    {'form_id': 'lnd_disableMPP', 'value': 0, 'parse': lambda x: int(x), 'id': 'LND-DisableMPP'},
                     ]
 
         form = LocalSettingsForm(request.POST)
@@ -3492,3 +3508,62 @@ def reset_api(request):
             return Response({'error': f'Error deleting table: {error}'})
     else:
         return Response({'error': serializer.error_messages})
+@is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
+def sankey(request):
+    return render(request, 'sankey.html', {
+        'graph_links': graph_links(),
+        'network': 'testnet/' if settings.LND_NETWORK == 'testnet' else '',
+    })
+
+@api_view(['GET'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def sankey_data(request):
+    mode = request.GET.get('mode', 'routing')
+    days = request.GET.get('days', '30')
+
+    if days == 'all':
+        filter_date = None
+    else:
+        try:
+            filter_date = datetime.now() - timedelta(days=int(days))
+        except (ValueError, TypeError):
+            filter_date = datetime.now() - timedelta(days=30)
+
+    links = []
+    nodes_set = set()
+
+    if mode == 'routing':
+        qs = Forwards.objects
+        if filter_date:
+            qs = qs.filter(forward_date__gte=filter_date)
+        rows = qs.values('chan_in_alias', 'chan_out_alias').annotate(amount=Sum('amt_out_msat')).filter(amount__gt=0)
+        flow_dict = defaultdict(int)
+        for row in rows:
+            src = row['chan_in_alias'] or 'Unknown'
+            tgt = row['chan_out_alias'] or 'Unknown'
+            amt = int(row['amount'] // 1000)
+            if src != tgt and amt > 0:
+                flow_dict[(src, tgt)] += amt
+        for (src, tgt), amt in flow_dict.items():
+            links.append({'source': src, 'target': tgt, 'value': amt})
+            nodes_set.add(src)
+            nodes_set.add(tgt)
+    elif mode == 'rebalancing':
+        qs = Payments.objects.filter(status=2, rebal_chan__isnull=False)
+        if filter_date:
+            qs = qs.filter(creation_date__gte=filter_date)
+        chan_id_to_alias = {str(c.chan_id): c.alias for c in Channels.objects.filter(is_open=True)}
+        flow_dict = defaultdict(int)
+        for p in qs.values('chan_out_alias', 'rebal_chan', 'value'):
+            src = p['chan_out_alias'] or 'Unknown'
+            tgt = chan_id_to_alias.get(str(p['rebal_chan']), str(p['rebal_chan']) or 'Unknown')
+            amt = int(p['value'] or 0)
+            if src != tgt and amt > 0:
+                flow_dict[(src, tgt)] += amt
+        for (src, tgt), amt in flow_dict.items():
+            links.append({'source': src, 'target': tgt, 'value': amt})
+            nodes_set.add(src)
+            nodes_set.add(tgt)
+
+    nodes = [{'id': n, 'name': n} for n in sorted(nodes_set)]
+    return Response({'nodes': nodes, 'links': links})

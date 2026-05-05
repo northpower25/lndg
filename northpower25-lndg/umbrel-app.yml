@@ -35,6 +35,6 @@ releaseNotes: >-
   Fix log file path for Docker deployments. Always write initial password to data/lndg-admin.txt.
 path: ""
 defaultUsername: "lndg-admin"
-defaultPassword: "$APP_PASSWORD"
+defaultPassword: "See /app/data/lndg-admin.txt"
 submitter: northpower25
 submission: https://github.com/northpower25/lndg
