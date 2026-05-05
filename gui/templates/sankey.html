@@ -7,30 +7,36 @@
 
   <!-- Controls -->
   <div class="w3-bar w3-padding-small" style="gap:8px;display:flex;flex-wrap:wrap;align-items:center;">
-    <label style="margin-right:4px;font-weight:bold">Mode:</label>
-    <select id="modeSelect" class="w3-select" style="width:auto;height:30px;">
+    <label title="Choose what data to visualise: Routing shows how much traffic (sats) flows between channels via forwarded payments; Rebalancing shows how much liquidity was moved between channels via rebalance payments." style="margin-right:4px;font-weight:bold">Mode:</label>
+    <select id="modeSelect" class="w3-select" style="width:auto;height:30px;"
+      title="Routing: visualises forwarded payment flows between channels (source channel → destination channel, sized by total sats). Rebalancing: visualises rebalance flows (outgoing channel → refilled channel, sized by total sats moved).">
       <option value="routing">Routing</option>
       <option value="rebalancing">Rebalancing</option>
     </select>
     &nbsp;&nbsp;
-    <label style="margin-right:4px;font-weight:bold">Period:</label>
-    <select id="daysSelect" class="w3-select" style="width:auto;height:30px;">
+    <label title="Limit the data to the selected lookback window. Shorter periods highlight recent flow patterns; longer periods or All Time give a complete historical picture." style="margin-right:4px;font-weight:bold">Period:</label>
+    <select id="daysSelect" class="w3-select" style="width:auto;height:30px;"
+      title="Only events within this many days are included. All Time includes every recorded forward or rebalance in the database.">
       <option value="7">7 Days</option>
       <option value="30" selected>30 Days</option>
       <option value="90">90 Days</option>
       <option value="all">All Time</option>
     </select>
     &nbsp;&nbsp;
-    <label style="margin-right:4px;font-weight:bold">View:</label>
-    <button id="btnDiagram" class="w3-button w3-blue" onclick="switchView('diagram')">Diagram</button>
-    <button id="btnTable" class="w3-button w3-light-grey" onclick="switchView('table')">Matrix Table</button>
+    <label title="Switch between the two presentation styles for the same underlying data." style="margin-right:4px;font-weight:bold">View:</label>
+    <button id="btnDiagram" class="w3-button w3-blue" onclick="switchView('diagram')"
+      title="Sankey diagram: channel nodes are shown on the left (source) and right (target). The width of each ribbon is proportional to the total sats that flowed along that path. Click a node to highlight only its ribbons; click again to reset.">Diagram</button>
+    <button id="btnTable" class="w3-button w3-light-grey" onclick="switchView('table')"
+      title="Matrix table: rows = source channels, columns = destination channels. Each cell shows the total sats that flowed from that source to that destination. Cell colour intensity scales with the flow size. Hover a cell for the exact amount.">Matrix Table</button>
     &nbsp;&nbsp;
     <span id="loadingIndicator" style="display:none;color:#888;">Loading...</span>
   </div>
 
   <!-- Legend -->
   <div id="sankeyLegend" class="w3-container w3-padding-small w3-small" style="color:#888;">
-    Click on a node to highlight its flows. Click again to reset.
+    <span title="Each ribbon represents the total sats routed or rebalanced between two channels. Width scales with volume. Hover a ribbon to see the exact amount; click a node to isolate its flows.">
+      Diagram: ribbon width = total sats between two channels. Hover for details. Click a node to highlight its flows, click again to reset.
+    </span>
   </div>
 
   <!-- Sankey Diagram -->
