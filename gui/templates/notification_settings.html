@@ -8,8 +8,7 @@
         {# ── Telegram ─────────────────────────────────────────────────── #}
         <div class="w3-quarter w3-container w3-row">
           <label class="w3-col" title="Enable Telegram notifications via a Telegram Bot">Telegram</label>
-          <select style="height:27px" class="w3-col" name="tg_enabled" id="tg_enabled"
-                  onchange="document.getElementById('tg_fields').style.display=this.value==='true'?'block':'none'">
+          <select style="height:27px" class="w3-col" name="tg_enabled">
             <option value="false" {% if not notification_cfg.tg_enabled %}selected{% endif %}>Off</option>
             <option value="true"  {% if notification_cfg.tg_enabled  %}selected{% endif %}>On</option>
           </select>
@@ -27,56 +26,9 @@
                  placeholder="-100xxxxxxxxx" value="{{ notification_cfg.tg_chat_id }}"/>
         </div>
 
-        {# ── NOSTR ────────────────────────────────────────────────────── #}
-        <div class="w3-quarter w3-container w3-row">
-          <label class="w3-col" title="Enable NOSTR notifications (NIP-01 text notes published to relays)">NOSTR</label>
-          <select style="height:27px" class="w3-col" name="nostr_enabled" id="nostr_enabled"
-                  onchange="document.getElementById('nostr_fields').style.display=this.value==='true'?'block':'none'">
-            <option value="false" {% if not notification_cfg.nostr_enabled %}selected{% endif %}>Off</option>
-            <option value="true"  {% if notification_cfg.nostr_enabled  %}selected{% endif %}>On</option>
-          </select>
-        </div>
-
-        <div class="w3-half w3-container w3-row">
-          <label class="w3-col"
-                 title="32-byte hex NOSTR private key (nsec). Keep this secret! It is used to sign events (NIP-01).">
-            NOSTR Private Key (hex)
-          </label>
-          <input class="w3-col" type="password" name="nostr_privkey" maxlength="64"
-                 placeholder="{% if notification_cfg.nostr_privkey %}Key is set – paste to replace{% else %}64-char hex private key{% endif %}"
-                 autocomplete="off"/>
-          {% if notification_cfg.nostr_privkey %}
-          <label style="font-size:0.85em">
-            <input type="checkbox" name="nostr_privkey_clear" value="1"> Clear existing key
-          </label>
-          {% endif %}
-          {% if notification_cfg.nostr_privkey %}
-          <small>
-            Pubkey:
-            <span id="nostr_pubkey_display" title="Your NOSTR x-only public key">loading...</span>
-            <script>
-              Sync.GET('api/nostr_pubkey/', r => {
-                const el = document.getElementById('nostr_pubkey_display');
-                if (el) el.textContent = r.pubkey ? r.pubkey.substring(0, 16) + '…' : 'error';
-              });
-            </script>
-          </small>
-          {% endif %}
-        </div>
-
-        <div class="w3-half w3-container w3-row">
-          <label class="w3-col"
-                 title="Comma-separated list of NOSTR relay WebSocket URLs (wss://...). Events are published to all relays.">
-            NOSTR Relays
-          </label>
-          <input class="w3-col" type="text" name="nostr_relays"
-                 placeholder="wss://relay.damus.io,wss://nos.lol"
-                 value="{{ notification_cfg.nostr_relays }}"/>
-        </div>
-
         {# ── Event triggers ───────────────────────────────────────────── #}
         <div style="margin-top:12px" class="w3-full w3-container w3-row">
-          <label class="w3-col" style="margin-bottom:6px"><strong>Notify when…</strong></label>
+          <label class="w3-col" style="margin-bottom:6px"><strong>Notify when...</strong></label>
         </div>
 
         <div class="w3-quarter w3-container w3-row">
@@ -118,7 +70,7 @@
                  title="Send a test notification via all enabled backends"
                  onclick="Sync.POST('api/test_notification/', {}, r => {
                    const msg = r.message || r.error || 'Unknown response';
-                   const detail = r.results ? ' – ' + JSON.stringify(r.results) : '';
+                   const detail = r.results ? ' - ' + JSON.stringify(r.results) : '';
                    showBannerMsg('Test Notification', msg + detail);
                  })">
         </div>

@@ -3804,22 +3804,6 @@ def notification_settings(request):
         cfg.tg_enabled = _bool('tg_enabled')
         cfg.tg_bot_token = request.POST.get('tg_bot_token', '').strip()
         cfg.tg_chat_id = request.POST.get('tg_chat_id', '').strip()
-        cfg.nostr_enabled = _bool('nostr_enabled')
-        raw_privkey = request.POST.get('nostr_privkey', '').strip().lower()
-        if raw_privkey:
-            # Only overwrite when the user supplies a new value.
-            try:
-                int(raw_privkey, 16)
-                if len(raw_privkey) == 64:
-                    cfg.nostr_privkey = raw_privkey
-                else:
-                    messages.error(request, 'NOSTR private key must be a 64-character hex string (32 bytes).')
-            except ValueError:
-                messages.error(request, 'NOSTR private key must be a valid hex string.')
-        # Allow clearing the key by submitting the special sentinel value 'clear'
-        elif request.POST.get('nostr_privkey_clear') == '1':
-            cfg.nostr_privkey = ''
-        cfg.nostr_relays = request.POST.get('nostr_relays', '').strip()
         cfg.notify_rebalance_success = _bool('notify_rebalance_success')
         cfg.notify_rebalance_fail = _bool('notify_rebalance_fail')
         cfg.notify_channel_inactive = _bool('notify_channel_inactive')
@@ -3839,29 +3823,11 @@ def test_notification(request):
         import notify as notify_module
         result = notify_module.send_notification('🔔 LNDg test notification – your setup is working!')
         tg_ok = result.get('telegram')
-        nostr_ok = result.get('nostr')
         summary = {}
         if tg_ok is not None:
             summary['telegram'] = 'sent' if tg_ok else 'failed'
-        if nostr_ok is not None:
-            summary['nostr'] = {r: ('sent' if v else 'failed') for r, v in nostr_ok.items()}
         if not summary:
-            return Response({'message': 'No notification backends enabled. Configure Telegram or NOSTR first.'}, status=400)
+            return Response({'message': 'No notification backends enabled. Configure Telegram first.'}, status=400)
         return Response({'message': 'Test notification dispatched.', 'results': summary})
     except Exception:
         return Response({'error': 'Notification test failed. Check server logs for details.'}, status=500)
-
-
-@is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
-@api_view(['GET'])
-def nostr_pubkey(request):
-    """Return the NOSTR public key derived from the configured private key."""
-    try:
-        import notify as notify_module
-        cfg = NotificationSettings.load()
-        if not cfg.nostr_privkey:
-            return Response({'error': 'No NOSTR private key configured.'}, status=400)
-        pubkey = notify_module.nostr_pubkey_from_privkey(cfg.nostr_privkey)
-        return Response({'pubkey': pubkey})
-    except Exception:
-        return Response({'error': 'Failed to derive NOSTR public key. Check server logs.'}, status=500)

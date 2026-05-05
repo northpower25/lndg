@@ -109,6 +109,5 @@ urlpatterns = [
     # Notifications
     path('notification_settings/', views.notification_settings, name='notification-settings'),
     path('api/test_notification/', views.test_notification, name='test-notification'),
-    path('api/nostr_pubkey/', views.nostr_pubkey, name='nostr-pubkey'),
     path('lndg-admin/', admin.site.urls),
 ]
