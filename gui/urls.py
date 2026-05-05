@@ -106,5 +106,9 @@ urlpatterns = [
     path('api/pay_invoice/', views.pay_invoice, name='pay-invoice'),
     path('api/probe_route/', views.probe_route, name='probe-route'),
     path('api/cert_validity/', views.cert_validity, name='cert-validity'),
+    # Notifications
+    path('notification_settings/', views.notification_settings, name='notification-settings'),
+    path('api/test_notification/', views.test_notification, name='test-notification'),
+    path('api/nostr_pubkey/', views.nostr_pubkey, name='nostr-pubkey'),
     path('lndg-admin/', admin.site.urls),
 ]

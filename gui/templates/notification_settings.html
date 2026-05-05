@@ -1,0 +1,124 @@
+<div class="w3-container w3-padding-small">
+  <form action="/notification_settings/" method="post" id="notifyForm">
+    {% csrf_token %}
+    <h2>Notification Settings</h2>
+    <div class="w3-container">
+      <div class="w3-row-padding w3-container">
+
+        {# ── Telegram ─────────────────────────────────────────────────── #}
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Enable Telegram notifications via a Telegram Bot">Telegram</label>
+          <select style="height:27px" class="w3-col" name="tg_enabled" id="tg_enabled"
+                  onchange="document.getElementById('tg_fields').style.display=this.value==='true'?'block':'none'">
+            <option value="false" {% if not notification_cfg.tg_enabled %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.tg_enabled  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Telegram Bot Token from @BotFather (e.g. 123456:ABCdef...)">Bot Token</label>
+          <input class="w3-col" type="text" name="tg_bot_token" maxlength="100"
+                 placeholder="123456:ABCdef..." value="{{ notification_cfg.tg_bot_token }}"/>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Telegram Chat ID or @channel username where messages are sent">Chat ID</label>
+          <input class="w3-col" type="text" name="tg_chat_id" maxlength="50"
+                 placeholder="-100xxxxxxxxx" value="{{ notification_cfg.tg_chat_id }}"/>
+        </div>
+
+        {# ── NOSTR ────────────────────────────────────────────────────── #}
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Enable NOSTR notifications (NIP-01 text notes published to relays)">NOSTR</label>
+          <select style="height:27px" class="w3-col" name="nostr_enabled" id="nostr_enabled"
+                  onchange="document.getElementById('nostr_fields').style.display=this.value==='true'?'block':'none'">
+            <option value="false" {% if not notification_cfg.nostr_enabled %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.nostr_enabled  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-half w3-container w3-row">
+          <label class="w3-col"
+                 title="32-byte hex NOSTR private key (nsec). Keep this secret! It is used to sign events (NIP-01).">
+            NOSTR Private Key (hex)
+          </label>
+          <input class="w3-col" type="password" name="nostr_privkey" maxlength="64"
+                 placeholder="64-char hex private key"
+                 value="{% if notification_cfg.nostr_privkey %}{{ notification_cfg.nostr_privkey }}{% endif %}"/>
+          {% if notification_cfg.nostr_privkey %}
+          <small>
+            Pubkey:
+            <span id="nostr_pubkey_display" title="Your NOSTR x-only public key">loading...</span>
+            <script>
+              Sync.GET('api/nostr_pubkey/', r => {
+                const el = document.getElementById('nostr_pubkey_display');
+                if (el) el.textContent = r.pubkey ? r.pubkey.substring(0, 16) + '…' : 'error';
+              });
+            </script>
+          </small>
+          {% endif %}
+        </div>
+
+        <div class="w3-half w3-container w3-row">
+          <label class="w3-col"
+                 title="Comma-separated list of NOSTR relay WebSocket URLs (wss://...). Events are published to all relays.">
+            NOSTR Relays
+          </label>
+          <input class="w3-col" type="text" name="nostr_relays"
+                 placeholder="wss://relay.damus.io,wss://nos.lol"
+                 value="{{ notification_cfg.nostr_relays }}"/>
+        </div>
+
+        {# ── Event triggers ───────────────────────────────────────────── #}
+        <div style="margin-top:12px" class="w3-full w3-container w3-row">
+          <label class="w3-col" style="margin-bottom:6px"><strong>Notify when…</strong></label>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Send a notification when an auto-rebalance completes successfully">Rebalance Success</label>
+          <select style="height:27px" class="w3-col" name="notify_rebalance_success">
+            <option value="false" {% if not notification_cfg.notify_rebalance_success %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.notify_rebalance_success  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Send a notification when an auto-rebalance attempt fails">Rebalance Fail</label>
+          <select style="height:27px" class="w3-col" name="notify_rebalance_fail">
+            <option value="false" {% if not notification_cfg.notify_rebalance_fail %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.notify_rebalance_fail  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Send a notification when a channel becomes inactive">Channel Inactive</label>
+          <select style="height:27px" class="w3-col" name="notify_channel_inactive">
+            <option value="false" {% if not notification_cfg.notify_channel_inactive %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.notify_channel_inactive  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="Send a notification when the auto-fee engine adjusts a channel fee">Auto-Fee Change</label>
+          <select style="height:27px" class="w3-col" name="notify_autofee">
+            <option value="false" {% if not notification_cfg.notify_autofee %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.notify_autofee  %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        {# ── Action buttons ───────────────────────────────────────────── #}
+        <div style="height:37px;margin-top:12px" class="w3-quarter w3-container w3-row w3-margin-top">
+          <input style="margin-top:7px" type="submit" value="Save">
+          <input style="margin-top:7px;margin-left:8px" type="button" value="Send Test"
+                 title="Send a test notification via all enabled backends"
+                 onclick="Sync.POST('api/test_notification/', {}, r => {
+                   const msg = r.message || r.error || 'Unknown response';
+                   const detail = r.results ? ' – ' + JSON.stringify(r.results) : '';
+                   showBannerMsg('Test Notification', msg + detail);
+                 })">
+        </div>
+
+      </div>
+    </div>
+  </form>
+</div>

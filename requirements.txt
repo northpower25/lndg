@@ -10,3 +10,4 @@ asyncio
 bech32
 cryptography
 paramiko
+websocket-client

@@ -369,3 +369,30 @@ class ChannelEfficiency(models.Model):
     updated = models.DateTimeField(default=timezone.now)
     class Meta:
         app_label = 'gui'
+
+class NotificationSettings(models.Model):
+    """Singleton model that stores notification backend configuration."""
+    # Telegram
+    tg_enabled = models.BooleanField(default=False)
+    tg_bot_token = models.CharField(max_length=100, blank=True, default='')
+    tg_chat_id = models.CharField(max_length=50, blank=True, default='')
+    # NOSTR
+    nostr_enabled = models.BooleanField(default=False)
+    nostr_privkey = models.CharField(max_length=64, blank=True, default='',
+        help_text='32-byte hex private key for NOSTR signing (NIP-01)')
+    nostr_relays = models.TextField(blank=True, default='wss://relay.damus.io,wss://nos.lol',
+        help_text='Comma-separated list of NOSTR relay WebSocket URLs')
+    # Event triggers
+    notify_rebalance_success = models.BooleanField(default=True)
+    notify_rebalance_fail = models.BooleanField(default=False)
+    notify_channel_inactive = models.BooleanField(default=True)
+    notify_autofee = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'gui'
+
+    @classmethod
+    def load(cls):
+        """Return the singleton row, creating it if it doesn't exist."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
