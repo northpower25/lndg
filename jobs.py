@@ -13,11 +13,20 @@ from os import environ
 from requests import get
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency
+from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings
 import af
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
+
+
+def _safe_notify(message: str) -> None:
+    """Send a notification, suppressing all exceptions so jobs never fail because of it."""
+    try:
+        import notify as notify_module
+        notify_module.send_notification(message)
+    except Exception as exc:
+        print(f"{datetime.now().strftime('%c')} : [Notify] : Error sending notification: {exc}")
 
 def update_payments(stub):
     self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey
@@ -204,6 +213,7 @@ def update_channels(stub):
     get_info = stub.GetInfo(ln.GetInfoRequest())
     block_height = get_info.block_height
     version = get_info.version
+    notify_cfg = NotificationSettings.load()
     for channel in channels:
         if Channels.objects.filter(chan_id=channel.chan_id).exists():
             #Update the channel record with the most current data
@@ -283,6 +293,17 @@ def update_channels(stub):
                 PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='Connection', old_value=0, new_value=1, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
             else:
                 PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='Connection', old_value=1, new_value=0, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
+                # Notify on channel going inactive
+                try:
+                    if notify_cfg.notify_channel_inactive:
+                        alias = db_channel.alias or db_channel.remote_pubkey[:12]
+                        _safe_notify(
+                            f'⚠️ <b>Channel inactive</b>\n'
+                            f'Peer: {alias}\n'
+                            f'Chan ID: {db_channel.chan_id}'
+                        )
+                except Exception:
+                    pass
             db_channel.is_active = channel.active
         try:
             chan_data = stub.GetChanInfo(ln.ChanInfoRequest(chan_id=channel.chan_id))
@@ -608,6 +629,7 @@ def auto_fees(stub):
     else:
         LocalSettings(key='AF-InboundFees', value='0').save()
         inbound_enabled = False
+    notify_cfg = NotificationSettings.load()
     try:
         channels = Channels.objects.filter(is_open=True, is_active=True, private=False, auto_fees=True)
         results_df = af.main(channels)
@@ -640,6 +662,15 @@ def auto_fees(stub):
                         print(f"{datetime.now().strftime('%c')} : [Data] : Updating outbound fees for channel {str(target_channel['chan_id'])} to a value of: {str(target_channel['new_rate'])}")
                         channel.local_fee_rate = target_channel['new_rate']
                         Autofees(chan_id=channel.chan_id, peer_alias=channel.alias, setting=(f"AF [ {target_channel['net_routed_7day']}:{target_channel['in_percent']}:{target_channel['out_percent']} ]"), old_value=target_channel['local_fee_rate'], new_value=target_channel['new_rate']).save()
+                        try:
+                            if notify_cfg.notify_autofee:
+                                _safe_notify(
+                                    f'💸 <b>Auto-fee update</b>\n'
+                                    f'Channel: {channel.alias} ({channel.chan_id})\n'
+                                    f'Fee rate: {target_channel["local_fee_rate"]} → {target_channel["new_rate"]} ppm'
+                                )
+                        except Exception:
+                            pass
                     channel.fees_updated = datetime.now()
                     channel.save()
     except Exception as e:

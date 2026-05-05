@@ -127,6 +127,15 @@ class UpdateSetting(forms.Form):
     key = forms.CharField(label='setting', max_length=20)
     value = forms.CharField(label='value', max_length=50)
 
+class NotificationSettingsForm(forms.Form):
+    tg_enabled = forms.BooleanField(required=False, label='Telegram Enabled')
+    tg_bot_token = forms.CharField(required=False, max_length=100, label='Bot Token')
+    tg_chat_id = forms.CharField(required=False, max_length=50, label='Chat ID')
+    notify_rebalance_success = forms.BooleanField(required=False, label='Notify on Rebalance Success')
+    notify_rebalance_fail = forms.BooleanField(required=False, label='Notify on Rebalance Fail')
+    notify_channel_inactive = forms.BooleanField(required=False, label='Notify on Channel Inactive')
+    notify_autofee = forms.BooleanField(required=False, label='Notify on Auto-Fee Change')
+
 class BatchOpenForm(forms.Form):
     pubkey1 = forms.CharField(label='pubkey1', max_length=66, required=False)
     amt1 = forms.IntegerField(label='amt1', required=False)

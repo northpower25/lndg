@@ -13,7 +13,32 @@ from typing import List
 
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency
+from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency, NotificationSettings
+
+
+def _notify_rebalance(rebalance):
+    """Send a notification for a completed rebalance attempt (best-effort)."""
+    try:
+        cfg = NotificationSettings.load()
+        if rebalance.status == 2 and cfg.notify_rebalance_success:
+            msg = (
+                f'✅ <b>Rebalance successful</b>\n'
+                f'Target: {rebalance.target_alias}\n'
+                f'Amount: {rebalance.value:,} sats\n'
+                f'Fees paid: {rebalance.fees_paid or 0:.3f} sats'
+            )
+        elif rebalance.status > 2 and cfg.notify_rebalance_fail:
+            msg = (
+                f'❌ <b>Rebalance failed</b> (status {rebalance.status})\n'
+                f'Target: {rebalance.target_alias}\n'
+                f'Amount: {rebalance.value:,} sats'
+            )
+        else:
+            return
+        import notify as notify_module
+        notify_module.send_notification(msg)
+    except Exception as exc:
+        print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Notification error: {exc}")
 
 @sync_to_async
 def get_out_cans(rebalance, auto_rebalance_channels):
@@ -208,6 +233,7 @@ async def run_rebalancer(rebalance, worker):
             rebalance.stop = datetime.now()
             await save_record(rebalance)
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} completed payment attempts for: {rebalance.payment_hash}")
+            _notify_rebalance(rebalance)
             original_alias = rebalance.target_alias
             inc=1.21
             dec=2
