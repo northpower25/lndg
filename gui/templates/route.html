@@ -149,7 +149,7 @@
       res.innerHTML = `<span style="color:red">${resp.error}</span>`;
     } else {
       const d = resp.data;
-      res.innerHTML = `Estimated fee: <b>${d.routing_fee_sats.toLocaleFixed ? d.routing_fee_sats.toLocaleFixed(3) : d.routing_fee_sats} sats</b> (${d.routing_fee_msat} msat) | Time-lock: ${d.time_lock_delay} blocks`;
+      res.innerHTML = `Estimated fee: <b>${d.routing_fee_sats.toFixed(3)} sats</b> (${d.routing_fee_msat} msat) | Time-lock: ${d.time_lock_delay} blocks`;
     }
   }
 </script>

@@ -3635,8 +3635,8 @@ def clean_failed_payments(request):
     try:
         deleted, _ = Payments.objects.filter(status__in=[1, 3]).delete()
         return Response({'message': f'Removed {deleted} failed/in-flight payment record(s).'})
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Failed to clean payments. Check server logs.'}, status=500)
 
 
 @api_view(['POST'])
@@ -3666,7 +3666,7 @@ def decode_invoice(request):
         error = str(e)
         details_index = error.find('details =') + 11
         debug_end = error.find('debug_error_string =') - 3
-        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        error_msg = error[details_index:debug_end]
         return Response({'error': f'Decode failed: {error_msg}'})
 
 
@@ -3698,7 +3698,7 @@ def pay_invoice(request):
         error = str(e)
         details_index = error.find('details =') + 11
         debug_end = error.find('debug_error_string =') - 3
-        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        error_msg = error[details_index:debug_end]
         return Response({'error': f'Payment failed: {error_msg}'})
 
 
@@ -3729,7 +3729,7 @@ def probe_route(request):
         error = str(e)
         details_index = error.find('details =') + 11
         debug_end = error.find('debug_error_string =') - 3
-        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        error_msg = error[details_index:debug_end]
         return Response({'error': f'Probe failed: {error_msg}'})
 
 
@@ -3759,5 +3759,5 @@ def cert_validity(request):
                 'expiry': expiry_dt.strftime('%Y-%m-%d'),
             }
         })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Failed to read TLS certificate. Check server logs.'}, status=500)
