@@ -154,6 +154,7 @@
   <a class="w3-bar-item w3-hover-blue" href="/batch" target="_blank">Batching</a>
   <a class="w3-bar-item w3-hover-blue" href="/trades" target="_blank">Trades</a>
   <a class="w3-bar-item w3-hover-blue" href="/advanced" target="_blank">Advanced Settings</a>
+  <a class="w3-bar-item w3-hover-blue" href="/sankey/" target="_blank">Flow Diagram</a>
   <a class="w3-bar-item w3-hover-blue" href="/logs/?tail=20" target="_blank">Logs</a>
 </div>
 <div id="active_channels_container" style="display:none" class="w3-container w3-padding-small">
@@ -987,6 +988,17 @@
   document.addEventListener('DOMContentLoaded', async () => { 
     const builder = buildMain()
     await builder
+    // bos cert-validity-days: check TLS cert expiry and warn if < 30 days
+    try {
+      const cv = await GET('cert_validity');
+      if (cv && cv.data && cv.data.days_remaining <= 30) {
+        const banner = document.createElement('div');
+        banner.className = 'w3-panel w3-red w3-display-container w3-padding';
+        banner.innerHTML = `<span onclick="this.parentElement.style.display='none'" class="w3-button w3-hover-red w3-display-topright">X</span>
+          <h3>⚠ LND TLS certificate expires in ${cv.data.days_remaining} day(s) (on ${cv.data.expiry}). Renew it to keep LNDg connected.</h3>`;
+        document.getElementById('content').insertBefore(banner, document.getElementById('content').firstChild);
+      }
+    } catch(e) {}
   })
 </script>
 {% endblock %}

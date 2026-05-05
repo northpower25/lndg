@@ -264,7 +264,7 @@ def initialize_django(adminuser, adminpw):
             try:
                 call_command('createsuperuser', username=adminuser, email='admin@lndg.local', interactive=False)
                 admin = get_user_model().objects.get(username=adminuser)
-                login_pw = secrets.token_urlsafe(16) if adminpw is None else adminpw
+                login_pw = secrets.token_urlsafe(16) if adminpw is None or adminpw == '' else adminpw
                 admin.set_password(login_pw)
                 admin.save()
                 try:

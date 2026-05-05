@@ -241,3 +241,14 @@ class FailedHTLCSerializer(serializers.HyperlinkedModelSerializer):
 
 class ResetSerializer(serializers.Serializer):
     table = serializers.CharField(max_length=20)
+
+class DecodeInvoiceSerializer(serializers.Serializer):
+    payment_request = serializers.CharField(max_length=2000)
+
+class PayInvoiceSerializer(serializers.Serializer):
+    payment_request = serializers.CharField(max_length=2000)
+    max_fee_sats = serializers.IntegerField(required=False, default=100, min_value=0)
+
+class ProbeRouteSerializer(serializers.Serializer):
+    dest_pubkey = serializers.CharField(max_length=66, min_length=66)
+    amount_sats = serializers.IntegerField(min_value=1)

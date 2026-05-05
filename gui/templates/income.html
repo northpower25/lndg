@@ -7,6 +7,8 @@
 <div class="w3-container w3-padding-small">
   <h2>P&L Statement For <a href="{{ graph_links }}/{{ network }}node/{{ node_info.identity_pubkey }}" target="_blank">{% if node_info.alias != "" %}{{ node_info.alias }}</a> <small class="w3-round w3-border-small w3-border-grey">{{ node_info.identity_pubkey }}</small>{% else %}{{ node_info.identity_pubkey }}</a>{% endif %}</h2>
   <span class="input" data-unit="%"><label title="Aggregate events with `cost`, `offchain` or `onchain` < minimum `step`% value">Step > </label> <input id="step" value="0.01" min="0" step="0.1" max="100" type="number"/></span>
+  <a title="Download all forwarding revenue, payments, invoices and on-chain transactions as a CSV (bos accounting)" href="/export_accounting/" style="margin-left:12px;">⬇ Export Accounting CSV</a>
+  <span id="btcPriceWidget" style="margin-left:20px;font-size:0.9em;color:#888;" title="Current BTC price fetched from mempool.space (bos price)">Loading BTC price…</span>
   <canvas id="balances" style="max-height:500px"></canvas>
   <input id="timeFilter" type="range" min="0" max="100" style="width:100%" value="0"/>
   <script>
@@ -233,4 +235,18 @@
     </tr>
   </table>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', async function() {
+    try {
+      const r = await fetch('https://mempool.space/api/v1/prices');
+      const d = await r.json();
+      const usd = d.USD ? '$' + d.USD.toLocaleString() : '';
+      const eur = d.EUR ? '€' + d.EUR.toLocaleString() : '';
+      const parts = [usd, eur].filter(Boolean);
+      byId('btcPriceWidget').textContent = parts.length ? 'BTC: ' + parts.join(' / ') : '';
+    } catch(e) {
+      byId('btcPriceWidget').textContent = '';
+    }
+  });
+</script>
 {% endblock %}

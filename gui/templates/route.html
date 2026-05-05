@@ -3,6 +3,17 @@
 {% block content %}
 {% load euformat %}
 {% load humanize %}
+<button style="position:absolute;top:50px;right:50px;" title="Estimate the routing fee to a destination pubkey without sending (bos probe)" onclick="byId('probeModal').style.display='block'">Probe Route</button>
+<div id="probeModal" style="display:none;position:absolute;top:30px;right:30px;padding:30px;z-index:11;background-color:rgb(225,145,50);border-style:solid;border-width:3px;" class="w3-round w3-container">
+  <h2>Probe Route (bos probe)</h2>
+  <label>Destination Pubkey (66 hex chars)</label><br>
+  <input id="probePubkey" type="text" style="width:100%;min-width:400px;" placeholder="02…" maxlength="66"><br><br>
+  <label title="Payment amount to use for the route-fee estimation">Amount (sats)</label>
+  <input id="probeAmount" type="number" min="1" value="100000"><br><br>
+  <button onclick="probeRoute()">Probe</button>
+  <button onclick="byId('probeModal').style.display='none'" style="margin-left:8px;">Close</button>
+  <div id="probeResult" style="margin-top:12px;"></div>
+</div>
 {% if route %}
 <div class="w3-container w3-padding-small">
   <h2>Route For : {{ payment_hash }}{% if total_cost %} | Total Costs: {{ total_cost }} [{{ total_ppm }}]{% endif %}</h2>
@@ -127,4 +138,19 @@
   </table>
 </div>
 {% endif %}
+<script>
+  async function probeRoute() {
+    const pubkey = byId('probePubkey').value.trim();
+    const amount = parseInt(byId('probeAmount').value) || 100000;
+    const res = byId('probeResult');
+    res.textContent = 'Probing…';
+    const resp = await POST('probe_route', {body: {dest_pubkey: pubkey, amount_sats: amount}});
+    if (resp.error) {
+      res.innerHTML = `<span style="color:red">${resp.error}</span>`;
+    } else {
+      const d = resp.data;
+      res.innerHTML = `Estimated fee: <b>${d.routing_fee_sats.toFixed(3)} sats</b> (${d.routing_fee_msat} msat) | Time-lock: ${d.time_lock_delay} blocks`;
+    }
+  }
+</script>
 {% endblock %}

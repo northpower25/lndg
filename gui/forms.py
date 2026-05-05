@@ -50,6 +50,9 @@ class AutoRebalanceForm(forms.Form):
     autopilot = forms.IntegerField(label='autopilot', required=False)
     autopilotdays = forms.IntegerField(label='autopilotdays', required=False)
     workers = forms.IntegerField(label='workers', required=False)
+    ar_maxPPM = forms.IntegerField(label='ar_maxPPM', required=False)
+    ar_dailyBudget = forms.IntegerField(label='ar_dailyBudget', required=False)
+    ar_weeklyBudget = forms.IntegerField(label='ar_weeklyBudget', required=False)
     update_channels = forms.BooleanField(widget=forms.CheckboxSelectMultiple, required=False)
 
 class AutoFeesForm(AutoRebalanceForm):
@@ -63,6 +66,9 @@ class AutoFeesForm(AutoRebalanceForm):
     af_updateHours = forms.IntegerField(label='af_updateHours', required=False)
     af_lowliq = forms.IntegerField(label='af_lowliq', required=False)
     af_excess = forms.IntegerField(label='af_excess', required=False)
+    af_timeOfDay = forms.IntegerField(label='af_timeOfDay', required=False)
+    af_liqRewardFactor = forms.IntegerField(label='af_liqRewardFactor', required=False)
+    af_competitorFees = forms.IntegerField(label='af_competitorFees', required=False)
 
 class GUIForm(AutoFeesForm):
     gui_graphLinks = forms.CharField(label='gui_graphLinks', required=False)
@@ -72,6 +78,7 @@ class GUIForm(AutoFeesForm):
 class LocalSettingsForm(GUIForm):
     lnd_cleanPayments = forms.IntegerField(label='lnd_cleanPayments', required=False)
     lnd_retentionDays = forms.IntegerField(label='lnd_retentionDays', required=False)
+    lnd_disableMPP = forms.IntegerField(label='lnd_disableMPP', required=False)
 
 updates_channel_codes = [
     (0, 'base_fee'),
