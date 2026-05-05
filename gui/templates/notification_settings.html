@@ -44,7 +44,12 @@
           </label>
           <input class="w3-col" type="password" name="nostr_privkey" maxlength="64"
                  placeholder="{% if notification_cfg.nostr_privkey %}Key is set – paste to replace{% else %}64-char hex private key{% endif %}"
-                 autocomplete="new-password"/>
+                 autocomplete="off"/>
+          {% if notification_cfg.nostr_privkey %}
+          <label style="font-size:0.85em">
+            <input type="checkbox" name="nostr_privkey_clear" value="1"> Clear existing key
+          </label>
+          {% endif %}
           {% if notification_cfg.nostr_privkey %}
           <small>
             Pubkey:

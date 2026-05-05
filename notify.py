@@ -8,6 +8,11 @@ Supports two backends:
                 extra native libraries are required.
 
 Settings are stored in the ``NotificationSettings`` DB model (singleton row).
+
+Optional dependency:
+  ``websocket-client`` is required for NOSTR relay connections.
+  Install via:  pip install websocket-client
+  Without it, Telegram notifications still work but NOSTR publishing is skipped.
 """
 
 import hashlib
@@ -17,6 +22,19 @@ import time
 from datetime import datetime
 
 import requests
+
+# Warn at import time if websocket-client is missing (NOSTR will be unavailable).
+try:
+    import websocket as _websocket_check  # noqa: F401
+    _WEBSOCKET_AVAILABLE = True
+except ImportError:
+    _WEBSOCKET_AVAILABLE = False
+    print(
+        f"{datetime.now().strftime('%c')} : [Notify] : "
+        "Optional package 'websocket-client' not installed. "
+        "NOSTR relay publishing will be disabled. "
+        "Run: pip install websocket-client"
+    )
 
 # ---------------------------------------------------------------------------
 # secp256k1 curve parameters (BIP-340 / NOSTR)
@@ -128,14 +146,13 @@ def _publish_nostr_event(event: dict, relays: list, timeout: int = 8) -> dict:
     Falls back gracefully when *websocket-client* is not installed.
     """
     results: dict = {}
-    try:
-        import websocket  # websocket-client package
-    except ImportError:
+    if not _WEBSOCKET_AVAILABLE:
         print(f"{datetime.now().strftime('%c')} : [Notify] : websocket-client not installed; NOSTR publish skipped")
         for relay in relays:
             results[relay] = False
         return results
 
+    import websocket
     payload = json.dumps(["EVENT", event])
     for relay in relays:
         try:

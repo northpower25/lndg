@@ -3807,9 +3807,7 @@ def notification_settings(request):
         cfg.nostr_enabled = _bool('nostr_enabled')
         raw_privkey = request.POST.get('nostr_privkey', '').strip().lower()
         if raw_privkey:
-            # Only overwrite if the field contains a valid 64-char hex string;
-            # if the user left the password input unchanged the browser may
-            # re-submit the existing value – allow it through transparently.
+            # Only overwrite when the user supplies a new value.
             try:
                 int(raw_privkey, 16)
                 if len(raw_privkey) == 64:
@@ -3818,6 +3816,9 @@ def notification_settings(request):
                     messages.error(request, 'NOSTR private key must be a 64-character hex string (32 bytes).')
             except ValueError:
                 messages.error(request, 'NOSTR private key must be a valid hex string.')
+        # Allow clearing the key by submitting the special sentinel value 'clear'
+        elif request.POST.get('nostr_privkey_clear') == '1':
+            cfg.nostr_privkey = ''
         cfg.nostr_relays = request.POST.get('nostr_relays', '').strip()
         cfg.notify_rebalance_success = _bool('notify_rebalance_success')
         cfg.notify_rebalance_fail = _bool('notify_rebalance_fail')
