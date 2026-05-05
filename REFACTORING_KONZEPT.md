@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.0 · **Status:** Konzept / Entwurf  
+> **Version:** 1.1 · **Status:** Konzept / Entwurf  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -237,6 +237,13 @@ Alle Signale basieren auf bereits vorhandenen LNDg-Daten:
 - **Output:** Policy-Vorschläge + Konfidenz-Score
 - **Explainability:** SHAP-ähnliche Feature-Beiträge (UI: „Hauptgründe")
 
+**Zusätzliche ML-Features für Rebalancing & Auto-Fee:**
+- Kanal-Paar-Erfolgsrate: Welches (Ausgangs-/Zielkanal)-Paar gelingt wann mit welchem Betrag und welcher Gebühr?
+- Zeitreihen-Features: Stunde, Wochentag, Tages-Segment (Nacht/Tag/Peak) als Eingangsgrößen
+- Balance-Drain-Velocity: Wie schnell entleert sich ein Kanal → proaktive Fee-Anpassung statt reaktiver
+- Inbound-Fee-Elastizität: Wie reagiert eingehender Flow auf Änderungen von Base-Fee und Inbound-Fee?
+- HTLC-Größen-Verteilung: Welche min/max-HTLC-Konfiguration maximiert die Routing-Erfolgsrate?
+
 **Guardrails:**
 - Mindestdatenmenge (z. B. 30 Tage) bevor ML Empfehlungen ausgibt
 - Konfidenz-Schwelle: unterhalb → nur „Beobachten"-Modus
@@ -279,6 +286,73 @@ Cooldown    → verhindert Churn/Gossip (Mindestwartezeit zwischen Anpassungen)
 
 Expert-Detailpanel: zeigt alle Parameter erst bei explizitem Aufklappen. Entspricht weitgehend dem existierenden `af.py`-Verhalten, aber konfigurierbar über UI statt Datenbank-Keys.
 
+### 6.2a ML-gesteuertes Auto-Fee-Management (Phase 4–5)
+
+Das bisherige regelbasierte Auto-Fee-System wird durch einen **dynamischen, ML-gestützten Mechanismus** ergänzt, der proaktiver und ganzheitlicher agiert:
+
+**Proaktive statt reaktiver Gebührenanpassung:**
+
+Das System wartet nicht, bis ein Kanal bereits vollständig entleert ist, bevor es die Gebühren erhöht. Stattdessen:
+- Erkennt der ML-Algorithmus anhand der **Balance-Drain-Velocity** einen bevorstehenden Engpass (z. B. „Kanal wird bei aktuellem Trend in ~4 h unter 20 % Outbound fallen")
+- Löst eine schrittweise Gebührenerhöhung aus, bevor der kritische Schwellenwert erreicht wird
+- Passt die Anpassungsgeschwindigkeit der Drain-Rate an (schnelle Entleerung → schnellere Reaktion)
+
+**Erweiterter Fee-Parameter-Scope:**
+
+Alle relevanten Fee-Parameter werden in die dynamische Anpassung einbezogen:
+
+| Parameter | Bisherig | Neu (ML-gesteuert) |
+|---|---|---|
+| `fee_rate` (ppm) | ✅ Bereits dynamisch | ✅ Weiterhin primär |
+| `base_fee` | ❌ Statisch | ✅ Dynamisch (Einfluss auf kleine HTLC-Routing-Attraktivität) |
+| `min_htlc` | ❌ Statisch | ✅ Dynamisch (Filterung unrentabler Kleinstpayments) |
+| `max_htlc` | ❌ Statisch | ✅ Dynamisch (Schutz vor Übernutzung knapper Liquidität) |
+| `inbound_fee` | ❌ Nicht berücksichtigt | ✅ Neu: ML-gesteuerte Inbound-Fee-Anpassung |
+
+**ML-Lernmechanismus für Auto-Fee:**
+
+```
+Feature-Inputs:
+  - Aktuelle Balance (local/remote), Balance-Trend (1h/4h/24h)
+  - Historische Routing-Volumen nach Tageszeit/Wochentag
+  - Failed-HTLC-Typen (fee_insufficient / temporary_channel_failure / ...)
+  - Peer-Fee-Positionierung (relativ zum Netzwerk-Median)
+  - Vergangene Fee-Änderungen + resultierender Flow-Effekt (Fee-Elastizität)
+
+Modell-Output:
+  - Empfohlener neuer Wert pro Parameter (ppm, base_fee, min/max_htlc, inbound_fee)
+  - Konfidenz-Score + Begründung
+  - Eskalationsstufe (kein Eingriff / leichte Anpassung / starke Anpassung)
+
+Eskalations-/Deeskalationsprinzip:
+  - Schrittweise Anpassung in konfigurierbaren Grenzen (min/max pro Parameter)
+  - Bei positivem Routing-Signal: Deeskalation (Fee zurück senken)
+  - Bei anhaltendem Drain trotz Erhöhung: weitere Eskalation
+  - Cooldown: Mindestwartezeit zwischen zwei Anpassungen desselben Parameters
+```
+
+**Dynamische Zielanpassung basierend auf Routing-Verhalten:**
+
+Das System beobachtet kontinuierlich das Routing-Verhalten und passt die Zielparameter an:
+- Steigt das Routing-Volumen über einen Kanal, werden die Fee-Ziele nach oben angepasst
+- Sinkt das Volumen trotz niedrigerer Fees, wird dies als Signal für strukturelle Probleme gewertet (nicht nur Fee-Problem)
+- Änderungen im Netzwerk-Umfeld (Peer ändert Fees) werden erkannt und fließen in die Anpassung ein
+
+**Konfigurierbare Grenzen (je Kanal oder global):**
+
+```
+fee_rate:    min: 1 ppm    max: 5000 ppm   step: konfigurierbar
+base_fee:    min: 0 msat   max: 10000 msat step: konfigurierbar
+min_htlc:    min: 1 msat   max: 100000 msat
+max_htlc:    min: 100k sat max: 100% capacity
+inbound_fee: min: -500 ppm max: +500 ppm   (Netzwerk-Grenzen beachten)
+```
+
+**UI-Transparenz:**
+- Jede ML-getriggerte Änderung erscheint im Audit-Log mit Begründung
+- „Warum?"-Panel: „Fee wurde erhöht, da Balance in 3 h unter Schwellenwert fallen würde (Konfidenz: 78 %)"
+- Shadow-Mode: ML-Empfehlungen werden zuerst nur angezeigt, bis der Nutzer dem System vertraut
+
 ### 6.3 Rebalancing: „Budgetiert & zielgerichtet"
 
 Rebalancing soll nicht „immer" laufen, sondern:
@@ -293,6 +367,90 @@ Rebalancing soll nicht „immer" laufen, sondern:
 „Hat der Rebalance das Routing verbessert?"
   → Vergleich: Outbound-Flüsse 7 Tage vorher vs. 7 Tage nachher
 ```
+
+### 6.3a ML-Modus für Rebalancing (Phase 4–5)
+
+Das Rebalancing wird um einen **lernenden ML-Modus** ergänzt, der statische Regeln durch datengetriebene Erkenntnisse ersetzt:
+
+**Lernziel des ML-Modells:**
+
+LNDg lernt für jedes Kanalpar (Quell-/Zielkanal), zu welchen Zeitpunkten, mit welchen Beträgen und zu welchen Gebühren ein Rebalancing erfolgreich durchführbar ist und danach tatsächlich zu mehr Routing-Revenue führt.
+
+```
+ML lernt: (Quellkanal, Zielkanal, Tageszeit, Wochentag, Betrag, max_fee_ppm)
+             → P(Erfolg) + E(Routing-Revenue-Verbesserung in 24h/48h/7d)
+```
+
+**Feature-Set für Rebalancing-ML:**
+
+| Feature-Gruppe | Beispiel-Features |
+|---|---|
+| **Kanal-Zustand** | local_balance, remote_balance, capacity, Balance-Trend |
+| **Historische Rebalance-Daten** | Erfolgsrate pro Kanalpar, durchschnittliche Kosten, Zeitdauer |
+| **Zeitliche Features** | Stunde des Tages, Wochentag, Wochenende/Werktag |
+| **Routing-Kontext** | Outbound-Flow letzter 24h/7d, Failed-HTLC-Rate, Peer-Stabilität |
+| **Netzwerk-Kontext** | Peer-Fee-Änderungen, Channel-Aktivität des Peers |
+| **Ergebnismessung** | Routing-Revenue Δ 24h/48h/7d nach Rebalance |
+
+**Eskalations- und Deeskalationsprinzip:**
+
+Das System passt Betrag und Gebühren schrittweise innerhalb konfigurierbarer Grenzen an:
+
+```
+Eskalation (wenn vorheriger Versuch erfolglos):
+  Betrag:   aktueller_betrag × eskalationsfaktor (z. B. 0.75 → Betrag reduzieren)
+  max_fee:  max_fee × eskalationsfaktor_fee (z. B. erhöhen um 10 %)
+  → Maximal: definiertes Limit (z. B. max 500 ppm Rebalancing-Kosten)
+
+Deeskalation (wenn Routing nach Rebalance gut läuft):
+  Nächster Versuch: niedrigere Gebühr zuerst probieren
+  → Bewährte Parameter werden bevorzugt wiederverwendet
+
+Abbruch:
+  Nach N erfolglosen Versuchen: Kanal temporär aus Queue entfernen
+  → Nächster Versuch nach konfigurierter Wartezeit
+```
+
+**Dynamische Zielquoten (In-/Outbound):**
+
+Die prozentualen Rebalancing-Ziele werden nicht mehr statisch gesetzt, sondern dynamisch anhand der tatsächlichen Liquiditätsbedürfnisse angepasst:
+
+- **Liquiditätsbedarf-Analyse:** Channels mit hohem aktivem Outbound-Flow benötigen höhere Outbound-Quoten als inaktive Channels
+- **Konfigurierbarer Puffer:** Zielquote = Mindestquote + dynamischer Puffer (z. B. 30 % Mindest-Outbound + 10–20 % Puffer je nach Flow-Stärke)
+- **Routing-Verhaltens-Adaption:** Ändert sich das Routing-Muster (z. B. ein Peer wird inaktiv), werden die Zielquoten für betroffene Channels automatisch angepasst
+- **Manuelle Override:** Nutzer kann für einzelne Channels fixe Zielquoten setzen (überschreibt ML-Empfehlung)
+
+```
+Dynamische Zielquote (Beispiel):
+  Channel X hat durchschnittlich 80k sats/Tag Outbound-Flow
+  → Ziel-Outbound: max(30%, min_outbound + flow_faktor × 15%) = z. B. 45%
+  Channel Y hat 0 sats/Tag Outbound-Flow seit 7 Tagen
+  → Ziel-Outbound: 30% (Minimum, kein Puffer nötig)
+  
+  Bei Routing-Änderung (Channel X Flow sinkt auf 10k sats/Tag):
+  → Ziel-Outbound wird schrittweise auf 32% reduziert (Cooldown: 48h)
+```
+
+**Priorisierung der Rebalance-Queue:**
+
+ML-Score bestimmt die Priorität der Rebalancing-Aufgaben:
+
+```
+Prioritätsscore = w1 × P(Erfolg) 
+                + w2 × E(Routing-Revenue-Verbesserung)
+                - w3 × geschätzte_Rebalancing-Kosten
+                + w4 × Dringlichkeit (Balance kritisch?)
+
+Queue-Reihenfolge: absteigend nach Prioritätsscore
+```
+
+**UI-Darstellung des ML-Rebalancing-Modus:**
+
+- **ML-Modus-Toggle** im Rebalancing-Bereich (Guided/Advanced/Expert-abhängig)
+- **Lern-Fortschritt-Anzeige:** „Das Modell hat X Kanalpaare analysiert, Y Muster gelernt"
+- **Erklärbarkeit:** Pro Queue-Eintrag: „Warum jetzt? Warum dieser Betrag?" mit Top-3-Gründen
+- **Erfolgs-Tracking:** Timeline der Rebalance-Events mit tatsächlichem vs. erwartetem Ergebnis
+- **Shadow-Mode (Phase 4):** ML schlägt vor, Nutzer entscheidet; erst in Phase 5 volle Automation möglich
 
 ---
 
@@ -485,7 +643,43 @@ class ChangeLog(models.Model):
         app_label = 'gui'
         indexes = [models.Index(fields=['timestamp']), models.Index(fields=['target_chan_id'])]
 
-class UserMode(models.Model):
+class RebalanceMLRecord(models.Model):
+    """Lernhistorie für ML-Rebalancing: Kanalpar + Kontext + Ergebnis."""
+    timestamp = models.DateTimeField(db_index=True)
+    source_chan_id = models.CharField(max_length=20, db_index=True)
+    target_chan_id = models.CharField(max_length=20, db_index=True)
+    amount_sat = models.BigIntegerField()
+    fee_ppm = models.IntegerField()
+    hour_of_day = models.IntegerField()    # 0–23
+    day_of_week = models.IntegerField()    # 0–6
+    success = models.BooleanField()
+    routing_revenue_delta_24h = models.BigIntegerField(null=True)  # Δ nach 24h
+    routing_revenue_delta_7d = models.BigIntegerField(null=True)   # Δ nach 7d
+    ml_predicted_success_prob = models.FloatField(null=True)
+    ml_confidence = models.FloatField(null=True)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['source_chan_id', 'target_chan_id', 'timestamp'])]
+
+class AutoFeeMLRecord(models.Model):
+    """Lernhistorie für ML-Auto-Fee: Parameteränderung + Ergebnis."""
+    timestamp = models.DateTimeField(db_index=True)
+    chan_id = models.CharField(max_length=20, db_index=True)
+    param_name = models.CharField(max_length=20)  # fee_rate, base_fee, min_htlc, max_htlc, inbound_fee
+    old_value = models.BigIntegerField()
+    new_value = models.BigIntegerField()
+    trigger_reason = models.CharField(max_length=50)  # drain_velocity / low_flow / high_flow / ...
+    ml_confidence = models.FloatField(null=True)
+    routing_volume_delta_24h = models.BigIntegerField(null=True)
+    routing_revenue_delta_24h = models.BigIntegerField(null=True)
+    escalation_level = models.IntegerField(default=0)  # 0=neutral, >0=eskaliert, <0=deeskaliert
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['chan_id', 'timestamp'])]
+
+
     """Nutzer-Betriebsmodus und Onboarding-Fortschritt."""
     mode = models.CharField(max_length=10, default='guided')  # guided/advanced/expert
     onboarding_step = models.IntegerField(default=0)
@@ -508,6 +702,8 @@ jobs/
 ├── analyzer.py       # Berechnet Channel-Scores, Peer-Scores
 ├── recommender.py    # Erzeugt Recommendations (Heuristik + optional ML)
 ├── executor.py       # Führt Policies aus (nur wenn erlaubt + nicht dry_run)
+├── ml_trainer.py     # Trainiert/aktualisiert ML-Modelle (Rebalancing + Auto-Fee)
+├── ml_predictor.py   # Erzeugt ML-Vorschläge (Rebalancing-Queue, Fee-Anpassungen)
 ├── notifier.py       # UI-Notifications / Webhooks
 └── cleaner.py        # DB-Bereinigung (siehe Abschnitt 11)
 ```
@@ -517,6 +713,8 @@ jobs/
 - Forwarding: alle 5 Min
 - Aggregates: stündlich (Batch)
 - Empfehlungen: alle 30 Min (konfigurierbar)
+- ML-Training: täglich (nächtlich, konfigurierbar; bei Ressourcenmangel: manuell auslösbar)
+- ML-Predictions (Rebalancing-Queue-Update): alle 30 Min oder nach Rebalance-Event
 
 ### 9.3 API-Layer v2
 
@@ -536,6 +734,12 @@ POST /api/v2/policies/{id}/run           # Policy manuell ausführen
 GET  /api/v2/changelog                   # Audit-Trail
 GET  /api/v2/changelog/{id}/rollback     # Rollback-Vorschau
 POST /api/v2/changelog/{id}/rollback     # Rollback ausführen
+GET  /api/v2/ml/rebalance/suggestions    # ML-Rebalancing-Vorschläge (Queue)
+GET  /api/v2/ml/rebalance/history        # Lernhistorie Kanalpar-Erfolg
+POST /api/v2/ml/rebalance/train          # Manuelles Modell-Retraining auslösen
+GET  /api/v2/ml/autofee/suggestions      # ML-Auto-Fee-Vorschläge
+GET  /api/v2/ml/autofee/history          # Lernhistorie Fee-Anpassungen + Ergebnis
+GET  /api/v2/ml/status                   # Modell-Status (Konfidenz, Datenmenge, letztes Training)
 ```
 
 **Optional:** WebSocket/SSE für Live-Updates (statt Auto-Refresh-Polling). Empfohlen für Rebalance-Status und HTLC-Stream.
@@ -697,6 +901,8 @@ Ohne Bereinigung wächst die DB durch `Forwards`, `FailedHTLCs`, `ChannelSnapsho
 | `ChannelSnapshot` | 180 Tage | 90–180 Tage |
 | `ForwardingAggregate` | unbegrenzt | nie löschen (klein) |
 | `Rebalancer` | 365 Tage | 180 Tage |
+| `RebalanceMLRecord` | unbegrenzt | nie auto-löschen (Trainingsdaten) |
+| `AutoFeeMLRecord` | unbegrenzt | nie auto-löschen (Trainingsdaten) |
 | `Payments` (fehlgeschlagen) | 30 Tage | 14 Tage |
 | `PolicyRun` | 90 Tage | 60 Tage |
 | `ChangeLog` | unbegrenzt | nie auto-löschen (Audit) |
@@ -944,7 +1150,10 @@ Phase 3 – Konsolidierung (optional):
 
 - [ ] **Policy-Engine:** `Policy`, `PolicyRun`-Models, Executor-Job
 - [ ] **Auto-Fee-Templates:** Conservative/Balanced/Revenue-Seeking UI
-- [ ] **Rebalance-Budget:** Budget-Konfiguration, Queue, Erfolgsmessung
+- [ ] **ML-Auto-Fee Shadow-Mode:** Balance-Drain-Velocity-Erkennung, proaktive Gebührenanpassung, erweiterter Parameter-Scope (base_fee, min/max_htlc, inbound_fee)
+- [ ] **ML-Rebalancing Shadow-Mode:** Kanalpar-Lernhistorie (`RebalanceMLRecord`), zeitbasierte Features, Erfolgswahrscheinlichkeits-Modell
+- [ ] **Rebalance-Budget:** Budget-Konfiguration, Queue mit ML-Priorisierung, Erfolgsmessung
+- [ ] **Dynamische Rebalancing-Zielquoten:** Liquiditätsbedarf-Analyse, konfigurierbarer Puffer, Routing-Verhaltens-Adaption
 - [ ] **Audit-Log-UI:** Vollständiger Änderungsverlauf mit Rollback
 
 ### Phase 5: Externe Integrationen & Erweiterte Features
@@ -957,7 +1166,10 @@ Phase 3 – Konsolidierung (optional):
 ### Phase 6: ML Shadow Mode & SPA-Konsolidierung
 
 - [ ] **ML-Infrastruktur:** Feature-Engineering, Modell-Training-Pipeline
-- [ ] **Shadow Mode:** ML-Empfehlungen parallel zu Heuristik, nur loggen
+- [ ] **Shadow Mode (Rebalancing):** ML-Empfehlungen parallel zu Heuristik, nur loggen → Konfidenz aufbauen
+- [ ] **Shadow Mode (Auto-Fee):** ML-gesteuerte Gebührenanpassungen erst vorschlagen, dann schrittweise automatisieren
+- [ ] **ML-Vollautomation (opt-in, Expert-Mode):** Rebalancing und Auto-Fee vollständig ML-gesteuert, mit definierten Grenzen und Audit-Log
+- [ ] **Eskalations-/Deeskalations-Tuning:** Konfigurierbare Faktoren und Grenzen über UI
 - [ ] **SPA als Haupt-Produkt:** Phase 2 des Roll-outs
 - [ ] **PWA-Vorbereitung:** Service Worker, Manifest, Offline-Fallback
 
@@ -1085,6 +1297,8 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | A3 | WebSocket für Live-Updates? | Django Channels (Redis) **vs.** SSE **vs.** Polling beibehalten | Redis-Abhängigkeit; Komplexität im Deployment |
 | A4 | Datenbank: SQLite behalten oder PostgreSQL als Standard? | SQLite (einfach, single-file) **vs.** PostgreSQL (besser für Zeitreihen, Concurrent Writes) | Beeinflusst Backup-Strategie, Performance bei Snapshots |
 | A5 | ML-Bibliothek: scikit-learn (leicht, kein Overhead) vs. externe ML-API? | scikit-learn lokal **vs.** External ML API | Privacy (keine Daten extern), Ressourcenverbrauch auf kleinen Nodes (RPi) |
+| A6 | ML-Modell-Persistenz: Wie werden trainierte Modelle gespeichert und versioniert? | SQLite-BLOB **vs.** Dateisystem (`.joblib`/`.pkl`) **vs.** MLflow | Reproduzierbarkeit, Rollback bei schlechtem Modell |
+| A7 | ML-Training: Online-Learning (inkrementell) vs. periodisches Batch-Retraining? | Online (z. B. stündlich) **vs.** Batch (täglich/wöchentlich) | Ressourcenverbrauch vs. Aktualität der Modelle; Stabilität |
 
 ### Produkt & UX
 
@@ -1095,6 +1309,9 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | P3 | Welche Sprachen zum Launch? | Nur DE+EN **vs.** DE+EN+weitere | Übersetzungsaufwand; Community-Resourcen |
 | P4 | Sollen Empfehlungen Community-geteilt werden können? | Ja (opt-in) **vs.** Nein (privat) | Privacy-Implikationen; Mehrwert für Community |
 | P5 | Wie detailliert soll der Onboarding-Wizard sein? | Minimal (3 Schritte) **vs.** Vollständig (5+ Schritte) | Abbruchrate vs. Lerneffekt |
+| P6 | Ab wann darf ML-Rebalancing vollautomatisch ausführen? | Nur Expert-Mode nach N Tagen Shadow-Mode **vs.** Opt-in ab Advanced | Risiko vs. Nutzbarkeit; Vertrauen ins Modell |
+| P7 | Wie soll der Übergang von regelbasiert zu ML-gesteuert kommuniziert werden? | Explizites UI-Toggle (Modus: Regelbasiert / ML) **vs.** gradueller Übergang | Nutzerkontrolle vs. Komplexität; Vertrauen |
+| P8 | Welche Kanäle sollen vom ML-Auto-Fee ausgeschlossen werden können? | Einzelne Kanäle (Whitelist/Blacklist) **vs.** nur global | Granularität vs. Konfigurationsaufwand |
 
 ### Datenschutz & Sicherheit
 
@@ -1114,6 +1331,9 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | B3 | Automatisches Backup: lokal vs. remote? | Nur lokal (Standard) **vs.** Optional SFTP/S3 | Sicherheit vs. Konfigurationsaufwand |
 | B4 | Soll es ein offizielles Helm-Chart/Umbrel-Update geben? | Ja (Priorität) **vs.** Community-Beitrag **vs.** Später | Adoptions-Reichweite; Maintenance-Aufwand |
 | B5 | Minimale Hardware-Anforderung für ML-Features? | Raspberry Pi 4 (4 GB RAM) **vs.** Nur auf leistungsfähiger Hardware | Kompatibilität vs. Feature-Reichhaltigkeit |
+| B6 | ML-Training-Frequenz auf ressourcenschwachen Nodes? | Nächtliches Batch-Training **vs.** Nur manuell auslösbar **vs.** Deaktivierbar | Aktualität der Modelle vs. CPU/RAM-Belastung auf RPi |
+| B7 | Mindestdatenmenge für ML-Rebalancing-Modell? | 30 Tage / mind. 50 Rebalance-Events **vs.** 14 Tage / 20 Events | Modellqualität vs. Time-to-Value für neue Nutzer |
+| B8 | Wie werden ML-Modelle bei Upgrade auf neue LNDg-Version migriert? | Modelle verwerfen + neu trainieren **vs.** Migrations-Skript | Einfachheit vs. Datenverlust beim Upgrade |
 
 ---
 
