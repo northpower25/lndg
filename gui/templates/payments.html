@@ -3,6 +3,27 @@
 {% block content %}
 {% load euformat %}
 {% load humanize %}
+<button style="position:absolute;top:50px;right:50px;" title="Pay a BOLT11 invoice (bos pay)" onclick="openPayModal()">Pay Invoice</button>
+<button style="position:absolute;top:50px;right:200px;" title="Delete all failed and in-flight payment records from the database (bos clean-failed-payments)" onclick="cleanFailedPayments()">Clean Failed</button>
+<div id="payModal" style="display:none;position:absolute;top:30px;right:30px;padding:30px;z-index:11;background-color:rgb(225,145,50);border-style:solid;border-width:3px;" class="w3-round w3-container">
+  <h2>Pay Invoice</h2>
+  <label>Payment Request (BOLT11)</label><br>
+  <textarea id="payReqInput" rows="4" style="width:100%;min-width:400px;" placeholder="lnbc…"></textarea><br><br>
+  <button onclick="decodeAndPreview()">Decode</button>
+  <button onclick="closePayModal()" style="margin-left:8px;">Cancel</button>
+  <div id="payDecoded" style="display:none;margin-top:12px;">
+    <table class="w3-table-all w3-centered">
+      <tr><td>Destination</td><td id="pd_dest" style="word-break:break-all;"></td></tr>
+      <tr><td>Amount (sats)</td><td id="pd_sats"></td></tr>
+      <tr><td>Description</td><td id="pd_desc"></td></tr>
+      <tr><td>Expires</td><td id="pd_exp"></td></tr>
+    </table>
+    <br>
+    <label title="Maximum routing fee you are willing to pay in sats">Max Fee (sats)</label>
+    <input id="payMaxFee" type="number" min="0" value="100">
+    <button onclick="sendPayment()" style="margin-left:8px;">Pay</button>
+  </div>
+</div>
 {% if payments %}
 <div class="w3-container w3-padding-small">
   <h2>Last 150 Payments</h2>
@@ -41,4 +62,40 @@
   <center><h1>You dont have any payments yet.</h1></center>
 </div>
 {% endif %}
+<script>
+  function openPayModal() { byId('payModal').style.display = 'block'; }
+  function closePayModal() {
+    byId('payModal').style.display = 'none';
+    byId('payDecoded').style.display = 'none';
+    byId('payReqInput').value = '';
+  }
+  async function decodeAndPreview() {
+    const pr = byId('payReqInput').value.trim();
+    if (!pr) return;
+    const resp = await POST('decode_invoice', {body: {payment_request: pr}});
+    if (resp.error) { showBannerMsg('', resp.error, true); return; }
+    const d = resp.data;
+    byId('pd_dest').textContent = d.destination;
+    byId('pd_sats').textContent = d.num_satoshis.toLocaleString();
+    byId('pd_desc').textContent = d.description || '---';
+    const expTs = (d.timestamp + d.expiry) * 1000;
+    byId('pd_exp').textContent = new Date(expTs).toLocaleString();
+    byId('payDecoded').style.display = 'block';
+  }
+  async function sendPayment() {
+    const pr = byId('payReqInput').value.trim();
+    const maxFee = parseInt(byId('payMaxFee').value) || 100;
+    const resp = await POST('pay_invoice', {body: {payment_request: pr, max_fee_sats: maxFee}});
+    if (resp.error) { showBannerMsg('', resp.error, true); return; }
+    showBannerMsg('', resp.message);
+    closePayModal();
+  }
+  async function cleanFailedPayments() {
+    if (!confirm('Delete all failed and in-flight payment records?')) return;
+    const resp = await POST('clean_failed_payments', {body: {}});
+    if (resp.error) { showBannerMsg('', resp.error, true); return; }
+    showBannerMsg('', resp.message);
+    setTimeout(() => location.reload(), 1500);
+  }
+</script>
 {% endblock %}

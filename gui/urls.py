@@ -100,5 +100,11 @@ urlpatterns = [
     path('api/reset/', views.reset_api, name='reset-api'),
     path('sankey/', views.sankey, name='sankey'),
     path('api/sankey_data/', views.sankey_data, name='sankey-data'),
+    path('export_accounting/', views.export_accounting, name='export-accounting'),
+    path('api/clean_failed_payments/', views.clean_failed_payments, name='clean-failed-payments'),
+    path('api/decode_invoice/', views.decode_invoice, name='decode-invoice'),
+    path('api/pay_invoice/', views.pay_invoice, name='pay-invoice'),
+    path('api/probe_route/', views.probe_route, name='probe-route'),
+    path('api/cert_validity/', views.cert_validity, name='cert-validity'),
     path('lndg-admin/', admin.site.urls),
 ]

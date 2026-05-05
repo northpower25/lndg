@@ -29,6 +29,14 @@ Welcome to LNDg, an advanced web interface designed for analyzing Lightning Netw
   - [HTLC Failure Stream](#htlc-failure-stream)
   - [API Backend](#api-backend)
   - [Peer Reconnection](#peer-reconnection)
+- [BOS-Equivalent Advanced Features](#bos-equivalent-advanced-features)
+  - [Accounting CSV Export](#accounting-csv-export)
+  - [Pay Invoice](#pay-invoice)
+  - [Clean Failed Payments](#clean-failed-payments)
+  - [Route Probe](#route-probe)
+  - [TLS Certificate Expiry Alert](#tls-certificate-expiry-alert)
+  - [Bitcoin Price Widget](#bitcoin-price-widget)
+  - [Chain Fee Widget](#chain-fee-widget)
 - [Auto-Fees](#auto-fees)
   - [Auto-Fees Settings](#auto-fees-settings)
   - [Auto-Fees Notes](#auto-fees-notes)
@@ -310,6 +318,82 @@ Append `?format=json` for JSON output.
 ### Peer Reconnection
 
 Automatically attempts to reconnect to peers associated with inactive channels (max once every 3 minutes per peer).
+
+## BOS-Equivalent Advanced Features
+
+LNDg now covers the most commonly used [Balance of Satoshis (bos)](https://github.com/alexbosworth/balanceofsatoshis) workflows directly from the web UI.
+
+### Accounting CSV Export
+
+**Equivalent to:** `bos accounting`
+
+Download a full CSV of all financial events from the **P&L** page (`/income`).  The file (`lndg_accounting.csv`) contains one row per event with the following columns:
+
+| Column | Description |
+|---|---|
+| `date` | ISO-8601 UTC timestamp |
+| `type` | `forwarding_revenue`, `rebalance_cost`, `payment_sent`, `invoice_received`, `onchain_fee` |
+| `amount_sats` | Event amount in sats |
+| `fee_sats` | Fee paid or earned |
+| `notes` | Payment hash, channel IDs, or TX hash |
+
+Click the **⬇ Export Accounting CSV** link next to the P&L chart header to download.
+
+### Pay Invoice
+
+**Equivalent to:** `bos pay`
+
+Pay a BOLT11 payment request directly from the **Payments** page (`/payments`).
+
+1. Click **Pay Invoice** (top-right).
+2. Paste a BOLT11 payment request and click **Decode** to preview the destination, amount, and description before committing.
+3. Set a **Max Fee (sats)** limit and click **Pay**.
+
+The API endpoint is also available: `POST /api/pay_invoice/` with `payment_request` and optional `max_fee_sats`.
+
+### Clean Failed Payments
+
+**Equivalent to:** `bos clean-failed-payments`
+
+Remove all failed and in-flight payment records from the database.
+
+- Click **Clean Failed** on the **Payments** page (`/payments`).
+- Confirm the prompt — all records with status `In-Flight` or `Failed` are deleted.
+- API: `POST /api/clean_failed_payments/`
+
+### Route Probe
+
+**Equivalent to:** `bos probe`
+
+Estimate the routing fee to any destination pubkey *without* sending a real payment (uses `EstimateRouteFee` under the hood).
+
+1. Open a payment route page (`/route`) or click **Probe Route** (top-right).
+2. Enter the destination 66-char hex pubkey and the desired amount in sats.
+3. Click **Probe** — the estimated fee in sats and the time-lock delay are displayed instantly.
+
+API: `POST /api/probe_route/` with `dest_pubkey` (66-char hex) and `amount_sats`.
+
+### TLS Certificate Expiry Alert
+
+**Equivalent to:** `bos cert-validity-days`
+
+LNDg automatically checks the expiry date of the LND TLS certificate on every dashboard load.  A red warning banner is shown when fewer than **30 days** remain, prompting you to renew the certificate.
+
+API: `GET /api/cert_validity/` returns `{"data": {"days_remaining": N, "expiry": "YYYY-MM-DD"}}`.
+
+### Bitcoin Price Widget
+
+**Equivalent to:** `bos price`
+
+The current BTC/USD and BTC/EUR price is fetched from [mempool.space](https://mempool.space) and displayed inline on the **P&L** page next to the accounting export link.  No server-side changes are required — the fetch is done client-side so no API key is needed.
+
+### Chain Fee Widget
+
+**Equivalent to:** `bos chainfees`
+
+Current mempool fee estimates (fastest, 30-minute, 1-hour) are shown at the top of the **Balances** page (`/balances`) fetched live from [mempool.space](https://mempool.space).
+
+---
 
 ## Auto-Fees
 

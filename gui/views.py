@@ -3567,3 +3567,197 @@ def sankey_data(request):
 
     nodes = [{'id': n, 'name': n} for n in sorted(nodes_set)]
     return Response({'nodes': nodes, 'links': links})
+
+# ---------------------------------------------------------------------------
+# BOS-equivalent features
+# ---------------------------------------------------------------------------
+
+@is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
+def export_accounting(request):
+    """bos accounting – export all financial events as a CSV download."""
+    import csv
+    from django.http import StreamingHttpResponse
+
+    class EchoWriter:
+        def write(self, value):
+            return value
+
+    def rows():
+        yield ['date', 'type', 'amount_sats', 'fee_sats', 'notes']
+        for f in Forwards.objects.all().order_by('forward_date'):
+            yield [
+                f.forward_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'forwarding_revenue',
+                int(f.amt_out_msat / 1000),
+                int(f.fee),
+                f'in:{f.chan_id_in} out:{f.chan_id_out}',
+            ]
+        for p in Payments.objects.filter(status=2).order_by('creation_date'):
+            row_type = 'rebalance_cost' if p.rebal_chan else 'payment_sent'
+            yield [
+                p.creation_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                row_type,
+                int(p.value),
+                int(p.fee),
+                p.payment_hash,
+            ]
+        for inv in Invoices.objects.filter(state=1, is_revenue=True).order_by('settle_date'):
+            yield [
+                inv.settle_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'invoice_received',
+                int(inv.amt_paid),
+                0,
+                inv.r_hash,
+            ]
+        for tx in Onchain.objects.all().order_by('-block_height'):
+            yield [
+                tx.time_stamp.strftime('%Y-%m-%dT%H:%M:%SZ') if tx.time_stamp else '',
+                'onchain_fee',
+                int(tx.amount),
+                int(tx.fee),
+                tx.tx_hash,
+            ]
+
+    pseudo_buffer = EchoWriter()
+    writer = csv.writer(pseudo_buffer)
+    response = StreamingHttpResponse(
+        (writer.writerow(row) for row in rows()),
+        content_type='text/csv',
+    )
+    response['Content-Disposition'] = 'attachment; filename="lndg_accounting.csv"'
+    return response
+
+
+@api_view(['POST'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def clean_failed_payments(request):
+    """bos clean-failed-payments – delete in-flight and failed payment records."""
+    try:
+        deleted, _ = Payments.objects.filter(status__in=[1, 3]).delete()
+        return Response({'message': f'Removed {deleted} failed/in-flight payment record(s).'})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def decode_invoice(request):
+    """Decode a BOLT11 payment request without paying it (used by pay-invoice modal)."""
+    serializer = DecodeInvoiceSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'error': 'Invalid request!'}, status=400)
+    payment_request = serializer.validated_data['payment_request']
+    try:
+        stub = lnrpc.LightningStub(lnd_connect())
+        resp = stub.DecodePayReq(ln.PayReqString(pay_req=payment_request))
+        return Response({
+            'message': 'Decoded successfully',
+            'data': {
+                'destination': resp.destination,
+                'payment_hash': resp.payment_hash,
+                'num_satoshis': resp.num_satoshis,
+                'timestamp': resp.timestamp,
+                'expiry': resp.expiry,
+                'description': resp.description,
+                'cltv_expiry': resp.cltv_expiry,
+            }
+        })
+    except Exception as e:
+        error = str(e)
+        details_index = error.find('details =') + 11
+        debug_end = error.find('debug_error_string =') - 3
+        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        return Response({'error': f'Decode failed: {error_msg}'})
+
+
+@api_view(['POST'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def pay_invoice(request):
+    """bos pay – pay a BOLT11 payment request via LND."""
+    serializer = PayInvoiceSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'error': 'Invalid request!'}, status=400)
+    payment_request = serializer.validated_data['payment_request']
+    max_fee_sats = serializer.validated_data['max_fee_sats']
+    try:
+        stub = lnrpc.LightningStub(lnd_connect())
+        resp = stub.SendPaymentSync(ln.SendRequest(
+            payment_request=payment_request,
+            fee_limit=ln.FeeLimit(fixed=max_fee_sats),
+        ))
+        if resp.payment_error:
+            return Response({'error': f'Payment failed: {resp.payment_error}'})
+        return Response({
+            'message': 'Payment sent!',
+            'data': {
+                'payment_hash': resp.payment_hash.hex(),
+                'payment_preimage': resp.payment_preimage.hex(),
+            }
+        })
+    except Exception as e:
+        error = str(e)
+        details_index = error.find('details =') + 11
+        debug_end = error.find('debug_error_string =') - 3
+        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        return Response({'error': f'Payment failed: {error_msg}'})
+
+
+@api_view(['POST'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def probe_route(request):
+    """bos probe – estimate the routing fee for a payment to a destination."""
+    serializer = ProbeRouteSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'error': 'Invalid request!'}, status=400)
+    dest_pubkey = serializer.validated_data['dest_pubkey']
+    amount_sats = serializer.validated_data['amount_sats']
+    try:
+        router_stub = lnrouter.RouterStub(lnd_connect())
+        resp = router_stub.EstimateRouteFee(lnr.RouteFeeRequest(
+            dest=bytes.fromhex(dest_pubkey),
+            amt_sat=amount_sats,
+        ))
+        return Response({
+            'message': 'Route fee estimated',
+            'data': {
+                'routing_fee_msat': resp.routing_fee_msat,
+                'routing_fee_sats': resp.routing_fee_msat / 1000,
+                'time_lock_delay': resp.time_lock_delay,
+            }
+        })
+    except Exception as e:
+        error = str(e)
+        details_index = error.find('details =') + 11
+        debug_end = error.find('debug_error_string =') - 3
+        error_msg = error[details_index:debug_end] if details_index > 10 else error
+        return Response({'error': f'Probe failed: {error_msg}'})
+
+
+@api_view(['GET'])
+@is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
+def cert_validity(request):
+    """bos cert-validity-days – return days remaining on the LND TLS certificate."""
+    import ssl, subprocess
+    from datetime import timezone as tz
+    try:
+        cert_path = path.expanduser(settings.LND_TLS_PATH)
+        result = subprocess.run(
+            ['openssl', 'x509', '-noout', '-enddate'],
+            input=open(cert_path, 'rb').read(),
+            capture_output=True,
+        )
+        expiry_str = result.stdout.decode().strip().replace('notAfter=', '')
+        try:
+            expiry_dt = datetime.strptime(expiry_str, '%b %d %H:%M:%S %Y %Z').replace(tzinfo=tz.utc)
+        except ValueError:
+            expiry_dt = datetime.strptime(expiry_str, '%b  %d %H:%M:%S %Y %Z').replace(tzinfo=tz.utc)
+        days_remaining = (expiry_dt - datetime.now(tz=tz.utc)).days
+        return Response({
+            'message': 'success',
+            'data': {
+                'days_remaining': days_remaining,
+                'expiry': expiry_dt.strftime('%Y-%m-%d'),
+            }
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
