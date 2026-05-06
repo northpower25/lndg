@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.4 · **Status:** Konzept / Entwurf  
+> **Version:** 1.5 · **Status:** Konzept / Entwurf  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -57,7 +57,7 @@ LNDg entwickelt sich von einem „LND-Tool" zu einem **Lightning Node Intelligen
 | Ziel | Messkriterium | Mechanismus im Produkt |
 |---|---|---|
 | **Time-to-First-Understanding** | Einsteiger kann Inbound/Outbound, Fees, Rebalancing, Peer-Wahl erklären | Onboarding-Wizard + Glossar-Tooltips |
-| **Time-to-First-Improvement** | UI zeigt klare „Nächste beste Aktion" mit Simulation | Recommendation Engine + Dry-Run |
+| **Time-to-First-Improvement** | UI zeigt klare „Nächste beste Aktion" mit Policy Dry-Run | Recommendation Engine + Policy Dry-Run |
 | **Safety First** | Automationen standardmäßig Dry-Run, rate-limitiert, mit Rollback | Policy-Engine + Audit-Log |
 | **Wachstumspfad** | Feature-Freischaltung durch Modus-Aufstieg | Progressive Disclosure (Guided → Advanced → Expert) |
 | **CLN-First-GUI** | CLN-Nutzer können Node vollständig über LNDg verwalten | Backend-Adapter + Capability-UI + CLN-Onboarding |
@@ -188,7 +188,7 @@ Schritt 4: Was ist Rebalancing?
   → „Du verschiebst Liquidität, um Routing-Chancen zu erhöhen"
 
 Schritt 5: Erste sichere Optimierung
-  → Vorschlag mit Dry-Run / Simulation + „Warum"
+  → Vorschlag mit Policy Dry-Run (zeigt: würde diese Regel heute greifen?) + „Warum"
 ```
 
 Jeder Schritt ist **überspringbar** und **wiederholbar**. Fortschritt wird gespeichert. Onboarding kann jederzeit über „Lernen & Verlauf" erneut durchlaufen werden.
@@ -237,7 +237,7 @@ Alle Signale basieren auf bereits vorhandenen LNDg-Daten:
 │ Risiko: Niedrig                             │
 │ Erwarteter Effekt: Mehr Routing-Anfragen    │
 │ Alternativen: [Rebalance] [Schließen]       │
-│ [Simulation starten]  [Anwenden]            │
+│ [Dry-Run prüfen]  [Anwenden]            │
 └─────────────────────────────────────────────┘
 ```
 
@@ -257,11 +257,12 @@ Jede Empfehlung verwendet ein standardisiertes JSON-Schema im `rationale`-Feld d
   "confidence": 0.72,
   "confidence_label": "heuristic",
   "alternatives": ["rebalance", "close"],
-  "simulation_available": true
+  "simulation_available": true,
+  "simulation_scope": "policy_trigger_only"
 }
 ```
 
-`confidence_label`-Typen: `heuristic` | `rule_based` | `ml_shadow` | `ml_model`. Das Schema ist in Phase 1 (nur Heuristik) sofort einsetzbar – ML-Modelle müssen nicht aktiv sein. Die KI-Sicherheitsarchitektur für das `Recommendation`-Model ist in Abschnitt 18 beschrieben.
+`confidence_label`-Typen: `heuristic` | `rule_based` | `ml_shadow` | `ml_model`. Das Schema ist in Phase 1 (nur Heuristik) sofort einsetzbar – ML-Modelle müssen nicht aktiv sein. `simulation_scope: "policy_trigger_only"` kennzeichnet, dass der Dry-Run ausschließlich prüft, ob eine Policy heute ausgelöst hätte – **keine** Vorhersage von Volumen- oder Revenue-Effekten. Die KI-Sicherheitsarchitektur für das `Recommendation`-Model ist in Abschnitt 18 beschrieben.
 
 ### 5.3 ML-Komponente (Phase 2–3)
 
@@ -1271,8 +1272,8 @@ Phase 3 – Konsolidierung (optional):
 
 - [ ] **Heuristik-Engine:** Top-3-Aktionen pro Node-Zustand (inkl. Splice-In/Out Empfehlungen)
 - [ ] **Recommendation-Model:** Empfehlungen speichern, Status tracken; Rationale-Schema formalisieren und validieren (Abschnitt 5.2)
-- [ ] **Simulation Layer:** Jede Policy mit `simulate=True` aufrufbar; Ergebnis in `dry_run_result` speichern; „Was wäre passiert wenn…"-Widget im Lernen-&-Verlauf-Bereich
-- [ ] **Dry-Run-Framework:** Jede Empfehlung simulierbar
+- [ ] **Simulation Layer (Policy Dry-Run):** Jede Policy mit `simulate=True` aufrufbar; Ergebnis in `dry_run_result` speichern; „Was wäre in den letzten N Tagen passiert?"-Widget im Lernen-&-Verlauf-Bereich. **Scope: nur deterministisch prüfbare Policy-Trigger-Entscheidungen – keine predictiven Volumen- oder Revenue-Prognosen** (siehe Abschnitt 18.6 + offene Frage P9)
+- [ ] **Dry-Run-Framework:** Jede Policy-Aktion simulierbar (Trigger Ja/Nein, konkrete Aktionen im Zeitfenster)
 - [ ] **Explainability-UI:** „Warum?"-Panels für alle Empfehlungen (basierend auf Rationale-Schema)
 - [ ] **Guided Splice-Workflow (CLN):** Schritt-für-Schritt UI für Splice-In und Splice-Out
   - Kostenvorschau (On-Chain-Gebühren via mempool.space)
@@ -1383,10 +1384,17 @@ Erweiterung des bestehenden `add_avoid`-Systems:
 
 ### 15.7 Routing-Simulator
 
-„Was wäre wenn?"-Simulator für Fee-Strategien:
-- Eingabe: neue Fee-Konfiguration
-- Ausgabe: geschätzter Effekt auf Routing-Volumen (basierend auf historischen Daten)
-- Vergleich: aktuelle Konfiguration vs. Simulation
+> ⚠️ **Wichtiger Scope-Hinweis:** Ein predictiver „Was wäre wenn?"-Simulator für Fee-Änderungen ist im Lightning Network **methodisch nicht valide** und birgt das Risiko falscher Erwartungen. Das Netzwerk ist kein isoliertes System: Routing-Entscheidungen werden netzwerkweit getroffen, andere Sender weichen bei Fee-Änderungen auf alternative Pfade aus, Kanalbalancen sind dynamisch, und historische Daten bilden nur ab, was unter vergangenen Bedingungen passiert ist – nicht, was unter veränderten Bedingungen passieren *würde* (Counterfactual-Problem). Ein UI-Widget, das „+X% Routing-Volumen bei Fee Y" verspricht, weckt Erwartungen, die strukturell nicht erfüllt werden können.
+
+**Valider Umfang des Routing-Simulators:**
+
+- **Retrospektive Baseline-Statistik:** „Channels mit ähnlichem Profil (Kapazität, Balanceverhältnis) haben in den letzten 30 Tagen bei Fee-Band X median Y sats Routing-Volumen gesehen." – explizit als deskriptiver Vergleichswert, nicht als Vorhersage
+- **Policy-Trigger-Dry-Run:** „Hätte diese Fee-Policy in den letzten N Tagen ausgelöst? Wie oft? Welche Änderungen wären vorgenommen worden?" – deterministisch und valide
+- **Historischer Eigenbericht:** Chart der eigenen tatsächlichen Routing-Performance über Zeit, als Referenzrahmen für manuelle Entscheidungen
+
+**Jede Darstellung muss folgenden Disclaimer tragen:**
+
+> *„Diese Ansicht basiert auf historischen Daten unter den damals geltenden Netzwerkbedingungen. Eine tatsächliche Fee-Änderung verändert das Routing-Verhalten anderer Netzwerkteilnehmer – die tatsächlichen Auswirkungen können erheblich abweichen."*
 
 ### 15.8 Multi-Node-Support
 
@@ -1423,7 +1431,7 @@ Opt-in Metrics-Export für Nutzer, die bereits Grafana/Prometheus betreiben:
 ### 15.13 Guided Channel-Close-Workflow
 
 Schließen eines Channels ist risikobehaftet. Dedizierter Workflow:
-1. Analyse: Warum schließen? (Simulation der Opportunitätskosten)
+1. Analyse: Warum schließen? (historische Opportunitätskosten aus tatsächlichen Forwarding-Daten)
 2. Depriorisierungs-Phase: Fees hochsetzen, Routing deaktivieren
 3. Warte-Empfehlung: „Kanal hat noch X sats Outbound, warte auf natürlichen Drain"
 4. Günstigstes Zeitfenster (mempool.space)
@@ -1459,6 +1467,7 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | P6 | Ab wann darf ML-Rebalancing vollautomatisch ausführen? | Nur Expert-Mode nach N Tagen Shadow-Mode **vs.** Opt-in ab Advanced | Risiko vs. Nutzbarkeit; Vertrauen ins Modell |
 | P7 | Wie soll der Übergang von regelbasiert zu ML-gesteuert kommuniziert werden? | Explizites UI-Toggle (Modus: Regelbasiert / ML) **vs.** gradueller Übergang | Nutzerkontrolle vs. Komplexität; Vertrauen |
 | P8 | Welche Kanäle sollen vom ML-Auto-Fee ausgeschlossen werden können? | Einzelne Kanäle (Whitelist/Blacklist) **vs.** nur global | Granularität vs. Konfigurationsaufwand |
+| P9 | **Simulationsversprechen: Welche Aussagen darf das UI über zukünftige Effekte machen?** | Nur deterministischer Policy-Dry-Run (hat Policy ausgelöst? Ja/Nein) **vs.** retrospektive Baseline-Statistik mit explizitem Caveat **vs.** predictive Volume/Revenue-Schätzung (⚠️ methodisch nicht valide) | **Kernfrage:** Jede quantitative Zukunftsaussage (z. B. „+15% Routing-Volumen") ist im Lightning Network nicht valide – Netzwerkeffekte, Counterfactual-Problem und dynamische Balancen können nicht isoliert modelliert werden. Falsche Erwartungen gefährden das Nutzervertrauen. Entscheidung: Scope des Simulation Layers klar auf deterministisch simulierbare Aktionen begrenzen (siehe Abschnitt 15.7 und 18.6). |
 
 ### Datenschutz & Sicherheit
 
@@ -2038,15 +2047,22 @@ Wenn `ai_mode = 'shadow'`, werden KI-Empfehlungen im `ChangeLog` protokolliert u
 
 ### 18.6 Simulation Layer
 
-Der `dry_run`-Mechanismus (Abschnitt 6.1) wird als vollwertiger Simulation Layer ausgebaut:
+> ⚠️ **Scope-Abgrenzung:** Der Begriff „Simulation" wird in diesem Konzept auf **deterministisch prüfbare Aussagen** begrenzt. Predictive Aussagen über zukünftige Routing-Volumina oder Revenue-Effekte von Fee-Änderungen sind im Lightning Network methodisch nicht valide (Netzwerkeffekte, Counterfactual-Problem, dynamische Balancen) und wecken Erwartungen, die strukturell nicht erfüllt werden können. Siehe Abschnitt 15.7 und Offene Frage P9 für eine vollständige Begründung.
 
-- Jede Policy kann mit `simulate=True` aufgerufen werden
-- Ergebnis: Welche Fees/Balances würden sich wie ändern? (basierend auf Vergangenheitsdaten)
+**Was der Simulation Layer kann (deterministisch valide):**
+
+- **Policy-Trigger-Dry-Run:** Jede Policy kann mit `simulate=True` aufgerufen werden. Ergebnis: Hätte diese Policy im gewählten Zeitfenster ausgelöst? Wie oft? Welche konkreten Aktionen (Fee-Änderung von X auf Y an Channel Z) wären ausgeführt worden?
 - `dry_run_result` wird in `Recommendation` und `PolicyRun` gespeichert
-- UI: „Was wäre passiert, wenn..."-Widget im Lernen-&-Verlauf-Bereich
-- **Keine KI nötig** – der Simulation Layer ist deterministisch und ab Phase 3 sofort verfügbar
+- UI: „Policy-Verlauf: Was wäre in den letzten 7 Tagen passiert?"-Widget im Lernen-&-Verlauf-Bereich
+- **Keine KI nötig** – der Simulation Layer ist regelbasiert und ab Phase 3 sofort verfügbar
 
-Der Simulation Layer ist auch die sichere Sandstrecke zum Testen von `policy_bound`-Konfigurationen, bevor sie live gehen.
+**Was der Simulation Layer explizit nicht macht:**
+
+- Keine Vorhersage von Routing-Volumen oder Revenue nach Fee-Änderung
+- Keine „+X% Routing"-Versprechen
+- Keine hypothetischen Netzwerk-Reaktionen auf eigene Parameter-Änderungen
+
+Der Simulation Layer ist die sichere Sandstrecke zum Testen von `policy_bound`-Konfigurationen, bevor sie live gehen: Er beantwortet „Hätte diese Regel ausgelöst?" – nicht „Was hätte sie bewirkt?"
 
 ---
 
@@ -2097,7 +2113,7 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 |---|---|
 | **1** | `ReadAdapter`/`WriteAdapter`-Trennung implementieren; AI-Feature-Flags in `UserMode` (Default: `off`); `ChannelSnapshot` + `ChangeLog` aktiv befüllen |
 | **2** | Shadow-Log-Infrastruktur: KI-Empfehlungen mitloggen (noch kein ML-Modell nötig) |
-| **3** | Simulation Layer; Rationale-Schema in Recommendation validieren; „Was wäre passiert"-Widget |
+| **3** | Simulation Layer (Policy Dry-Run); Rationale-Schema in Recommendation validieren; „Policy-Verlauf: was wäre passiert?"-Widget (nur Policy-Trigger, keine Volumen-/Revenue-Prognosen) |
 | **4** | `ai_mode = 'shadow'` freischalten (Expert): ML-Empfehlungen parallel zu Heuristik loggen; `RebalanceMLRecord` + `AutoFeeMLRecord` befüllen |
 | **5** | `ai_mode = 'policy_bound'` freischalten (Expert): Policy-gebundene KI-Automation mit Human-Confirmation-Layer |
 | **6** | Vollautomation (sehr begrenzt, opt-in Expert): nur nach nachgewiesenem Shadow-Mode-Erfolg + konfigurierten Hard Caps |
