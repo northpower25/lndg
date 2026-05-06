@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.2 · **Status:** Konzept / Entwurf  
+> **Version:** 1.3 · **Status:** Konzept / Entwurf  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -23,7 +23,7 @@
 14. [Implementierungsfahrplan](#14-implementierungsfahrplan)
 15. [Zusätzliche Ideen & Erweiterungsvorschläge](#15-zusätzliche-ideen--erweiterungsvorschläge)
 16. [Offene Fragen & Entscheidungsbedarfe](#16-offene-fragen--entscheidungsbedarfe)
-17. [Multi-Backend & Multi-Asset Architektur (CLN- & Zukunftsfähigkeit)](#17-multi-backend--multi-asset-architektur-cln---zukunftsfähigkeit)
+17. [Multi-Backend-Architektur: LND & CLN (inkl. Channel-Splice)](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice)
 
 ---
 
@@ -41,9 +41,15 @@ Sekundäre Zielgruppe: erfahrene Betreiber, die maximale Kontrolle bei geringem 
 
 ### Strategische Vision
 
-> **LNDg Next soll heute LND perfekt bedienen, aber so refactored werden, dass morgen weder CLN noch Multi-Asset-Lightning eine Neuentwicklung erzwingen.**
+> **LNDg Next ist von Anfang an für LND und CLN gebaut – gleichzeitig, nicht nacheinander.**
 
-LNDg entwickelt sich von einem „LND-Tool" zu einem **Lightning Node Intelligence Layer** – einer implementierungsneutralen Plattform, die jedes Lightning-Backend versteht, erklärt und optimiert.
+LNDg entwickelt sich von einem „LND-Tool" zu einem **Lightning Node Intelligence Layer** – der ersten modernen GUI, die beide führenden Lightning-Implementierungen (LND + CLN) vollständig unterstützt, erklärt und optimiert.
+
+**Kernwertversprechen:**
+
+- **LND-Nutzer:** Beste-in-Klasse Routing-Optimierung mit ML-gestützter Automation
+- **CLN-Nutzer:** Erste vollwertige, erklärende GUI für Core Lightning – inkl. nativer **Channel-Splice**-Unterstützung
+- **Für alle:** Channel-Größen dynamisch anpassen ohne Close/Reopen – das ist das Alleinstellungsmerkmal der Routing-Node-Verwaltung
 
 ### Produktziele (messbar / implementierbar)
 
@@ -53,6 +59,8 @@ LNDg entwickelt sich von einem „LND-Tool" zu einem **Lightning Node Intelligen
 | **Time-to-First-Improvement** | UI zeigt klare „Nächste beste Aktion" mit Simulation | Recommendation Engine + Dry-Run |
 | **Safety First** | Automationen standardmäßig Dry-Run, rate-limitiert, mit Rollback | Policy-Engine + Audit-Log |
 | **Wachstumspfad** | Feature-Freischaltung durch Modus-Aufstieg | Progressive Disclosure (Guided → Advanced → Expert) |
+| **CLN-First-GUI** | CLN-Nutzer können Node vollständig über LNDg verwalten | Backend-Adapter + Capability-UI + CLN-Onboarding |
+| **Splice-Workflows** | Routing-Nodes können Channel-Kapazität ohne Close/Reopen anpassen | Guided Splice-In/Out Workflow (CLN nativ, LND wenn verfügbar) |
 
 ---
 
@@ -132,6 +140,11 @@ Kacheln + Story-Panels statt Tabellen:
 - Spalten-Presets: „Beginner", „Fees", „Flows", „Risk", „ROI"
 - Inline-Tooltips (Glossar)
 - Bulk-Aktionen (mehrere Channels gleichzeitig bearbeiten)
+- **Channel-Aktionen** (kontextsensitiv, abhängig von Backend-Capabilities):
+  - **Splice In** – Kapazität erhöhen ohne Close (CLN nativ; LND wenn Capability aktiv)
+  - **Splice Out** – Kapazität reduzieren und On-Chain auszahlen
+  - **Rebalance** – Liquidität verschieben
+  - **Close** – Kanal kooperativ schließen (mit Kostenampel)
 
 ### 3.4 Peers-Bereich
 
@@ -193,10 +206,11 @@ Jeder Schritt ist **überspringbar** und **wiederholbar**. Fortschritt wird gesp
 | Typ | Beschreibung |
 |---|---|
 | **A – Open New Channel** | Neuer Peer oder Kapazitätserweiterung zu bestehendem Peer |
-| **B – Resize / Splice** | Kapazität vergrößern oder verkleinern |
-| **C – Close / Deprioritize** | Stagnation, Risiko, Opportunitätskosten |
-| **D – Rebalance** | Gezielt + kostensensitiv |
-| **E – Fee Strategy** | Manuell, semi-auto oder auto |
+| **B – Splice In** | Kapazität eines bestehenden Channels erhöhen (kein Close nötig; CLN nativ, LND capability-abhängig) |
+| **C – Splice Out** | Kapazität reduzieren und Überschuss On-Chain auszahlen (kein Close nötig) |
+| **D – Close / Deprioritize** | Stagnation, Risiko, Opportunitätskosten – wenn Splice nicht sinnvoll oder verfügbar |
+| **E – Rebalance** | Gezielt + kostensensitiv |
+| **F – Fee Strategy** | Manuell, semi-auto oder auto |
 
 ### 5.2 Heuristiken (Phase 1 – sofort nutzbar)
 
@@ -209,7 +223,8 @@ Alle Signale basieren auf bereits vorhandenen LNDg-Daten:
 | Hohe failed HTLC-Rate | `FailedHTLCs` | Routing-Richtung deaktivieren, Peer prüfen |
 | Peer-Konzentration: viele Channels zu ähnlichen Peers | `Channels.remote_pubkey` | Diversifikation empfehlen |
 | Ungenutzte Kapazität + geringe Flüsse | `Channels.capacity`, `Forwards` | Reduce/Close erwägen |
-| Hoher stabiler Outbound-Flow + Liquidität knapp | `Forwards`, `local_balance` | Kapazitätserweiterung erwägen |
+| Hoher stabiler Outbound-Flow + Liquidität knapp | `Forwards`, `local_balance` | Kapazitätserweiterung erwägen: **Splice In** (wenn verfügbar) oder neuer Channel |
+| Channel permanent einseitig (Inbound chronisch ≫ Outbound) | `Channels.local_balance`, `ChannelSnapshot`-Trend | **Splice Out** + Outbound in neuem Channel oder Rebalance; Close als letztes Mittel |
 
 **UI-Ausgabe pro Empfehlung:**
 
@@ -554,7 +569,7 @@ Konfidenz: Heuristik (noch kein ML-Modell aktiv)
 
 ## 9. Backend-Konzept
 
-> **Hinweis:** Die Backend-Schicht wird so strukturiert, dass LND als erste Implementierung eines abstrakten `LightningBackend`-Adapters gilt. Die vollständige Adapter-Architektur inkl. CLN-Vorbereitung ist in [Abschnitt 17](#17-multi-backend--multi-asset-architektur-cln---zukunftsfähigkeit) beschrieben.
+> **Hinweis:** Die Backend-Schicht wird so strukturiert, dass LND und CLN beide als gleichrangige Implementierungen des abstrakten `LightningBackend`-Adapters gebaut werden. Die vollständige Adapter-Architektur inkl. CLN, Channel-Splice und Capability-System ist in [Abschnitt 17](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice) beschrieben.
 
 ### 9.1 Datenmodell-Erweiterungen (neue Models)
 
@@ -749,6 +764,12 @@ POST /api/v2/ml/rebalance/train          # Manuelles Modell-Retraining auslösen
 GET  /api/v2/ml/autofee/suggestions      # ML-Auto-Fee-Vorschläge
 GET  /api/v2/ml/autofee/history          # Lernhistorie Fee-Anpassungen + Ergebnis
 GET  /api/v2/ml/status                   # Modell-Status (Konfidenz, Datenmenge, letztes Training)
+
+# Channel-Management (Splice, wenn Backend-Capability vorhanden)
+GET  /api/v2/channels/{id}/splice/preview   # Vorschau: Kosten + Effekt eines Splice
+POST /api/v2/channels/{id}/splice/in        # Splice-In ausführen (Kapazität erhöhen)
+POST /api/v2/channels/{id}/splice/out       # Splice-Out ausführen (Kapazität reduzieren + Auszahlung)
+GET  /api/v2/channels/{id}/splice/status    # Status eines laufenden Splice-Vorgangs
 ```
 
 **Optional:** WebSocket/SSE für Live-Updates (statt Auto-Refresh-Polling). Empfohlen für Rebalance-Status und HTLC-Stream.
@@ -1139,42 +1160,54 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **Multilanguage-Basis:** Django i18n aktivieren, alle bestehenden Strings markieren, DE/EN-Übersetzungen
 - [ ] **UserMode-Model:** Modus-Einstellung persistieren
 - [ ] **Build-Optimierung:** Multi-Stage Dockerfile, CI-Caching, Makefile
-- [ ] **Adapter-Grundstruktur:** Abstraktes `LightningBackend`-Interface anlegen; LND-Logik in `LndBackend` kapseln (keine UI/Business-Logik ändert sich – nur Strukturierung; siehe Abschnitt 17)
-- [ ] **Domänenmodell-Basis:** Abstrakte Modelle `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy` einführen (BTC-only, aber asset-agnostisch modelliert)
+- [ ] **LightningBackend-Interface:** Abstraktes Interface + `SpliceAction`-Domänenobjekt definieren (siehe Abschnitt 17)
+- [ ] **LndBackend:** Bestehende LND-Logik in Adapter kapseln (keine UI-Logik ändert sich – nur Strukturierung)
+- [ ] **ClnBackend (Skelett):** Verbindung + Authentifizierung via `clnrest` / `cln-grpc`; grundlegende Methoden (`get_node_info`, `list_channels`, `list_peers`) implementieren
+- [ ] **Domänenmodell-Basis:** Abstrakte Modelle `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy`, `SpliceAction` einführen
 
-### Phase 2: Daten & Visualisierung
+### Phase 2: CLN-Integration & Daten
 
-- [ ] **Zeitreihen-Models:** `ChannelSnapshot`, `ForwardingAggregate`, `ChangeLog`
-- [ ] **Collector/Aggregator-Jobs:** Regelmäßige Snapshots
+- [ ] **ClnBackend vollständig:** Forwarding-Events, Fee-Update, HTLC-Stream (via `listforwards`, `setchannel`, CLN-Hooks)
+- [ ] **CLN-Onboarding-Pfad:** Guided-Wizard erkennt CLN und passt Erklärungen + Begriffe an
+- [ ] **Capability-Registry:** Backend registriert seine Fähigkeiten; UI wertet Capabilities aus statt Backend-Typ zu prüfen
+- [ ] **Zeitreihen-Models:** `ChannelSnapshot`, `ForwardingAggregate`, `ChangeLog` (backend-neutral)
+- [ ] **Collector/Aggregator-Jobs:** Regelmäßige Snapshots für LND und CLN
 - [ ] **Neue Charts:** Liquidity Donut, Fee vs. Volume Scatter, Channel Health Heatmap
 - [ ] **Backup/Restore-Funktion:** UI + Backend + automatisches Backup
 - [ ] **DB-Bereinigung:** Konfigurierbare Aufbewahrungsregeln + UI
-- [ ] **Capability-Registry:** Backend registriert seine Fähigkeiten; UI wertet Capabilities aus statt Backend-Typ zu prüfen
 
-### Phase 3: Empfehlungs-Engine
+### Phase 3: Empfehlungs-Engine & Splice-Workflow
 
-- [ ] **Heuristik-Engine:** Top-3-Aktionen pro Node-Zustand
+- [ ] **Heuristik-Engine:** Top-3-Aktionen pro Node-Zustand (inkl. Splice-In/Out Empfehlungen)
 - [ ] **Recommendation-Model:** Empfehlungen speichern, Status tracken
 - [ ] **Dry-Run-Framework:** Jede Empfehlung simulierbar
 - [ ] **Explainability-UI:** „Warum?"-Panels für alle Empfehlungen
+- [ ] **Guided Splice-Workflow (CLN):** Schritt-für-Schritt UI für Splice-In und Splice-Out
+  - Kostenvorschau (On-Chain-Gebühren via mempool.space)
+  - Impact-Simulation (neue Kapazität, neues Balanceverhältnis)
+  - Fortschritts-Tracking (Splice dauert Blöcke – UI zeigt Status)
+  - Audit-Log-Eintrag
+- [ ] **Splice-Workflow (LND):** Gleicher UI-Flow, aber capability-abhängig aktiviert (LND Splice ist in Entwicklung)
+- [ ] **CLN Plugin-Status-Panel:** Zeigt welche CLN-Plugins installiert/aktiv sind; erklärt fehlende Capabilities
 
 ### Phase 4: Policy-Engine & Automationen
 
 - [ ] **Policy-Engine:** `Policy`, `PolicyRun`-Models, Executor-Job
 - [ ] **Auto-Fee-Templates:** Conservative/Balanced/Revenue-Seeking UI
+- [ ] **CLN-Policy-Adapter:** `setchannel`-Aufrufe für Fee-Policies; CLN-Rebalancing via `rebalance`-Plugin
 - [ ] **ML-Auto-Fee Shadow-Mode:** Balance-Drain-Velocity-Erkennung, proaktive Gebührenanpassung, erweiterter Parameter-Scope (base_fee, min/max_htlc, inbound_fee)
 - [ ] **ML-Rebalancing Shadow-Mode:** Kanalpar-Lernhistorie (`RebalanceMLRecord`), zeitbasierte Features, Erfolgswahrscheinlichkeits-Modell
 - [ ] **Rebalance-Budget:** Budget-Konfiguration, Queue mit ML-Priorisierung, Erfolgsmessung
 - [ ] **Dynamische Rebalancing-Zielquoten:** Liquiditätsbedarf-Analyse, konfigurierbarer Puffer, Routing-Verhaltens-Adaption
 - [ ] **Audit-Log-UI:** Vollständiger Änderungsverlauf mit Rollback
-- [ ] **Policy-Domänenentkopplung:** Policy-Definitionen auf Domänenebene; Executor-Adapter übersetzt Policy → konkrete LND-Aktion (CLN-Vorbereitung)
+- [ ] **Policy-Domänenentkopplung:** Policy-Definitionen auf Domänenebene; Executor-Adapter übersetzt Policy → konkrete LND- oder CLN-Aktion
 
 ### Phase 5: Externe Integrationen & Erweiterte Features
 
-- [ ] **mempool.space-Integration:** Fee-Ampel bei Open/Close-Empfehlungen
+- [ ] **mempool.space-Integration:** Fee-Ampel bei Open/Close/Splice-Empfehlungen
 - [ ] **Amboss-Integration:** Optionale Peer-Kontextdaten
-- [ ] **Onboarding-Wizard:** Vollständiger 5-Schritte-Wizard
-- [ ] **Missions/Glossar:** Learning Center
+- [ ] **Onboarding-Wizard:** Vollständiger 5-Schritte-Wizard (LND- und CLN-Variante)
+- [ ] **Missions/Glossar:** Learning Center (inkl. CLN-spezifischer Erklärungen)
 
 ### Phase 6: ML Shadow Mode & SPA-Konsolidierung
 
@@ -1186,14 +1219,14 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **SPA als Haupt-Produkt:** Phase 2 des Roll-outs
 - [ ] **PWA-Vorbereitung:** Service Worker, Manifest, Offline-Fallback
 
-### Phase 7: CLN-Adapter & Multi-Asset-Vorbereitung
+### Phase 7: Multi-Asset-Vorbereitung (Optional – Spätere Roadmap)
 
-- [ ] **CLN-Adapter:** `ClnBackend` als zweite `LightningBackend`-Implementierung (JSON-RPC / Plugin-API)
-- [ ] **Capability-UI vollständig:** Features werden angezeigt/ausgegraut basierend auf Backend-Capabilities, nicht auf Backend-Typ
-- [ ] **Multi-Node-Backend-Switcher:** UI-Switcher zwischen mehreren Backend-Instanzen
+> **Hinweis:** Multi-Asset (Taproot Assets, Stablecoins auf Lightning) ist aktuell noch nicht produktionsreif und wird bewusst zurückgestellt. Die Adapter-Architektur aus den vorherigen Phasen ermöglicht nachträgliche Integration ohne Rewrite.
+
 - [ ] **Asset-Attribut im Datenmodell aktivieren:** `asset_id` / `asset_group` / `denomination` in Flow- und Fee-Modellen sichtbar machen
 - [ ] **Unit-flexible UI:** Beträge, Charts, Erklärungen arbeiten mit `denomination`-Platzhaltern statt hardcodierten „sats"
-- [ ] **CLN-Onboarding-Erweiterung:** Guided-Mode erkennt CLN-Capabilities und passt Wizard-Inhalte an
+- [ ] **Multi-Asset-UI:** Asset-Bereich in Advanced/Expert wenn `can_multi_asset` aktiv
+- [ ] **Multi-Node-Backend-Switcher:** UI-Switcher zwischen mehreren Backend-Instanzen
 
 ---
 
@@ -1359,9 +1392,9 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 
 ---
 
-## 17. Multi-Backend & Multi-Asset Architektur (CLN- & Zukunftsfähigkeit)
+## 17. Multi-Backend-Architektur: LND & CLN (inkl. Channel-Splice)
 
-> **Leitgedanke:** LNDg Next soll heute LND perfekt bedienen, aber so refactored werden, dass morgen weder CLN noch Multi-Asset-Lightning eine Neuentwicklung erzwingen.
+> **Leitgedanke:** LNDg Next wird von Anfang an für LND und CLN gebaut – beide Backends sind gleichrangige, gleichzeitig implementierte Ziele des Refactorings. Channel Splicing ist das technische Alleinstellungsmerkmal, das Routing-Nodes erstmals über eine GUI zugänglich gemacht wird.
 
 ---
 
@@ -1388,8 +1421,9 @@ Folgende Modelle beschreiben **was passiert**, nicht wie es technisch geliefert 
 | `LiquidityState` | Snapshot des Kanal-Zustands (lokal/remote/total) |
 | `FeePolicy` | Gebührenparameter (base_fee, fee_rate, min/max_htlc, inbound_fee) |
 | `RebalanceAction` | Rebalancing-Vorgang mit Quelle, Ziel, Betrag, Kosten |
+| `SpliceAction` | Channel-Resize-Vorgang: Typ (in/out), Betrag, On-Chain-Fee, Status (pending/confirmed) |
 
-**Konsequenz:** LND wird zu einer _Implementierung_ eines „Lightning-Adapters". CLN kann später ein zweiter Adapter sein – ohne UI-Rewrite.
+**Konsequenz:** LND und CLN sind beide _Implementierungen_ eines „Lightning-Adapters". Beide werden im Rahmen dieses Refactorings implementiert – kein zukünftiger Mehraufwand für CLN-Support.
 
 ---
 
@@ -1399,9 +1433,11 @@ Folgende Modelle beschreiben **was passiert**, nicht wie es technisch geliefert 
 
 ```
 LightningBackend (Interface / abstrakte Klasse)
-├── LndBackend          ← Implementierung heute
-└── ClnBackend          ← Implementierung später (future)
+├── LndBackend          ← Phase 1: LND gRPC-Adapter
+└── ClnBackend          ← Phase 1–2: CLN clnrest/cln-grpc-Adapter (gleichzeitig!)
 ```
+
+**Beide Backends werden im gleichen Refactoring-Zyklus implementiert** – LND zuerst (da bestehende Logik nur umstrukturiert wird), CLN direkt danach (Phase 2, da neue Verbindungslogik nötig).
 
 #### Was der Adapter kapselt
 
@@ -1416,22 +1452,35 @@ class LightningBackend:
     def get_liquidity_state(self, channel_id) -> LiquidityState: ...
     def update_fee_policy(self, channel_id, policy: FeePolicy) -> bool: ...
     def get_capabilities(self) -> BackendCapabilities: ...
+
+    # Splice-Operationen (nur aktiv wenn can_splice == True)
+    def splice_in(self, channel_id: str, amount_sat: int, fee_rate: int) -> SpliceAction: ...
+    def splice_out(self, channel_id: str, amount_sat: int, destination: str, fee_rate: int) -> SpliceAction: ...
+    def get_splice_status(self, splice_id: str) -> SpliceAction: ...
 ```
 
 Der Adapter kapselt:
 - RPC / gRPC / JSON-RPC Unterschiede
 - Naming-Unterschiede (z. B. `chan_id` vs. `short_channel_id`)
 - Event-Formate (z. B. HTLC-Events in LND vs. CLN-Plugin-Hooks)
-- Capability-Flags (z. B. `supports_splicing`, `supports_multi_asset`)
+- Capability-Flags (z. B. `can_splice`, `can_inbound_fees`)
 
-#### Warum das für CLN entscheidend ist
+#### CLN-spezifische Adapter-Details
 
-Core Lightning (CLN):
-- ist stark plugin-basiert – viele Features kommen aus Plugins, nicht aus dem Core
-- liefert viele Daten anders strukturiert (JSON-RPC statt gRPC)
-- erweitert sich häufig außerhalb des Core (Plugins: `clnrest`, `cln-grpc`, `rebalance`, etc.)
+**Verbindung:** CLN bietet zwei API-Wege:
+- `clnrest` – HTTP REST API (empfohlen für neue Implementierungen, ab CLN v23.08)
+- `cln-grpc` – gRPC (ähnlich wie LND, aber andere Schemas)
 
-> Ohne Adapter-Schicht wäre CLN-Support später ein Refactoring-Albtraum.
+**Plugin-Abhängigkeiten (ClnBackend muss prüfen):**
+
+| Plugin | Capability | CLN-Befehl |
+|---|---|---|
+| `clnrest` (Core) | Basisverbindung | – |
+| `rebalance` | `can_rebalance` | `rebalance` |
+| Core (ab v24.02) | `can_splice` | `splice_init`, `splice_update`, `splice_signed` |
+| `feeadjuster` | `can_auto_fee` | – (alternativ: `setchannel`) |
+
+> Ohne Adapter-Schicht wäre der Umgang mit CLN-Plugin-Abhängigkeiten fehleranfällig und schwer wartbar.
 
 ---
 
@@ -1463,27 +1512,150 @@ class BackendCapabilities:
     can_auto_fee: bool           # Fee-Anpassung via API möglich
     can_rebalance: bool          # Kreisförmige Payments für Rebalancing
     can_stream_htlcs: bool       # Live HTLC-Event-Stream verfügbar
-    can_multi_asset: bool        # Multi-Asset-Kanäle (Taproot Assets)
-    can_splice: bool             # Channel-Splice (Resize ohne Close)
+    can_splice: bool             # Channel-Splice (Resize ohne Close) – CLN nativ; LND in Entwicklung
     can_inbound_fees: bool       # Inbound-Fee-Parameter unterstützt
     can_keysend: bool            # Spontane Payments (Keysend)
-    supports_plugins: bool       # Plugin-Erweiterungs-Mechanismus vorhanden
+    supports_plugins: bool       # Plugin-Erweiterungs-Mechanismus vorhanden (CLN)
+    can_multi_asset: bool        # Multi-Asset-Kanäle (Taproot Assets) – für spätere Phase
 ```
 
 #### UI-Verhalten
 
-| Capability | UI-Reaktion wenn `False` |
-|---|---|
-| `can_auto_fee` | Button ausgegraut + Tooltip „Nicht vom Backend unterstützt" |
-| `can_splice` | Resize-Option ausgeblendet in Advanced, Hinweis in Expert |
-| `supports_plugins` | CLN-Plugin-Status anzeigen (z. B. „rebalance-Plugin fehlt") |
-| `can_multi_asset` | Asset-Bereich nur in Expert-Mode sichtbar |
+| Capability | LndBackend | ClnBackend | UI-Reaktion wenn `False` |
+|---|---|---|---|
+| `can_auto_fee` | ✅ (gRPC) | ✅ (`setchannel`) | Button ausgegraut + Tooltip |
+| `can_splice` | ⚠️ (in Entwicklung) | ✅ (ab CLN v24.02) | Button ausgegraut + „Backend unterstützt Splicing nicht" |
+| `can_rebalance` | ✅ (circular payment) | ✅ (`rebalance`-Plugin) | Rebalancing-Tab ausgegraut + Plugin-Hinweis |
+| `supports_plugins` | ❌ | ✅ | CLN-Plugin-Panel einblenden |
+| `can_multi_asset` | ⚠️ (Taproot Assets) | ⚠️ (Experimentell) | Asset-Bereich nur in Expert-Mode (Phase 7) |
 
 **Vorteil für CLN:** CLN-Setups unterscheiden sich stark je nach installierten Plugins. Die UI kann Funktionen anzeigen/ausgrauen und erklären, welches Plugin fehlt – ohne harte LND-Feature-Parity vorauszusetzen.
 
 ---
 
-### 17.4 Asset-agnostisches Datenmodell
+### 17.4 Channel Splicing – Alleinstellungsmerkmal für Routing-Nodes
+
+#### Was ist Channel Splicing?
+
+Channel Splicing ermöglicht es, die Kapazität eines bestehenden Lightning-Channels **ohne Schließen und Wiedereröffnen** zu verändern. Es gibt zwei Operationen:
+
+| Operation | Beschreibung |
+|---|---|
+| **Splice In** | On-Chain-Mittel in einen bestehenden Channel einzahlen → Kapazität erhöhen |
+| **Splice Out** | Kapazität eines Channels reduzieren und Mittel On-Chain auszahlen |
+
+Während des Splice-Vorgangs bleibt der Channel **aktiv und routing-fähig** (er wird nur kurz pausiert während der On-Chain-Bestätigung, nicht geschlossen).
+
+#### Warum ist das für Routing-Nodes entscheidend?
+
+Routing-Nodes sind kein statisches Netzwerk – Routing-Verhalten, Nachfrage und Peers ändern sich kontinuierlich. Heute sind die Optionen bei falscher Channel-Größe:
+
+```
+Zu klein → Routing-Chancen werden verpasst
+           → Einzige Option: neuen Channel öffnen (On-Chain-Kosten × 2)
+
+Zu groß  → Kapital ineffizient gebunden
+           → Einzige Option: schließen + kleiner wiedereröffnen (On-Chain-Kosten × 2)
+```
+
+**Mit Splice:**
+
+```
+Zu klein → Splice In: Kapazität erhöhen, Channel bleibt offen, ein On-Chain-TX
+Zu groß  → Splice Out: Überkapazität auszahlen, Channel bleibt offen, ein On-Chain-TX
+```
+
+#### CLN-nativer Splice-Support
+
+Core Lightning unterstützt Splicing nativ ab **CLN v24.02** (`splice_init`, `splice_update`, `splice_signed`). Es ist keine zusätzliche Plugin-Installation nötig – es ist Teil des Core.
+
+**LND:** Splice ist in Entwicklung (Experimental-Flag). LNDg unterstützt es capability-abhängig sobald stabil.
+
+#### Guided Splice-Workflow (UI)
+
+```
+Trigger: Empfehlungs-Engine schlägt Splice vor
+  → „Dein Channel zu [Peer] hat seit 30 Tagen konstant hohen Outbound-Flow
+     und ist regelmäßig ausgeschöpft. Empfehlung: Splice In (+2M sats)"
+
+Schritt 1: Impact-Vorschau
+  → Neue Kapazität: 3M sats (aktuell: 1M sats)
+  → Geschätzte On-Chain-Kosten: ~1.200 sats (🟢 günstig)
+  → Routing-Pausierung: ~6 Blöcke (~60 Minuten)
+  → Erwarteter Effekt: +40% Routing-Kapazität
+
+Schritt 2: Betrag & Fee wählen
+  → Schieberegler für Betrag (innerhalb konfigurierbarer Grenzen)
+  → On-Chain-Fee: Auto (mempool.space) | Manuell
+  → Warnung wenn mempool überlastet (🔴 teuer)
+
+Schritt 3: Bestätigung (Impact-Check)
+  → Risiko-Label: Niedrig (Kanal bleibt aktiv)
+  → Audit-Log-Vorschau
+  → „Ausführen" nur in Advanced/Expert-Mode
+
+Schritt 4: Fortschritts-Tracking
+  → Live-Status: Warte auf Bestätigung (Block X von 6)
+  → Kanal-Status: „Splicing – eingeschränktes Routing"
+  → Nach Abschluss: Bestätigungsnotifikation + Eintrag im Änderungsverlauf
+```
+
+#### Splice-Out-Workflow (Kapazität reduzieren)
+
+```
+Trigger: Empfehlung oder manuell
+  → „Kanal zu [Peer] hat seit 60 Tagen kaum Routing-Aktivität.
+     Erwäge Splice Out: 500k sats On-Chain zurückziehen statt zu schließen."
+
+Vorschau:
+  → Neue Kapazität: 500k sats (aktuell: 1M sats)
+  → Auszahlung: 500k sats → [eigene On-Chain-Adresse]
+  → Kosten, Dauer, Kanal bleibt offen
+
+Besonderheit:
+  → Splice Out ist oft günstiger als Close + Reopen
+  → UI erklärt den Kostenvergleich explizit
+```
+
+#### Splice im Datenmodell
+
+```python
+@dataclass
+class SpliceAction:
+    channel_id: str
+    splice_type: str              # "in" | "out"
+    amount_sat: int               # Betrag der Splice-Operation
+    on_chain_fee_sat: int         # Tatsächliche On-Chain-Fee
+    destination: str | None       # Bei splice_out: Zieladresse
+    status: str                   # "pending" | "broadcasting" | "confirming" | "confirmed" | "failed"
+    blocks_remaining: int | None  # Schätzung verbleibende Blöcke
+    txid: str | None              # On-Chain-Transaktions-ID
+    initiated_at: datetime
+    confirmed_at: datetime | None
+```
+
+```python
+# Neues DB-Model für Splice-Historie
+class SpliceLog(models.Model):
+    channel_id = models.CharField(max_length=20, db_index=True)
+    splice_type = models.CharField(max_length=5)   # "in" | "out"
+    amount_sat = models.BigIntegerField()
+    on_chain_fee_sat = models.BigIntegerField()
+    status = models.CharField(max_length=20)
+    txid = models.CharField(max_length=64, null=True)
+    initiated_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True)
+    rationale = models.TextField(blank=True)       # Warum wurde gespliced?
+    recommendation_id = models.IntegerField(null=True)  # Verknüpfung zur Empfehlung
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['channel_id', 'initiated_at'])]
+```
+
+---
+
+### 17.5 Asset-agnostisches Datenmodell (Vorbereitung für spätere Phasen)
 
 Auch wenn LNDg Next zunächst ausschließlich BTC-Routing zeigt, sollte jede Liquidität, jede Fee und jeder Flow intern ein Asset-Attribut tragen:
 
@@ -1520,17 +1692,18 @@ class LiquidityState:
     ...
 ```
 
-**Warum jetzt?**
+**Warum bereits jetzt modellieren (auch wenn Multi-Asset erst Phase 7 ist)?**
 
 - Taproot Assets (ex-TARO) nutzen bestehende Lightning-Kanäle – kein separates Netzwerk
 - Stablecoins auf Lightning werden kein „separate Channels"-System sein, sondern Routing auf bestehender Infrastruktur
 - Ein späteres „DB-Rewrite" wäre extrem teuer – wenn das Datenmodell heute richtig ist, bleibt das UI morgen stabil
+- Das `asset`-Attribut ist standardmäßig auf `btc` gesetzt und kostet keine Mehraufwände in Phase 1–6
 
-**BTC bleibt Default:** Das `asset`-Attribut ist standardmäßig auf `btc` gesetzt. Multi-Asset erscheint nur in Advanced/Expert-Mode und nur wenn `can_multi_asset` aktiv ist.
+**BTC bleibt Default:** Multi-Asset-UI erscheint erst in Phase 7, nur in Advanced/Expert-Mode und nur wenn `can_multi_asset` aktiv ist.
 
 ---
 
-### 17.5 Implementierungsneutrale Policies
+### 17.6 Implementierungsneutrale Policies
 
 #### Fehler, den man jetzt vermeiden sollte
 
@@ -1573,7 +1746,7 @@ def execute_fee_policy(update: FeePolicyUpdate):
 
 ---
 
-### 17.6 UX-Strategie: Bereits jetzt „CLN-fähig" denken
+### 17.7 UX-Strategie: CLN als gleichrangiger Bürger
 
 #### Konkrete UI-Regeln
 
@@ -1594,36 +1767,49 @@ def execute_fee_policy(update: FeePolicyUpdate):
    ```
 
 4. **Onboarding erkennt das Backend**  
-   Der Guided-Wizard fragt nicht „Hast du LND?", sondern erkennt automatisch via Capability-Check, welche Features verfügbar sind, und passt die Erklärungen an.
+   Der Guided-Wizard erkennt automatisch via Capability-Check, welches Backend aktiv ist, und passt Erklärungen, Terminologie und Funktionen an:
+
+   ```
+   LND-Nutzer sieht:  „Macaroon-Pfad", „gRPC-Adresse"
+   CLN-Nutzer sieht:  „Rune / API-Token", „clnrest-Endpunkt", „Plugin-Status"
+   ```
+
+5. **CLN Plugin-Panel im Expert-Mode**  
+   Übersicht aller bekannten CLN-Plugins mit Status (installiert / aktiv / fehlend). Für fehlende Plugins: Erklärung + Installationshinweis.
 
 #### Strategischer Effekt
 
-Viele Betreiber nutzen CLN nicht, weil moderne GUIs fehlen und die Lernbarrieren hoch sind.
+Core Lightning ist technisch führend (native Splice-Unterstützung, flexible Plugin-Architektur), hat aber bisher keine moderne, erklärende GUI. **LNDg Next ist die erste vollwertige GUI für CLN-Routing-Node-Betreiber.**
 
-LNDg Next kann genau hier eine Marktlücke schließen:
-- CLN ist technisch stark, aber bisher UI-schwach
-- LNDg Next bietet: Lernen + Visualisierung + erklärtes Routing – für beide Welten
+Dies öffnet einen neuen Nutzerkreis:
+- CLN-Betreiber, die bisher auf CLI-Tools angewiesen waren
+- Einsteiger, die CLN wählen, aber keine GUI hatten
+- Routing-Node-Betreiber, die Splice-Workflows grafisch steuern möchten
 
 ---
 
-### 17.7 Refactoring-Checkliste (kompakt)
+### 17.8 Refactoring-Checkliste (kompakt)
 
 | Punkt | Beschreibung | Phase |
 |---|---|---|
-| ✅ Abstraktes Domänenmodell | `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy` etc. backend-neutral | Phase 1 |
-| ✅ Backend-Adapter-Schicht | `LightningBackend` Interface + `LndBackend` Implementierung | Phase 1 |
+| ✅ Abstraktes Domänenmodell | `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy`, `SpliceAction` backend-neutral | Phase 1 |
+| ✅ LndBackend | Bestehende LND-Logik als Adapter-Implementierung | Phase 1 |
+| ✅ ClnBackend | CLN-Implementierung via `clnrest`/`cln-grpc` | Phase 1–2 |
 | ✅ Capability-basierte UI | Kein `if backend == "LND"` in Templates/Views | Phase 2 |
-| ✅ Asset-agnostisches Datenmodell | `asset_id` / `denomination` in Liquiditäts- und Flow-Modellen | Phase 1–2 |
+| ✅ Guided Splice-Workflow | Splice-In/Out mit Kostenvorschau + Fortschritts-Tracking | Phase 3 |
+| ✅ CLN Plugin-Panel | Plugin-Status-Übersicht, Capability-Hinweise | Phase 3 |
 | ✅ Implementierungsneutrale Policies | Policy-Objekte auf Domänenebene; Executor delegiert an Adapter | Phase 4 |
-| ✅ UX ohne implizite LND-Annahmen | Generische Lightning-Begriffe; flexible Units; Capability-Checks | Phase 1+ |
-| 🔮 CLN-Adapter | `ClnBackend` Implementierung (JSON-RPC + Plugin-API) | Phase 7 |
-| 🔮 Multi-Asset-UI | Asset-Bereich in Advanced/Expert wenn `can_multi_asset` aktiv | Phase 7+ |
+| ✅ CLN-Policy-Adapter | `setchannel`, `rebalance`-Plugin-Integration | Phase 4 |
+| ✅ UX ohne implizite LND-Annahmen | Backend-erkennender Onboarding-Wizard; generische Begriffe | Phase 1+ |
+| 🔮 Multi-Asset-UI | Asset-Bereich in Advanced/Expert wenn `can_multi_asset` aktiv | Phase 7 |
+| 🔮 Unit-flexible UI | `denomination`-Platzhalter statt hardcodierten „sats" | Phase 7 |
 
 **Was dadurch möglich wird:**
 
-- CLN-Support ohne Architekturbruch
-- Stablecoins & Taproot Assets ohne DB-Rewrite
-- Einsteiger-freundliche GUI für LND und CLN
+- **Sofort:** LND-Nutzer erhalten die beste Routing-Optimierungs-GUI
+- **Phase 2–3:** CLN-Nutzer erhalten die **erste vollwertige CLI-freie Node-Management-GUI** für Core Lightning
+- **Phase 3:** Routing-Nodes können Channel-Kapazitäten via **Splice ohne Close/Reopen** optimieren
+- **Phase 7+:** Taproot Assets / Multi-Asset ohne Architekturbruch nachrüstbar
 - LNDg entwickelt sich vom „LND-Tool" zum **Lightning Node Intelligence Layer**
 
 ---
