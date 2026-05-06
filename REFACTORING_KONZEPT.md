@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.1 · **Status:** Konzept / Entwurf  
+> **Version:** 1.2 · **Status:** Konzept / Entwurf  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -23,6 +23,7 @@
 14. [Implementierungsfahrplan](#14-implementierungsfahrplan)
 15. [Zusätzliche Ideen & Erweiterungsvorschläge](#15-zusätzliche-ideen--erweiterungsvorschläge)
 16. [Offene Fragen & Entscheidungsbedarfe](#16-offene-fragen--entscheidungsbedarfe)
+17. [Multi-Backend & Multi-Asset Architektur (CLN- & Zukunftsfähigkeit)](#17-multi-backend--multi-asset-architektur-cln---zukunftsfähigkeit)
 
 ---
 
@@ -37,6 +38,12 @@ Neue Routing-Node-Betreiber, die:
 3. Später **automatisieren** – aber sicher
 
 Sekundäre Zielgruppe: erfahrene Betreiber, die maximale Kontrolle bei geringem kognitiven Aufwand wünschen.
+
+### Strategische Vision
+
+> **LNDg Next soll heute LND perfekt bedienen, aber so refactored werden, dass morgen weder CLN noch Multi-Asset-Lightning eine Neuentwicklung erzwingen.**
+
+LNDg entwickelt sich von einem „LND-Tool" zu einem **Lightning Node Intelligence Layer** – einer implementierungsneutralen Plattform, die jedes Lightning-Backend versteht, erklärt und optimiert.
 
 ### Produktziele (messbar / implementierbar)
 
@@ -546,6 +553,8 @@ Konfidenz: Heuristik (noch kein ML-Modell aktiv)
 ---
 
 ## 9. Backend-Konzept
+
+> **Hinweis:** Die Backend-Schicht wird so strukturiert, dass LND als erste Implementierung eines abstrakten `LightningBackend`-Adapters gilt. Die vollständige Adapter-Architektur inkl. CLN-Vorbereitung ist in [Abschnitt 17](#17-multi-backend--multi-asset-architektur-cln---zukunftsfähigkeit) beschrieben.
 
 ### 9.1 Datenmodell-Erweiterungen (neue Models)
 
@@ -1130,6 +1139,8 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **Multilanguage-Basis:** Django i18n aktivieren, alle bestehenden Strings markieren, DE/EN-Übersetzungen
 - [ ] **UserMode-Model:** Modus-Einstellung persistieren
 - [ ] **Build-Optimierung:** Multi-Stage Dockerfile, CI-Caching, Makefile
+- [ ] **Adapter-Grundstruktur:** Abstraktes `LightningBackend`-Interface anlegen; LND-Logik in `LndBackend` kapseln (keine UI/Business-Logik ändert sich – nur Strukturierung; siehe Abschnitt 17)
+- [ ] **Domänenmodell-Basis:** Abstrakte Modelle `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy` einführen (BTC-only, aber asset-agnostisch modelliert)
 
 ### Phase 2: Daten & Visualisierung
 
@@ -1138,6 +1149,7 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **Neue Charts:** Liquidity Donut, Fee vs. Volume Scatter, Channel Health Heatmap
 - [ ] **Backup/Restore-Funktion:** UI + Backend + automatisches Backup
 - [ ] **DB-Bereinigung:** Konfigurierbare Aufbewahrungsregeln + UI
+- [ ] **Capability-Registry:** Backend registriert seine Fähigkeiten; UI wertet Capabilities aus statt Backend-Typ zu prüfen
 
 ### Phase 3: Empfehlungs-Engine
 
@@ -1155,6 +1167,7 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **Rebalance-Budget:** Budget-Konfiguration, Queue mit ML-Priorisierung, Erfolgsmessung
 - [ ] **Dynamische Rebalancing-Zielquoten:** Liquiditätsbedarf-Analyse, konfigurierbarer Puffer, Routing-Verhaltens-Adaption
 - [ ] **Audit-Log-UI:** Vollständiger Änderungsverlauf mit Rollback
+- [ ] **Policy-Domänenentkopplung:** Policy-Definitionen auf Domänenebene; Executor-Adapter übersetzt Policy → konkrete LND-Aktion (CLN-Vorbereitung)
 
 ### Phase 5: Externe Integrationen & Erweiterte Features
 
@@ -1172,6 +1185,15 @@ Phase 3 – Konsolidierung (optional):
 - [ ] **Eskalations-/Deeskalations-Tuning:** Konfigurierbare Faktoren und Grenzen über UI
 - [ ] **SPA als Haupt-Produkt:** Phase 2 des Roll-outs
 - [ ] **PWA-Vorbereitung:** Service Worker, Manifest, Offline-Fallback
+
+### Phase 7: CLN-Adapter & Multi-Asset-Vorbereitung
+
+- [ ] **CLN-Adapter:** `ClnBackend` als zweite `LightningBackend`-Implementierung (JSON-RPC / Plugin-API)
+- [ ] **Capability-UI vollständig:** Features werden angezeigt/ausgegraut basierend auf Backend-Capabilities, nicht auf Backend-Typ
+- [ ] **Multi-Node-Backend-Switcher:** UI-Switcher zwischen mehreren Backend-Instanzen
+- [ ] **Asset-Attribut im Datenmodell aktivieren:** `asset_id` / `asset_group` / `denomination` in Flow- und Fee-Modellen sichtbar machen
+- [ ] **Unit-flexible UI:** Beträge, Charts, Erklärungen arbeiten mit `denomination`-Platzhaltern statt hardcodierten „sats"
+- [ ] **CLN-Onboarding-Erweiterung:** Guided-Mode erkennt CLN-Capabilities und passt Wizard-Inhalte an
 
 ---
 
@@ -1334,6 +1356,275 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | B6 | ML-Training-Frequenz auf ressourcenschwachen Nodes? | Nächtliches Batch-Training **vs.** Nur manuell auslösbar **vs.** Deaktivierbar | Aktualität der Modelle vs. CPU/RAM-Belastung auf RPi |
 | B7 | Mindestdatenmenge für ML-Rebalancing-Modell? | 30 Tage / mind. 50 Rebalance-Events **vs.** 14 Tage / 20 Events | Modellqualität vs. Time-to-Value für neue Nutzer |
 | B8 | Wie werden ML-Modelle bei Upgrade auf neue LNDg-Version migriert? | Modelle verwerfen + neu trainieren **vs.** Migrations-Skript | Einfachheit vs. Datenverlust beim Upgrade |
+
+---
+
+## 17. Multi-Backend & Multi-Asset Architektur (CLN- & Zukunftsfähigkeit)
+
+> **Leitgedanke:** LNDg Next soll heute LND perfekt bedienen, aber so refactored werden, dass morgen weder CLN noch Multi-Asset-Lightning eine Neuentwicklung erzwingen.
+
+---
+
+### 17.1 Trennung von „Lightning-Logik" und „Implementierungs-Details"
+
+#### Was heute vermieden werden muss
+
+Direkte Kopplung von UI/Business-Logik an:
+
+- LND-spezifische RPC-Felder (z. B. `chan_id`, `_forwarding_event`, `lnd_short_chan_id`)
+- LND-spezifische Begrifflichkeiten in Templates und Kommentaren
+- Vermischung von Routing-Konzepten und Implementierungsartefakten
+
+#### Abstrakte Lightning-Domänenmodelle
+
+Folgende Modelle beschreiben **was passiert**, nicht wie es technisch geliefert wird:
+
+| Domänenmodell | Beschreibung |
+|---|---|
+| `Node` | Eigener Lightning-Node (Backend-unabhängig) |
+| `Peer` | Verbundener Lightning-Knoten |
+| `Channel` | Bidirektionaler Liquiditätskanal |
+| `ForwardingEvent` | Weitergeleites HTLC mit In-/Outbound-Channel, Betrag, Fee |
+| `LiquidityState` | Snapshot des Kanal-Zustands (lokal/remote/total) |
+| `FeePolicy` | Gebührenparameter (base_fee, fee_rate, min/max_htlc, inbound_fee) |
+| `RebalanceAction` | Rebalancing-Vorgang mit Quelle, Ziel, Betrag, Kosten |
+
+**Konsequenz:** LND wird zu einer _Implementierung_ eines „Lightning-Adapters". CLN kann später ein zweiter Adapter sein – ohne UI-Rewrite.
+
+---
+
+### 17.2 Adapter-Pattern für Node-Backends
+
+#### Empfohlene Struktur
+
+```
+LightningBackend (Interface / abstrakte Klasse)
+├── LndBackend          ← Implementierung heute
+└── ClnBackend          ← Implementierung später (future)
+```
+
+#### Was der Adapter kapselt
+
+```python
+class LightningBackend:
+    """Abstraktes Interface für alle Lightning-Node-Backends."""
+
+    def get_node_info(self) -> Node: ...
+    def list_channels(self) -> list[Channel]: ...
+    def list_peers(self) -> list[Peer]: ...
+    def get_forwarding_events(self, start, end) -> list[ForwardingEvent]: ...
+    def get_liquidity_state(self, channel_id) -> LiquidityState: ...
+    def update_fee_policy(self, channel_id, policy: FeePolicy) -> bool: ...
+    def get_capabilities(self) -> BackendCapabilities: ...
+```
+
+Der Adapter kapselt:
+- RPC / gRPC / JSON-RPC Unterschiede
+- Naming-Unterschiede (z. B. `chan_id` vs. `short_channel_id`)
+- Event-Formate (z. B. HTLC-Events in LND vs. CLN-Plugin-Hooks)
+- Capability-Flags (z. B. `supports_splicing`, `supports_multi_asset`)
+
+#### Warum das für CLN entscheidend ist
+
+Core Lightning (CLN):
+- ist stark plugin-basiert – viele Features kommen aus Plugins, nicht aus dem Core
+- liefert viele Daten anders strukturiert (JSON-RPC statt gRPC)
+- erweitert sich häufig außerhalb des Core (Plugins: `clnrest`, `cln-grpc`, `rebalance`, etc.)
+
+> Ohne Adapter-Schicht wäre CLN-Support später ein Refactoring-Albtraum.
+
+---
+
+### 17.3 Capability-basierte UI
+
+#### Refactoring-Regel
+
+UI-Funktionen dürfen **nicht** fragen:
+
+```python
+# ❌ FALSCH – direkte Backend-Kopplung
+if settings.backend == "LND":
+    show_auto_fee_button()
+```
+
+sondern müssen fragen:
+
+```python
+# ✅ RICHTIG – Capability-basiert
+if backend.get_capabilities().can_auto_fee:
+    show_auto_fee_button()
+```
+
+#### Definierte Capabilities
+
+```python
+@dataclass
+class BackendCapabilities:
+    can_auto_fee: bool           # Fee-Anpassung via API möglich
+    can_rebalance: bool          # Kreisförmige Payments für Rebalancing
+    can_stream_htlcs: bool       # Live HTLC-Event-Stream verfügbar
+    can_multi_asset: bool        # Multi-Asset-Kanäle (Taproot Assets)
+    can_splice: bool             # Channel-Splice (Resize ohne Close)
+    can_inbound_fees: bool       # Inbound-Fee-Parameter unterstützt
+    can_keysend: bool            # Spontane Payments (Keysend)
+    supports_plugins: bool       # Plugin-Erweiterungs-Mechanismus vorhanden
+```
+
+#### UI-Verhalten
+
+| Capability | UI-Reaktion wenn `False` |
+|---|---|
+| `can_auto_fee` | Button ausgegraut + Tooltip „Nicht vom Backend unterstützt" |
+| `can_splice` | Resize-Option ausgeblendet in Advanced, Hinweis in Expert |
+| `supports_plugins` | CLN-Plugin-Status anzeigen (z. B. „rebalance-Plugin fehlt") |
+| `can_multi_asset` | Asset-Bereich nur in Expert-Mode sichtbar |
+
+**Vorteil für CLN:** CLN-Setups unterscheiden sich stark je nach installierten Plugins. Die UI kann Funktionen anzeigen/ausgrauen und erklären, welches Plugin fehlt – ohne harte LND-Feature-Parity vorauszusetzen.
+
+---
+
+### 17.4 Asset-agnostisches Datenmodell
+
+Auch wenn LNDg Next zunächst ausschließlich BTC-Routing zeigt, sollte jede Liquidität, jede Fee und jeder Flow intern ein Asset-Attribut tragen:
+
+```python
+@dataclass
+class AssetContext:
+    asset_id: str            # "btc" | "usdt.taproot" | ...
+    asset_group: str         # "bitcoin" | "stablecoin" | "token"
+    denomination: str        # "sat" | "msat" | "usd-cent" | ...
+    display_unit: str        # "sats" | "USD" | "Token" (für UI)
+    decimals: int            # Dezimalstellen für Darstellung
+```
+
+**Betroffene Domänenmodelle:**
+
+```python
+class ForwardingEvent:
+    asset: AssetContext      # Default: AssetContext("btc", "bitcoin", "msat", "sats", 0)
+    in_amount: int
+    out_amount: int
+    fee_earned: int
+    ...
+
+class FeePolicy:
+    asset: AssetContext
+    fee_rate_ppm: int
+    base_fee: int
+    ...
+
+class LiquidityState:
+    asset: AssetContext
+    local_balance: int
+    remote_balance: int
+    ...
+```
+
+**Warum jetzt?**
+
+- Taproot Assets (ex-TARO) nutzen bestehende Lightning-Kanäle – kein separates Netzwerk
+- Stablecoins auf Lightning werden kein „separate Channels"-System sein, sondern Routing auf bestehender Infrastruktur
+- Ein späteres „DB-Rewrite" wäre extrem teuer – wenn das Datenmodell heute richtig ist, bleibt das UI morgen stabil
+
+**BTC bleibt Default:** Das `asset`-Attribut ist standardmäßig auf `btc` gesetzt. Multi-Asset erscheint nur in Advanced/Expert-Mode und nur wenn `can_multi_asset` aktiv ist.
+
+---
+
+### 17.5 Implementierungsneutrale Policies
+
+#### Fehler, den man jetzt vermeiden sollte
+
+```python
+# ❌ FALSCH – LND-spezifische Policy-Logik
+def run_auto_fee():
+    lnd_client.update_channel_policy(
+        chan_point=lnd_channel_id,
+        fee_rate_ppm=calculated_ppm,
+        time_lock_delta=LND_DEFAULT_CLTV
+    )
+```
+
+#### Richtige Struktur: Domänenebene + Backend-Adapter
+
+```python
+# ✅ RICHTIG – implementierungsneutrale Policy
+@dataclass
+class FeePolicyUpdate:
+    """Domänen-Objekt: Was soll passieren (ohne Backend-Details)."""
+    channel_id: str           # Abstrakte Channel-ID
+    target_fee_rate_ppm: int
+    target_base_fee: int
+    rationale: str            # Für Audit-Log
+
+# Executor delegiert an den aktiven Backend-Adapter:
+def execute_fee_policy(update: FeePolicyUpdate):
+    backend = get_active_backend()   # LndBackend oder ClnBackend
+    backend.update_fee_policy(update.channel_id, FeePolicy(
+        fee_rate_ppm=update.target_fee_rate_ppm,
+        base_fee=update.target_base_fee,
+    ))
+    ChangeLog.create(rationale=update.rationale, ...)
+```
+
+**Vorteil:**
+- LND verwendet integrierte gRPC-Mechaniken
+- CLN verwendet `lightning-cli setchannel` oder Plugin-API
+- Die Policy bleibt gleich – nur der Executor ändert sich
+
+---
+
+### 17.6 UX-Strategie: Bereits jetzt „CLN-fähig" denken
+
+#### Konkrete UI-Regeln
+
+1. **Keine LND-Begrifflichkeiten in der UI**  
+   Statt „LND Channel ID" → „Channel ID"  
+   Statt „LND Macaroon" → „Node-Zugangsdaten"  
+   Statt „HTLC forwarding event" → „Weiterleitungsereignis"
+
+2. **Keine Screens, die implizit identische Features aller Nodes voraussetzen**  
+   Jede Funktion ist mit Capability-Check versehen – in der UI unsichtbar wenn nicht unterstützt.
+
+3. **Beträge und Einheiten flexibel halten**  
+   Texte, Charts, Erklärungen arbeiten mit `denomination`-Platzhaltern statt hardcodierten „sats":
+   
+   ```
+   ❌ "Dein Outbound-Guthaben beträgt 500.000 sats"
+   ✅ "Dein Outbound-Guthaben beträgt 500.000 {denomination}"
+   ```
+
+4. **Onboarding erkennt das Backend**  
+   Der Guided-Wizard fragt nicht „Hast du LND?", sondern erkennt automatisch via Capability-Check, welche Features verfügbar sind, und passt die Erklärungen an.
+
+#### Strategischer Effekt
+
+Viele Betreiber nutzen CLN nicht, weil moderne GUIs fehlen und die Lernbarrieren hoch sind.
+
+LNDg Next kann genau hier eine Marktlücke schließen:
+- CLN ist technisch stark, aber bisher UI-schwach
+- LNDg Next bietet: Lernen + Visualisierung + erklärtes Routing – für beide Welten
+
+---
+
+### 17.7 Refactoring-Checkliste (kompakt)
+
+| Punkt | Beschreibung | Phase |
+|---|---|---|
+| ✅ Abstraktes Domänenmodell | `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy` etc. backend-neutral | Phase 1 |
+| ✅ Backend-Adapter-Schicht | `LightningBackend` Interface + `LndBackend` Implementierung | Phase 1 |
+| ✅ Capability-basierte UI | Kein `if backend == "LND"` in Templates/Views | Phase 2 |
+| ✅ Asset-agnostisches Datenmodell | `asset_id` / `denomination` in Liquiditäts- und Flow-Modellen | Phase 1–2 |
+| ✅ Implementierungsneutrale Policies | Policy-Objekte auf Domänenebene; Executor delegiert an Adapter | Phase 4 |
+| ✅ UX ohne implizite LND-Annahmen | Generische Lightning-Begriffe; flexible Units; Capability-Checks | Phase 1+ |
+| 🔮 CLN-Adapter | `ClnBackend` Implementierung (JSON-RPC + Plugin-API) | Phase 7 |
+| 🔮 Multi-Asset-UI | Asset-Bereich in Advanced/Expert wenn `can_multi_asset` aktiv | Phase 7+ |
+
+**Was dadurch möglich wird:**
+
+- CLN-Support ohne Architekturbruch
+- Stablecoins & Taproot Assets ohne DB-Rewrite
+- Einsteiger-freundliche GUI für LND und CLN
+- LNDg entwickelt sich vom „LND-Tool" zum **Lightning Node Intelligence Layer**
 
 ---
 
