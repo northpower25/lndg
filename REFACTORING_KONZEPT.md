@@ -1433,57 +1433,57 @@ Schließen eines Channels ist risikobehaftet. Dedizierter Workflow:
 
 ## 16. Offene Fragen & Entscheidungsbedarfe
 
-Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
+Die folgenden Punkte wurden entschieden oder sind noch offen. Entschiedene Punkte sind mit ✅ markiert, offene mit 🔲.
 
 ### Architektur & Technologie
 
-| # | Frage | Optionen | Implikation |
-|---|---|---|---|
-| A1 | Welches Frontend-Framework? | React + Vite **vs.** HTMX + Alpine.js **vs.** Vue.js | Beeinflusst Entwicklungsaufwand, benötigte Skills, mobile Tauglichkeit |
-| A2 | SPA unter `/app/*` oder komplette URL-Migration? | Parallel `/app/*` **vs.** Migration bestehender URLs | Risiko für bestehende Nutzer, Bookmarks, externe Verlinkungen |
-| A3 | WebSocket für Live-Updates? | Django Channels (Redis) **vs.** SSE **vs.** Polling beibehalten | Redis-Abhängigkeit; Komplexität im Deployment |
-| A4 | Datenbank: SQLite behalten oder PostgreSQL als Standard? | SQLite (einfach, single-file) **vs.** PostgreSQL (besser für Zeitreihen, Concurrent Writes) | Beeinflusst Backup-Strategie, Performance bei Snapshots |
-| A5 | ML-Bibliothek: scikit-learn (leicht, kein Overhead) vs. externe ML-API? | scikit-learn lokal **vs.** External ML API | Privacy (keine Daten extern), Ressourcenverbrauch auf kleinen Nodes (RPi) |
-| A6 | ML-Modell-Persistenz: Wie werden trainierte Modelle gespeichert und versioniert? | SQLite-BLOB **vs.** Dateisystem (`.joblib`/`.pkl`) **vs.** MLflow | Reproduzierbarkeit, Rollback bei schlechtem Modell |
-| A7 | ML-Training: Online-Learning (inkrementell) vs. periodisches Batch-Retraining? | Online (z. B. stündlich) **vs.** Batch (täglich/wöchentlich) | Ressourcenverbrauch vs. Aktualität der Modelle; Stabilität |
+| # | Frage | Optionen | Implikation | Entscheidung |
+|---|---|---|---|---|
+| A1 ✅ | Welches Frontend-Framework? | React + Vite **vs.** HTMX + Alpine.js **vs.** Vue.js | Beeinflusst Entwicklungsaufwand, benötigte Skills, mobile Tauglichkeit | **React + Vite** – größtes Ökosystem, beste Community-Unterstützung, zukunftssicher |
+| A2 ✅ | SPA unter `/app/*` oder komplette URL-Migration? | Parallel `/app/*` **vs.** Migration bestehender URLs | Risiko für bestehende Nutzer, Bookmarks, externe Verlinkungen | **Komplette URL-Migration** – da noch keine produktiven Nutzer auf dem Projekt arbeiten, kein Migrationsrisiko |
+| A3 ✅ | WebSocket für Live-Updates? | Django Channels (Redis) **vs.** SSE **vs.** Polling beibehalten | Redis-Abhängigkeit; Komplexität im Deployment | **SSE (Server-Sent Events)** – kein Redis nötig, ausreichend für einseitige Push-Updates; Polling als Fallback erhalten |
+| A4 ✅ | Datenbank: SQLite behalten oder PostgreSQL als Standard? | SQLite (einfach, single-file) **vs.** PostgreSQL (besser für Zeitreihen, Concurrent Writes) | Beeinflusst Backup-Strategie, Performance bei Snapshots | **SQLite Standard, PostgreSQL optional** – SQLite für Standardsetups (inkl. RPi), PostgreSQL als dokumentierte optionale Alternative |
+| A5 ✅ | ML-Bibliothek: scikit-learn (leicht, kein Overhead) vs. externe ML-API? | scikit-learn lokal **vs.** External ML API | Privacy (keine Daten extern), Ressourcenverbrauch auf kleinen Nodes (RPi) | **scikit-learn lokal** – Privacy-first, offline-fähig, läuft auf allen Zielplattformen inkl. RPi 4 |
+| A6 ✅ | ML-Modell-Persistenz: Wie werden trainierte Modelle gespeichert und versioniert? | SQLite-BLOB **vs.** Dateisystem (`.joblib`/`.pkl`) **vs.** MLflow | Reproduzierbarkeit, Rollback bei schlechtem Modell | **Dateisystem (`.joblib`)** – einfachstes bewährtes Pattern für scikit-learn; Ablage unter `models/rebalance_v{timestamp}.joblib` |
+| A7 ✅ | ML-Training: Online-Learning (inkrementell) vs. periodisches Batch-Retraining? | Online (z. B. stündlich) **vs.** Batch (täglich/wöchentlich) | Ressourcenverbrauch vs. Aktualität der Modelle; Stabilität | **Periodisches Batch-Retraining** – stabil und ressourcenschonend; Frequenz konfigurierbar; auf Nodes mit wenig RAM deaktivierbar oder nur manuell auslösbar |
 
 ### Produkt & UX
 
-| # | Frage | Optionen | Implikation |
-|---|---|---|---|
-| P1 | Wie werden Betriebsmodi freigeschaltet? | Manuell durch Nutzer **vs.** automatisch nach X Tagen/Aktionen | Engagement vs. Nutzerkontrolle |
-| P2 | Soll der Modus (Guided/Advanced/Expert) passwortgeschützt sein? | Ja (verhindert versehentliches Hochstufen) **vs.** Nein | Sicherheit vs. Reibung |
-| P3 | Welche Sprachen zum Launch? | Nur DE+EN **vs.** DE+EN+weitere | Übersetzungsaufwand; Community-Resourcen |
-| P4 | Sollen Empfehlungen Community-geteilt werden können? | Ja (opt-in) **vs.** Nein (privat) | Privacy-Implikationen; Mehrwert für Community |
-| P5 | Wie detailliert soll der Onboarding-Wizard sein? | Minimal (3 Schritte) **vs.** Vollständig (5+ Schritte) | Abbruchrate vs. Lerneffekt |
-| P6 | Ab wann darf ML-Rebalancing vollautomatisch ausführen? | Nur Expert-Mode nach N Tagen Shadow-Mode **vs.** Opt-in ab Advanced | Risiko vs. Nutzbarkeit; Vertrauen ins Modell |
-| P7 | Wie soll der Übergang von regelbasiert zu ML-gesteuert kommuniziert werden? | Explizites UI-Toggle (Modus: Regelbasiert / ML) **vs.** gradueller Übergang | Nutzerkontrolle vs. Komplexität; Vertrauen |
-| P8 | Welche Kanäle sollen vom ML-Auto-Fee ausgeschlossen werden können? | Einzelne Kanäle (Whitelist/Blacklist) **vs.** nur global | Granularität vs. Konfigurationsaufwand |
+| # | Frage | Optionen | Implikation | Entscheidung |
+|---|---|---|---|---|
+| P1 ✅ | Wie werden Betriebsmodi freigeschaltet? | Manuell durch Nutzer **vs.** automatisch nach X Tagen/Aktionen | Engagement vs. Nutzerkontrolle | **Manuell durch Nutzer** – technisch affine Zielgruppe erwartet Kontrolle; CTA im UI ("Bereit für mehr?") |
+| P2 ✅ | Soll der Modus (Guided/Advanced/Expert) passwortgeschützt sein? | Ja (verhindert versehentliches Hochstufen) **vs.** Nein | Sicherheit vs. Reibung | **Nein** – Confirmation-Dialog mit klarer Warnung beim Hochstufen ausreichend |
+| P3 ✅ | Welche Sprachen zum Launch? | Nur DE+EN **vs.** DE+EN+weitere | Übersetzungsaufwand; Community-Resourcen | **Nur DE + EN** – weitere Sprachen via Community-Contributions (i18n-Framework) nachrüstbar |
+| P4 🔲 | Sollen Empfehlungen Community-geteilt werden können? | Ja (opt-in) **vs.** Nein (privat) | Privacy-Implikationen; Mehrwert für Community | *Noch offen – zurückgestellt* |
+| P5 ✅ | Wie detailliert soll der Onboarding-Wizard sein? | Minimal (3 Schritte) **vs.** Vollständig (5+ Schritte) | Abbruchrate vs. Lerneffekt | **Vollständig (5+ Schritte)** – höherer Lerneffekt; bessere initiale Konfiguration |
+| P6 ✅ | Ab wann darf ML-Rebalancing vollautomatisch ausführen? | Nur Expert-Mode nach N Tagen Shadow-Mode **vs.** Opt-in ab Advanced | Risiko vs. Nutzbarkeit; Vertrauen ins Modell | **Nur Expert-Mode nach N Tagen Shadow-Mode** – Pflicht-Lernphase baut Vertrauen auf und validiert das Modell am konkreten Setup |
+| P7 ✅ | Wie soll der Übergang von regelbasiert zu ML-gesteuert kommuniziert werden? | Explizites UI-Toggle (Modus: Regelbasiert / ML) **vs.** gradueller Übergang | Nutzerkontrolle vs. Komplexität; Vertrauen | **Explizites UI-Toggle** – klarer "Modus: Regelbasiert / ML"-Toggle mit Status-Indikator (letzter ML-Eingriff, Konfidenzwert); UI-Benachrichtigung sobald genug ML-Daten verfügbar sind; **pro Kanal einzeln aktivier-/deaktivierbar** |
+| P8 ✅ | Welche Kanäle sollen vom ML-Auto-Fee ausgeschlossen werden können? | Einzelne Kanäle (Whitelist/Blacklist) **vs.** nur global | Granularität vs. Konfigurationsaufwand | **Einzelne Kanäle (Whitelist/Blacklist)** – gilt ebenso für ML-gesteuertes Rebalancing; **pro Kanal konfigurierbar ob ML-Nutzung ready und aktiv ist**; Toggle direkt in der Kanalübersicht |
 
 ### Datenschutz & Sicherheit
 
-| # | Frage | Optionen | Implikation |
-|---|---|---|---|
-| S1 | Welche Daten werden an externe APIs (Amboss, mempool) gesendet? | Nur Pubkeys **vs.** Channel-IDs **vs.** Nichts ohne explizite Einwilligung | Privacy-Policy notwendig; Default muss sicher sein |
-| S2 | Soll es eine anonyme Nutzungsstatistik geben? | Opt-in Telemetrie **vs.** Keine | Verbesserung des Produkts vs. Privacy |
-| S3 | Wie werden Backup-Dateien verschlüsselt? | AES-256 + Passwort **vs.** Unverschlüsselt **vs.** GPG | Einfachheit vs. Sicherheit |
-| S4 | Rollback: Wie weit zurück? | Letzte 1 Änderung **vs.** Letzten 7 Tage **vs.** Unbegrenzt | Speicherbedarf vs. Flexibilität |
-| S5 | Darf KI (`ai_mode=shadow`) Empfehlungen automatisch in Policies überführen? | Nein (immer manuell) **vs.** Ja, nach Konfidenz-Schwelle + Cooldown | Kernfrage der KI-Sicherheitsarchitektur (Abschnitt 18) |
-| S6 | Welche ML-Bibliothek für lokale Modelle? | scikit-learn (lokal, privacy-safe) **vs.** externe ML-API (komfortabler, aber Datenweitergabe) | Privacy vs. Wartungsaufwand; externe API erfordert explizite Einwilligung + klare Datenschutzerklärung |
-| S7 | Ab welchem `ai_mode`-Level darf KI Policy-Ausführung auslösen? | Nur `policy_bound` (nie `shadow`/`advisory`) **vs.** konfigurierbar | Sicherheit vs. Komfort; `policy_bound` ist der frühestmögliche sichere Level (Abschnitt 18.2) |
+| # | Frage | Optionen | Implikation | Entscheidung |
+|---|---|---|---|---|
+| S1 ✅ | Welche Daten werden an externe APIs (Amboss, mempool) gesendet? | Nur Pubkeys **vs.** Channel-IDs **vs.** Nichts ohne explizite Einwilligung | Privacy-Policy notwendig; Default muss sicher sein | **Nichts ohne explizite Einwilligung** – Default: keine externen Anfragen; bestehende Integrationen als bewusstes Opt-in |
+| S2 ✅ | Soll es eine anonyme Nutzungsstatistik geben? | Opt-in Telemetrie **vs.** Keine | Verbesserung des Produkts vs. Privacy | **Opt-in Telemetrie** – klare Anzeige im UI was gesendet wird; Privacy by default |
+| S3 ✅ | Wie werden Backup-Dateien verschlüsselt? | AES-256 + Passwort **vs.** Unverschlüsselt **vs.** GPG | Einfachheit vs. Sicherheit | **AES-256 + Passwort** – bester Kompromiss aus Sicherheit und Usability |
+| S4 ✅ | Rollback: Wie weit zurück? | Letzte 1 Änderung **vs.** Letzten 7 Tage **vs.** Unbegrenzt | Speicherbedarf vs. Flexibilität | **Letzte 7 Tage** – ausreichend für Fehlerdiagnose; beherrschbarer Speicherbedarf |
+| S5 ✅ | Darf KI (`ai_mode=shadow`) Empfehlungen automatisch in Policies überführen? | Nein (immer manuell) **vs.** Ja, nach Konfidenz-Schwelle + Cooldown | Kernfrage der KI-Sicherheitsarchitektur (Abschnitt 18) | **Nein (immer manuell)** – Shadow-Mode ist Beobachtungs-Modus; automatische Überführung würde Sicherheitsversprechen brechen |
+| S6 ✅ | Welche ML-Bibliothek für lokale Modelle? | scikit-learn (lokal, privacy-safe) **vs.** externe ML-API (komfortabler, aber Datenweitergabe) | Privacy vs. Wartungsaufwand; externe API erfordert explizite Einwilligung + klare Datenschutzerklärung | **scikit-learn (lokal, privacy-safe)** – identisch mit A5; externe ML-APIs sind für self-hosted Privacy-First-Anwendung keine valide Option |
+| S7 🔲 | Ab welchem `ai_mode`-Level darf KI Policy-Ausführung auslösen? | Nur `policy_bound` (nie `shadow`/`advisory`) **vs.** konfigurierbar | Sicherheit vs. Komfort; `policy_bound` ist der frühestmögliche sichere Level (Abschnitt 18.2) | *Noch offen* |
 
 ### Betrieb & Deployment
 
-| # | Frage | Optionen | Implikation |
-|---|---|---|---|
-| B1 | Soll Redis als Pflicht-Dependency eingeführt werden? | Ja (WebSocket, Caching) **vs.** Optional **vs.** Nein | Deployment-Komplexität auf kleinen Nodes |
-| B2 | Wie soll der Snapshot-Job skaliert werden? (RPi-Limit) | 15-Min-Intervall **vs.** 1h-Intervall **vs.** konfigurierbar | DB-Wachstum vs. Chart-Granularität |
-| B3 | Automatisches Backup: lokal vs. remote? | Nur lokal (Standard) **vs.** Optional SFTP/S3 | Sicherheit vs. Konfigurationsaufwand |
-| B4 | Soll es ein offizielles Helm-Chart/Umbrel-Update geben? | Ja (Priorität) **vs.** Community-Beitrag **vs.** Später | Adoptions-Reichweite; Maintenance-Aufwand |
-| B5 | Minimale Hardware-Anforderung für ML-Features? | Raspberry Pi 4 (4 GB RAM) **vs.** Nur auf leistungsfähiger Hardware | Kompatibilität vs. Feature-Reichhaltigkeit |
-| B6 | ML-Training-Frequenz auf ressourcenschwachen Nodes? | Nächtliches Batch-Training **vs.** Nur manuell auslösbar **vs.** Deaktivierbar | Aktualität der Modelle vs. CPU/RAM-Belastung auf RPi |
-| B7 | Mindestdatenmenge für ML-Rebalancing-Modell? | 30 Tage / mind. 50 Rebalance-Events **vs.** 14 Tage / 20 Events | Modellqualität vs. Time-to-Value für neue Nutzer |
-| B8 | Wie werden ML-Modelle bei Upgrade auf neue LNDg-Version migriert? | Modelle verwerfen + neu trainieren **vs.** Migrations-Skript | Einfachheit vs. Datenverlust beim Upgrade |
+| # | Frage | Optionen | Implikation | Entscheidung |
+|---|---|---|---|---|
+| B1 ✅ | Soll Redis als Pflicht-Dependency eingeführt werden? | Ja (WebSocket, Caching) **vs.** Optional **vs.** Nein | Deployment-Komplexität auf kleinen Nodes | **Optional** – mit SSE statt WebSocket entfällt der Hauptgrund für Redis; bleibt optionale Caching-Schicht für leistungsfähigere Setups |
+| B2 ✅ | Wie soll der Snapshot-Job skaliert werden? (RPi-Limit) | 15-Min-Intervall **vs.** 1h-Intervall **vs.** konfigurierbar | DB-Wachstum vs. Chart-Granularität | **Konfigurierbar (Default: 15 Min)** – 1h als RPi-Empfehlung; automatische Ressourcenerkennung für sinnvollen Default |
+| B3 ✅ | Automatisches Backup: lokal vs. remote? | Nur lokal (Standard) **vs.** Optional SFTP/S3 | Sicherheit vs. Konfigurationsaufwand | **Nur lokal (Standard)** – remote optional via SFTP / S3 / Azure / OneDrive; Standardinstallation bleibt einfach |
+| B4 ✅ | Soll es ein offizielles Helm-Chart/Umbrel-Update geben? | Ja (Priorität) **vs.** Community-Beitrag **vs.** Später | Adoptions-Reichweite; Maintenance-Aufwand | **Ja (Priorität)** – Umbrel und Start9 sind die meistgenutzten Plattformen; offizielles Package erhöht Adoptionsrate |
+| B5 ✅ | Minimale Hardware-Anforderung für ML-Features? | Raspberry Pi 4 (4 GB RAM) **vs.** Nur auf leistungsfähiger Hardware | Kompatibilität vs. Feature-Reichhaltigkeit | **Raspberry Pi 4 (4 GB RAM)** – Referenzplattform der meisten Home-Node-Betreiber; auf schwächerer Hardware automatisch deaktiviert mit klarer Meldung |
+| B6 ✅ | ML-Training-Frequenz auf ressourcenschwachen Nodes? | Nächtliches Batch-Training **vs.** Nur manuell auslösbar **vs.** Deaktivierbar | Aktualität der Modelle vs. CPU/RAM-Belastung auf RPi | **Nächtliches Batch-Training, deaktivierbar** – Training z. B. um 03:00 Uhr minimiert Konflikte mit Node-Betrieb; für sehr kleine Nodes (RPi 3, 2 GB RAM) vollständig deaktivierbar |
+| B7 ✅ | Mindestdatenmenge für ML-Rebalancing-Modell? | 30 Tage / mind. 50 Rebalance-Events **vs.** 14 Tage / 20 Events | Modellqualität vs. Time-to-Value für neue Nutzer | **30 Tage / mind. 50 Events** – Qualität vor Geschwindigkeit; **pro Kanal mit individuellem Status und de-/aktivierbar**; Fortschrittsanzeige für neue Nutzer ("Noch X Tage bis ML-Features für diesen Kanal verfügbar") |
+| B8 ✅ | Wie werden ML-Modelle bei Upgrade auf neue LNDg-Version migriert? | Modelle verwerfen + neu trainieren **vs.** Migrations-Skript | Einfachheit vs. Datenverlust beim Upgrade | **Modelle verwerfen + neu trainieren** – Trainingsdaten bleiben in lokaler DB erhalten; Neu-Training nach Upgrade max. eine Nacht; automatischer Hinweis beim Upgrade |
 
 ---
 
