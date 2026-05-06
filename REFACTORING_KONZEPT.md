@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.3 · **Status:** Konzept / Entwurf  
+> **Version:** 1.4 · **Status:** Konzept / Entwurf  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -24,6 +24,7 @@
 15. [Zusätzliche Ideen & Erweiterungsvorschläge](#15-zusätzliche-ideen--erweiterungsvorschläge)
 16. [Offene Fragen & Entscheidungsbedarfe](#16-offene-fragen--entscheidungsbedarfe)
 17. [Multi-Backend-Architektur: LND & CLN (inkl. Channel-Splice)](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice)
+18. [KI & Agentic KI – Advisory, Safety und graduierte Autonomie](#18-ki--agentic-ki--advisory-safety-und-graduierte-autonomie)
 
 ---
 
@@ -140,6 +141,7 @@ Kacheln + Story-Panels statt Tabellen:
 - Spalten-Presets: „Beginner", „Fees", „Flows", „Risk", „ROI"
 - Inline-Tooltips (Glossar)
 - Bulk-Aktionen (mehrere Channels gleichzeitig bearbeiten)
+- **Kanal-Gruppen / Tags:** Channels können zu benannten Gruppen zusammengefasst werden (z. B. „Premium Peers", „Inbound-Anker"). Gruppen erben globale Policy-Defaults und können gruppenspezifische Overrides erhalten. Kanalgruppen sind die Grundlage für Bulk-Aktionen und granulare Policy-Zuweisung (siehe Abschnitt 6.1). Ein Channel kann mehreren Gruppen angehören, sofern keine Konflikte in gemeinsamen Einstellungen entstehen.
 - **Channel-Aktionen** (kontextsensitiv, abhängig von Backend-Capabilities):
   - **Splice In** – Kapazität erhöhen ohne Close (CLN nativ; LND wenn Capability aktiv)
   - **Splice Out** – Kapazität reduzieren und On-Chain auszahlen
@@ -239,6 +241,28 @@ Alle Signale basieren auf bereits vorhandenen LNDg-Daten:
 └─────────────────────────────────────────────┘
 ```
 
+**Formalisiertes Rationale-Schema**
+
+Jede Empfehlung verwendet ein standardisiertes JSON-Schema im `rationale`-Feld des `Recommendation`-Models (siehe Abschnitt 9.1). Das Schema gilt gleichermaßen für heuristische und spätere ML-Empfehlungen und ist die Grundlage für alle „Warum?"-Panels in der UI:
+
+```json
+{
+  "reasons": [
+    {"rank": 1, "signal": "no_outbound_flow", "value": "14 Tage",         "weight": 0.45},
+    {"rank": 2, "signal": "balance_ratio",    "value": "78 % Inbound",    "weight": 0.35},
+    {"rank": 3, "signal": "fee_vs_peers",     "value": "+39 % über Median","weight": 0.20}
+  ],
+  "data_source": "internal",
+  "data_window_days": 30,
+  "confidence": 0.72,
+  "confidence_label": "heuristic",
+  "alternatives": ["rebalance", "close"],
+  "simulation_available": true
+}
+```
+
+`confidence_label`-Typen: `heuristic` | `rule_based` | `ml_shadow` | `ml_model`. Das Schema ist in Phase 1 (nur Heuristik) sofort einsetzbar – ML-Modelle müssen nicht aktiv sein. Die KI-Sicherheitsarchitektur für das `Recommendation`-Model ist in Abschnitt 18 beschrieben.
+
 ### 5.3 ML-Komponente (Phase 2–3)
 
 **Wichtig:** ML darf anfangs **nur beraten** ("shadow mode"), nicht automatisch ausführen.
@@ -295,6 +319,7 @@ Cooldown    → verhindert Churn/Gossip (Mindestwartezeit zwischen Anpassungen)
 - „Apply" erfordert: Advanced/Expert-Modus + Impact-Preview bestätigt
 - Jede Policy schreibt in Audit-Log mit: Zeitstempel, Auslöser, alter Wert, neuer Wert, Ergebnis
 - **Policy-Snapshot:** Vor jeder Änderung wird der aktuelle Zustand gespeichert (ermöglicht Rollback)
+- **Default-Konsistenz:** Alle Policy-Parameter-Defaults werden ausschließlich im Datenmodell (Policy-Objekt) definiert. Unterschiedliche Defaults zwischen Code und Datenbank (wie bei `lowliq_limit` im bestehenden System) werden durch explizite Default-Policy-Objekte strukturell vermieden.
 
 ### 6.2 Auto-Fee: „Wähle eine Strategie" statt 20 Parameter
 
@@ -382,6 +407,7 @@ Rebalancing soll nicht „immer" laufen, sondern:
 - **Budget** pro Tag/Woche (in sats oder ppm-Kosten)
 - **Zielzustände** (z. B. Outbound-Quote ≥ 40 %)
 - **Priorisierung:** Channels mit hohem erwartetem Nutzen (Heuristik/ML)
+- **Balance-Berechnung:** Beim Start eines Rebalance-Versuchs wird die aktuelle Local Balance **ohne** unsettled HTLC-Saldo berechnet. Bei parallelen Rebalance-Versuchen auf demselben Kanal (MPP) sorgt dies dafür, dass kein Versuch einen Outbound-Target unterschreitet, der durch noch offene HTLCs bereits belastet ist.
 
 **UI:** Rebalance-Plan (Queue) + Erfolgsmessung:
 
@@ -569,7 +595,51 @@ Konfidenz: Heuristik (noch kein ML-Modell aktiv)
 
 ## 9. Backend-Konzept
 
-> **Hinweis:** Die Backend-Schicht wird so strukturiert, dass LND und CLN beide als gleichrangige Implementierungen des abstrakten `LightningBackend`-Adapters gebaut werden. Die vollständige Adapter-Architektur inkl. CLN, Channel-Splice und Capability-System ist in [Abschnitt 17](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice) beschrieben.
+> **Hinweis:** Die Backend-Schicht wird so strukturiert, dass LND und CLN beide als gleichrangige Implementierungen des abstrakten `LightningBackend`-Adapters gebaut werden. Die vollständige Adapter-Architektur inkl. CLN, Channel-Splice und Capability-System ist in [Abschnitt 17](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice) beschrieben. Die KI-Sicherheitsarchitektur (Read/Write-Trennung, Action-Gateways) ist in [Abschnitt 18](#18-ki--agentic-ki--advisory-safety-und-graduierte-autonomie) beschrieben.
+
+### 9.0 ReadAdapter / WriteAdapter – Strukturelle Sicherheitstrennung
+
+Der `LightningBackend`-Adapter (Abschnitt 17.2) wird in zwei getrennte Interface-Klassen aufgeteilt. Diese Trennung ist ein Architektur-Constraint, der KI-Schreibzugriff strukturell unmöglich macht – nicht nur durch Konvention:
+
+```python
+class LightningReadAdapter:
+    """Schreibgeschützte Schicht. Darf von Analyse, Empfehlungs-Engine und KI direkt genutzt werden."""
+    def get_node_info(self) -> Node: ...
+    def list_channels(self) -> list[Channel]: ...
+    def list_peers(self) -> list[Peer]: ...
+    def get_forwarding_events(self, start, end) -> list[ForwardingEvent]: ...
+    def get_liquidity_state(self, channel_id) -> LiquidityState: ...
+    def get_capabilities(self) -> BackendCapabilities: ...
+
+class LightningWriteAdapter:
+    """Schreibzugriff. Nur über den Validation Layer erreichbar – niemals direkt aus Views,
+    Recommendation Engine oder KI-Modulen."""
+    def update_fee_policy(self, channel_id, policy: FeePolicy) -> bool: ...
+    def splice_in(self, channel_id: str, amount_sat: int, fee_rate: int) -> SpliceAction: ...
+    def splice_out(self, channel_id: str, amount_sat: int, destination: str, fee_rate: int) -> SpliceAction: ...
+    def get_splice_status(self, splice_id: str) -> SpliceAction: ...
+```
+
+**Datenfluss (Action-Gateway):**
+
+```
+KI / Recommendation Engine  ──►  Recommendation-Objekt (kein direkter API-Call)
+                                          │
+                                   Policy Engine
+                                   (deterministische Regeln, konfigurierbarer Scope)
+                                          │
+                                   Validation Layer
+                                   (Sanity-Checks, Hard Caps, Cooldown-Guard)
+                                          │
+                              Human Confirmation (UI) | Approved Automation (Policy-gebunden)
+                                          │
+                                  LightningWriteAdapter
+                                  (einziger Ort mit Schreibrechten)
+                                          │
+                                    ChangeLog-Eintrag
+```
+
+`LightningReadAdapter` ist für alle Module zugänglich. `LightningWriteAdapter` wird ausschließlich vom `executor.py`-Job aufgerufen, der seinerseits nur über einen validierten `PolicyRun` aktiviert wird. Details zur KI-Sicherheitsarchitektur: Abschnitt 18.
 
 ### 9.1 Datenmodell-Erweiterungen (neue Models)
 
@@ -711,6 +781,16 @@ class AutoFeeMLRecord(models.Model):
     language = models.CharField(max_length=10, default='de')
     updated_at = models.DateTimeField(auto_now=True)
 
+    # KI-Feature-Flags (alle Default: off / conservative)
+    # Aktivierung erfordert explizite Nutzeraktion im Expert-Modus (siehe Abschnitt 18.4)
+    ai_mode = models.CharField(max_length=20, default='off')
+    # Werte: 'off' | 'advisory' | 'shadow' | 'policy_bound'
+    ai_explain_always = models.BooleanField(default=True)
+    ai_min_data_days = models.IntegerField(default=30)
+    ai_max_auto_actions_day = models.IntegerField(default=0)  # 0 = manuell only
+    ai_cooldown_minutes = models.IntegerField(default=60)
+    ai_shadow_log_enabled = models.BooleanField(default=True)
+
     class Meta:
         app_label = 'gui'
 ```
@@ -739,6 +819,9 @@ jobs/
 - Empfehlungen: alle 30 Min (konfigurierbar)
 - ML-Training: täglich (nächtlich, konfigurierbar; bei Ressourcenmangel: manuell auslösbar)
 - ML-Predictions (Rebalancing-Queue-Update): alle 30 Min oder nach Rebalance-Event
+
+**gRPC-Verbindungsmanagement:**
+gRPC-Credentials (TLS-Zertifikat + Macaroon) werden einmalig beim Start des Collector-Jobs geladen und gecacht – nicht pro Anfrage neu gelesen. Die gRPC-Connection wird über den gesamten Job-Lifecycle wiederverwendet (kein Connection-Overhead pro Snapshot). Bei Verbindungsabbruch erfolgt automatisches Reconnect mit Backoff. Async ORM-Methoden (`aget`, `afilter`, `abulk_create`) werden im gesamten Job-Stack bevorzugt, um Event-Loop-Blockaden zu vermeiden.
 
 ### 9.3 API-Layer v2
 
@@ -790,6 +873,10 @@ GET  /api/v2/channels/{id}/splice/status    # Status eines laufenden Splice-Vorg
 - Jede Write-Aktion benötigt: Audit-Log + Policy-Snapshot + Undo-Option
 - Rate-Limiting auf alle schreibenden API-Endpunkte
 - CSRF-Schutz für alle Formulare (bereits via Django vorhanden, beibehalten)
+- **SSH-Verbindungen** (z. B. für Channel-DB-Size-Feature): `RejectPolicy` statt `AutoAddPolicy`; Hosts müssen in `~/.ssh/known_hosts` eingetragen sein – kein automatisches Akzeptieren unbekannter Hosts (MITM-Schutz)
+- **Sensitive Dateien** (z. B. Admin-Passwort): werden mit `mode=0o600` erstellt; keine World-Readable-Defaults
+- **Dependency-Pinning:** `requirements.txt` verwendet explizite Mindestversionen mit oberer Grenze (z. B. `Django>=4.2,<5.0`) um Sicherheitslücken durch veraltete oder brechende Versionen zu vermeiden (`pip-compile` aus `requirements.in`)
+- **KI-Zugriffsrechte:** KI-Module (`recommender.py`, `ml_predictor.py`) dürfen ausschließlich `LightningReadAdapter` und Django ORM Leseoperationen nutzen. Kein direkter Import von `LightningWriteAdapter` in KI-Modulen. Validierung per statischer Analyse (Linter-Regel) erzwingbar. Details: Abschnitt 18.
 
 ---
 
@@ -855,6 +942,7 @@ Sprachauswahl wird im `UserMode`-Model gespeichert und über `/api/v2/user/setti
 - Datumsformat richtet sich nach gewählter Sprache (Django `USE_L10N`)
 - Satoshi-Beträge: einheitlich als sats mit optionaler mBTC/BTC-Umschaltung
 - Zahlenformate (Trennzeichen) passen sich der Locale an
+- **Locale-sicheres Zahlen-Parsing im Frontend:** JS-Hilfsfunktionen (`intcomma`, `toInt`) dürfen nicht blind auf Komma als Tausend-Trenner angewiesen sein – in vielen Locales ist der Trenner ein Leerzeichen oder Punkt. Korrekte Implementierung: beim Zurückrechnen alle Nicht-Ziffern-Zeichen entfernen (`replace(/\D/g, '')`) statt nur Kommas. Betrifft alle numerischen Eingabefelder (Beträge, Fees, Limits).
 
 ---
 
@@ -1010,6 +1098,8 @@ COPY . /app
 
 **Kern-Prinzip:** Jeder Layer wird nur neu gebaut, wenn sich sein Input ändert. `requirements.txt` und `package.json` ändern sich selten → Python- und npm-Dependencies werden gecacht.
 
+**Rootless Container:** Der finale Container läuft als nicht-privilegierter User (kein `root`). Das reduziert die Angriffsfläche im Deployment erheblich und entspricht Best Practices für Produktions-Container. Arbeitsverzeichnis: `/lndg/` (statt `/app` im bisherigen Setup – Breaking Change beim Upgrade dokumentieren).
+
 ### 12.4 CI/CD-Pipeline-Optimierung
 
 ```yaml
@@ -1158,12 +1248,13 @@ Phase 3 – Konsolidierung (optional):
 
 - [ ] **UI-Reframe:** Neue Navigation (5-Bereiche), Modus-Switcher, Cockpit-Kacheln (nur Darstellung + Tooltips)
 - [ ] **Multilanguage-Basis:** Django i18n aktivieren, alle bestehenden Strings markieren, DE/EN-Übersetzungen
-- [ ] **UserMode-Model:** Modus-Einstellung persistieren
-- [ ] **Build-Optimierung:** Multi-Stage Dockerfile, CI-Caching, Makefile
-- [ ] **LightningBackend-Interface:** Abstraktes Interface + `SpliceAction`-Domänenobjekt definieren (siehe Abschnitt 17)
-- [ ] **LndBackend:** Bestehende LND-Logik in Adapter kapseln (keine UI-Logik ändert sich – nur Strukturierung)
+- [ ] **UserMode-Model:** Modus-Einstellung persistieren inkl. AI-Feature-Flags (alle Default: `off`)
+- [ ] **Build-Optimierung:** Multi-Stage Dockerfile (rootless, `/lndg/`), CI-Caching, Makefile
+- [ ] **LightningBackend-Interface:** Abstraktes Interface aufteilen in `LightningReadAdapter` + `LightningWriteAdapter` (KI-Sicherheitstrennung, Abschnitt 9.0); `SpliceAction`-Domänenobjekt definieren (siehe Abschnitt 17)
+- [ ] **LndBackend:** Bestehende LND-Logik in Adapter kapseln (keine UI-Logik ändert sich – nur Strukturierung); gRPC-Credentials einmalig cachen, Connection wiederverwenden
 - [ ] **ClnBackend (Skelett):** Verbindung + Authentifizierung via `clnrest` / `cln-grpc`; grundlegende Methoden (`get_node_info`, `list_channels`, `list_peers`) implementieren
 - [ ] **Domänenmodell-Basis:** Abstrakte Modelle `Channel`, `Peer`, `ForwardingEvent`, `FeePolicy`, `SpliceAction` einführen
+- [ ] **Sicherheits-Baseline:** SSH-Host-Key-Verification (RejectPolicy), Datei-Permissions 0o600, Dependency-Pinning mit Versions-Bounds
 
 ### Phase 2: CLN-Integration & Daten
 
@@ -1179,9 +1270,10 @@ Phase 3 – Konsolidierung (optional):
 ### Phase 3: Empfehlungs-Engine & Splice-Workflow
 
 - [ ] **Heuristik-Engine:** Top-3-Aktionen pro Node-Zustand (inkl. Splice-In/Out Empfehlungen)
-- [ ] **Recommendation-Model:** Empfehlungen speichern, Status tracken
+- [ ] **Recommendation-Model:** Empfehlungen speichern, Status tracken; Rationale-Schema formalisieren und validieren (Abschnitt 5.2)
+- [ ] **Simulation Layer:** Jede Policy mit `simulate=True` aufrufbar; Ergebnis in `dry_run_result` speichern; „Was wäre passiert wenn…"-Widget im Lernen-&-Verlauf-Bereich
 - [ ] **Dry-Run-Framework:** Jede Empfehlung simulierbar
-- [ ] **Explainability-UI:** „Warum?"-Panels für alle Empfehlungen
+- [ ] **Explainability-UI:** „Warum?"-Panels für alle Empfehlungen (basierend auf Rationale-Schema)
 - [ ] **Guided Splice-Workflow (CLN):** Schritt-für-Schritt UI für Splice-In und Splice-Out
   - Kostenvorschau (On-Chain-Gebühren via mempool.space)
   - Impact-Simulation (neue Kapazität, neues Balanceverhältnis)
@@ -1376,6 +1468,9 @@ Die folgenden Punkte müssen vor Beginn der Umsetzung entschieden werden:
 | S2 | Soll es eine anonyme Nutzungsstatistik geben? | Opt-in Telemetrie **vs.** Keine | Verbesserung des Produkts vs. Privacy |
 | S3 | Wie werden Backup-Dateien verschlüsselt? | AES-256 + Passwort **vs.** Unverschlüsselt **vs.** GPG | Einfachheit vs. Sicherheit |
 | S4 | Rollback: Wie weit zurück? | Letzte 1 Änderung **vs.** Letzten 7 Tage **vs.** Unbegrenzt | Speicherbedarf vs. Flexibilität |
+| S5 | Darf KI (`ai_mode=shadow`) Empfehlungen automatisch in Policies überführen? | Nein (immer manuell) **vs.** Ja, nach Konfidenz-Schwelle + Cooldown | Kernfrage der KI-Sicherheitsarchitektur (Abschnitt 18) |
+| S6 | Welche ML-Bibliothek für lokale Modelle? | scikit-learn (lokal, privacy-safe) **vs.** externe ML-API (komfortabler, aber Datenweitergabe) | Privacy vs. Wartungsaufwand; externe API erfordert explizite Einwilligung + klare Datenschutzerklärung |
+| S7 | Ab welchem `ai_mode`-Level darf KI Policy-Ausführung auslösen? | Nur `policy_bound` (nie `shadow`/`advisory`) **vs.** konfigurierbar | Sicherheit vs. Komfort; `policy_bound` ist der frühestmögliche sichere Level (Abschnitt 18.2) |
 
 ### Betrieb & Deployment
 
@@ -1517,6 +1612,8 @@ class BackendCapabilities:
     can_keysend: bool            # Spontane Payments (Keysend)
     supports_plugins: bool       # Plugin-Erweiterungs-Mechanismus vorhanden (CLN)
     can_multi_asset: bool        # Multi-Asset-Kanäle (Taproot Assets) – für spätere Phase
+    ai_safe_actions: list[str]   # Welche WriteAdapter-Aktionen für policy_bound-KI freigegeben sind
+                                 # z. B. ['update_fee_policy'] – nie 'splice_in'/'splice_out' ohne explizites Opt-in
 ```
 
 #### UI-Verhalten
@@ -1801,6 +1898,9 @@ Dies öffnet einen neuen Nutzerkreis:
 | ✅ Implementierungsneutrale Policies | Policy-Objekte auf Domänenebene; Executor delegiert an Adapter | Phase 4 |
 | ✅ CLN-Policy-Adapter | `setchannel`, `rebalance`-Plugin-Integration | Phase 4 |
 | ✅ UX ohne implizite LND-Annahmen | Backend-erkennender Onboarding-Wizard; generische Begriffe | Phase 1+ |
+| ✅ KI Advisory Layer | `ReadAdapter`-only; Rationale-Schema; Shadow-Log; AI-Feature-Flags (Default: off) | Phase 1–3 |
+| ✅ KI Policy-Bound Automation | `LightningWriteAdapter` nur über Validation Layer; Human-Confirmation; ChangeLog-Pflicht | Phase 4–5 |
+| 🔮 KI Agentic (Stufe 3) | Vollautomation mit Hard Caps; nur nach Shadow-Mode-Erfolg; ausschließlich Expert-Mode | Phase 6 |
 | 🔮 Multi-Asset-UI | Asset-Bereich in Advanced/Expert wenn `can_multi_asset` aktiv | Phase 7 |
 | 🔮 Unit-flexible UI | `denomination`-Platzhalter statt hardcodierten „sats" | Phase 7 |
 
@@ -1825,9 +1925,182 @@ Die bestehenden Jobs werden in Phase 1 nicht verändert, aber in Phase 2 schritt
 - Rebalancer (`rebalancer.py`) → bleibt eigenständig, Policy-Engine wrappt ihn
 - HTLC-Stream (`htlc_stream.py`) → wird als Input für `FailedHTLCs` beibehalten
 
+**Wichtig für alle Jobs:** Kein Job darf `LightningWriteAdapter` direkt importieren – ausschließlich über den Validation Layer (Abschnitt 9.0). KI-Jobs (`recommender.py`, `ml_predictor.py`) sind rein lesend und haben keinen Zugriff auf `LightningWriteAdapter`.
+
 ### Bestehende API-Endpunkte
 
 Alle bestehenden `/api/`-Endpunkte bleiben unverändert. Die neuen `/api/v2/`-Endpunkte ergänzen sie. Erst in Phase 3+ werden alte Endpunkte als „deprecated" markiert (mit Übergangsfrist von mindestens 6 Monaten).
+
+---
+
+*Dieses Dokument ist ein lebendes Konzept. Änderungen und Ergänzungen sind erwünscht. Bitte offene Punkte aus Abschnitt 16 vor Beginn der jeweiligen Implementierungsphase klären.*
+
+---
+
+## 18. KI & Agentic KI – Advisory, Safety und graduierte Autonomie
+
+> **Leitprinzip: „AI-Assisted, Policy-Bound, Human-Controlled"**  
+> KI ist für LNDg ein hochwertiges Analyse-, Erklär- und Empfehlungssystem. Agentische KI (handelnde Autonomie) auf einem Lightning-Node ist zunächst gefährlich und darf nur sehr begrenzt, streng kontrolliert und schrittweise eingesetzt werden.
+
+---
+
+### 18.1 Warum KI wertvoll – und agentische KI gefährlich ist
+
+**Hoher Wert (sofort):**
+- Routing-Muster erkennen, Liquiditäts-Drift analysieren, Peer-Verhalten klassifizieren
+- Fee-Elastizität abschätzen, Erfolg/Misserfolg von Maßnahmen evaluieren
+- Fachbegriffe erklären, Charts kommentieren, nächste sinnvolle Aktion bewerten
+
+**Reales Risiko bei unkontrollierter Automation:**
+- Fee-Explosion / Rebalancing-Churn durch fehlerhafte Aktionskaskaden
+- Kapitalverlust durch halluzinierte Parameter oder fehlerhafte Confidence-Scores
+- Gossip-Spam durch zu häufige Fee-Anpassungen
+- Reputationsschaden im Lightning-Netzwerk
+
+**Konsequenz:** KI wird als erfahrener Analyst behandelt – nicht als autonomer Node-Admin.
+
+---
+
+### 18.2 Drei Autonomiestufen (graduierte Aktivierung)
+
+| Stufe | Bezeichnung | Was KI darf | Was KI nicht darf | LNDg-Phase |
+|---|---|---|---|---|
+| 🟢 **1** | `advisory` | Analysieren, Erklären, Empfehlen, Simulieren | Fees ändern, Kanäle öffnen/schließen, Rebalance auslösen | Phase 1–3 (Default) |
+| 🟡 **2** | `policy_bound` | Empfehlungen innerhalb vordefinierter Policies mit Hard Caps, Cooldowns und vollständigem Audit-Trail | Aktionen ohne Human Confirmation oder Policy-Freigabe | Phase 4–5 (opt-in, Expert) |
+| 🔴 **3** | `agentic` | Policy-gebundene Ausführung ohne manuelle Bestätigung pro Aktion | Alles außerhalb definierter Policy-Grenzen; niemals breite Node-Credentials | Phase 6+ (sehr begrenzt, nur Expert) |
+
+**Stufe 1 ist Default und der empfohlene Dauerbetrieb für neue Nutzer.**  
+Höhere Stufen werden ausschließlich im Expert-Modus freigeschaltet, erfordern explizite Bestätigung und sind jederzeit einzeln rückschaltbar.
+
+**Beispiel Stufe 2 (policy_bound):**
+```
+Policy: "Wenn outbound_ratio < 20 % für ≥ 7 Tage
+  → Empfehle Fee-Erhöhung um max. 5 %
+  → Ausführung nur nach User-Bestätigung (kein Auto-Apply)"
+KI = Policy-Interpreter, nicht Entscheider
+```
+
+---
+
+### 18.3 Action-Gateway-Architektur (absolut kritisch)
+
+KI darf **niemals direkt:**
+- gRPC-Calls auslösen
+- `LightningWriteAdapter`-Methoden aufrufen
+- Node-Zustand ändern
+
+Der vollständige Datenfluss ist in Abschnitt 9.0 dargestellt. Als Referenz:
+
+```
+KI-Modul  →  Recommendation-Objekt
+                    │
+             Policy Engine (Regelprüfung)
+                    │
+             Validation Layer (Caps, Cooldown, Sanity-Checks)
+                    │
+          Human / Approved Automation (Policy-gebunden)
+                    │
+          LightningWriteAdapter  →  ChangeLog
+```
+
+Das verhindert Halluzinations-Damage, Parameter-Fehler und „Guessing instead of verifying".
+
+---
+
+### 18.4 AI-Feature-Flags (im `UserMode`-Model, Abschnitt 9.1)
+
+| Feld | Typ | Default | Beschreibung |
+|---|---|---|---|
+| `ai_mode` | enum | `off` | `off` \| `advisory` \| `shadow` \| `policy_bound` |
+| `ai_explain_always` | bool | `True` | Erklärungstext immer anzeigen (nie ausblendbar in Guided/Advanced) |
+| `ai_min_data_days` | int | `30` | Mindestdatenmenge (Tage) bevor KI Empfehlungen ausgibt |
+| `ai_max_auto_actions_day` | int | `0` | Max. automatische Aktionen/Tag (0 = manuell only) |
+| `ai_cooldown_minutes` | int | `60` | Mindestwartezeit zwischen KI-getriggerten Änderungen |
+| `ai_shadow_log_enabled` | bool | `True` | Shadow-Mode-Protokoll: KI-Empfehlungen loggen ohne auszuführen |
+
+**Aktivierungsregeln:**
+- `ai_mode != 'off'` → nur im Expert-Modus einstellbar, erfordert explizite Bestätigung
+- `ai_mode = 'policy_bound'` → zusätzlich: mindestens eine aktive Policy muss definiert sein
+- Jede Änderung an `ai_mode` schreibt einen `ChangeLog`-Eintrag
+
+---
+
+### 18.5 Erklärbarkeit by Design
+
+Jede KI-Empfehlung **muss** anzeigen: Warum? Welche Daten? Welche Alternativen? Wie sicher?
+
+Ohne Erklärbarkeit → keine Ausführung. Das Rationale-Schema (Abschnitt 5.2) ist die technische Grundlage. Im Guided-Modus ist das „Warum?"-Panel immer sichtbar, in Advanced per Tooltip, in Expert ausblendbar.
+
+**Shadow-Mode-Protokoll:**  
+Wenn `ai_mode = 'shadow'`, werden KI-Empfehlungen im `ChangeLog` protokolliert und kontinuierlich mit dem tatsächlichen Ergebnis verglichen – ohne ausgeführt zu werden. Das ist die Grundlage, um schrittweise Vertrauen in ein Modell aufzubauen, bevor `policy_bound` aktiviert wird.
+
+---
+
+### 18.6 Simulation Layer
+
+Der `dry_run`-Mechanismus (Abschnitt 6.1) wird als vollwertiger Simulation Layer ausgebaut:
+
+- Jede Policy kann mit `simulate=True` aufgerufen werden
+- Ergebnis: Welche Fees/Balances würden sich wie ändern? (basierend auf Vergangenheitsdaten)
+- `dry_run_result` wird in `Recommendation` und `PolicyRun` gespeichert
+- UI: „Was wäre passiert, wenn..."-Widget im Lernen-&-Verlauf-Bereich
+- **Keine KI nötig** – der Simulation Layer ist deterministisch und ab Phase 3 sofort verfügbar
+
+Der Simulation Layer ist auch die sichere Sandstrecke zum Testen von `policy_bound`-Konfigurationen, bevor sie live gehen.
+
+---
+
+### 18.7 ChannelSnapshot & ChangeLog als KI-Datenbasis
+
+KI kann nur so gut sein wie die Datenbasis. Beide Modelle (Abschnitt 9.1) erfüllen gleichzeitig operative und KI-Anforderungen:
+
+| Modell | Operative Funktion | KI-Funktion |
+|---|---|---|
+| `ChannelSnapshot` | Zeitreihen für Charts | Feature-Engineering für ML-Modelle |
+| `ChangeLog` | Audit-Trail aller Änderungen | Event-Sourcing: Trainingsdaten + Rollback-Grundlage |
+| `RebalanceMLRecord` | Rebalance-Lernhistorie | Kanalpar-Erfolgsrate, Zeitreihen-Features |
+| `AutoFeeMLRecord` | Auto-Fee-Lernhistorie | Fee-Elastizität, Drain-Velocity-Muster |
+
+**KI-Bereitschafts-Maßnahme:** `ChannelSnapshot` und `ChangeLog` werden ab Phase 1 aktiv befüllt – auch wenn KI-Features noch nicht aktiv sind. Ohne historische Daten können ML-Modelle in Phase 4–6 nicht sinnvoll trainiert werden.
+
+---
+
+### 18.8 CLN-spezifische KI-Sicherheitsregeln
+
+CLN ist plugin-basiert – das erhöht die Flexibilität, aber auch die Angriffsfläche:
+
+- KI/Policy darf niemals Plugin-Zustandsänderungen direkt auslösen
+- CLN-Plugin-Aktionen laufen ausschließlich über `LightningWriteAdapter` mit denselben Guardrails wie LND
+- Im Capability-System (Abschnitt 17.3) wird eine `AI_SAFE`-Markierung für KI-taugliche Operationen eingeführt: nur `AI_SAFE`-markierte Aktionen dürfen in `policy_bound`-Automation einfließen
+- CLN-Plugins sind mögliche Ausführungsschicht für deterministische Aktionen – niemals Entscheidungsschicht
+
+---
+
+### 18.9 Was jetzt (noch) nicht umgesetzt wird
+
+Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur (Stufen 1–2) vollständig etabliert und erprobt ist:
+
+| Nicht jetzt | Grund |
+|---|---|
+| KI mit Schreibrechten auf LND/CLN | Stufe 1–2 zuerst etablieren |
+| Externe KI-API ohne Opt-in (OpenAI, Anthropic etc.) | Datenschutz: keine Node-Daten extern ohne explizite Einwilligung |
+| Auto-Execution ohne `PolicyRun`-Protokoll | Nachvollziehbarkeit nicht gewährleistet |
+| KI-Zugriff auf Macaroon/Cert-Pfade | Credential-Scope strikt trennen |
+| `ai_mode = 'policy_bound'` ohne mindestens 30 Tage Datenbasis | Modellqualität zu gering |
+| Agentische Stufe 3 ohne explizites Shadow-Mode-Protokoll der Vorphasen | Vertrauen muss progressiv aufgebaut werden |
+
+---
+
+### 18.10 Implementierungsfahrplan KI
+
+| Phase | KI-Task |
+|---|---|
+| **1** | `ReadAdapter`/`WriteAdapter`-Trennung implementieren; AI-Feature-Flags in `UserMode` (Default: `off`); `ChannelSnapshot` + `ChangeLog` aktiv befüllen |
+| **2** | Shadow-Log-Infrastruktur: KI-Empfehlungen mitloggen (noch kein ML-Modell nötig) |
+| **3** | Simulation Layer; Rationale-Schema in Recommendation validieren; „Was wäre passiert"-Widget |
+| **4** | `ai_mode = 'shadow'` freischalten (Expert): ML-Empfehlungen parallel zu Heuristik loggen; `RebalanceMLRecord` + `AutoFeeMLRecord` befüllen |
+| **5** | `ai_mode = 'policy_bound'` freischalten (Expert): Policy-gebundene KI-Automation mit Human-Confirmation-Layer |
+| **6** | Vollautomation (sehr begrenzt, opt-in Expert): nur nach nachgewiesenem Shadow-Mode-Erfolg + konfigurierten Hard Caps |
 
 ---
 
