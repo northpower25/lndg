@@ -446,12 +446,14 @@ In Job-Dateien (`collector.py`, `aggregator.py`, `executor.py`, etc.) werden Asy
 
 ```python
 # ❌ Blockierend
-channels = Channel.objects.filter(is_active=True)
+channels = list(Channel.objects.filter(is_active=True))
 
-# ✅ Async
-channels = await Channel.objects.filter(is_active=True).aget()
-# oder
+# ✅ Async – mehrere Objekte
+channels = [c async for c in Channel.objects.filter(is_active=True)]
+# oder mit abulk_create
 await Channel.objects.abulk_create(snapshots)
+# oder einzelnes Objekt
+channel = await Channel.objects.aget(id=channel_id)
 ```
 
 ### R-JOB-2 – gRPC-Verbindung cachen
@@ -583,7 +585,7 @@ Verbindliche Begriffsdefinitionen für dieses Projekt. Gelten gleichermaßen in 
 | **Splice / Splice In / Splice Out** | Anpassung der Kapazität eines bestehenden Lightning-Channels ohne Schließen und Wiedereröffnen. Splice In = Kapazität erhöhen (On-Chain-Mittel einzahlen). Splice Out = Kapazität reduzieren und Mittel On-Chain auszahlen. CLN-nativ ab v24.02; LND in Entwicklung. |
 | **LightningReadAdapter** | Schreibgeschützte Abstraktionsschicht für Node-Daten (Channels, Peers, Forwards). Darf von allen Modulen importiert werden. |
 | **LightningWriteAdapter** | Schreibzugriff auf den Node (Fee-Policies, Splice, etc.). Darf **ausschließlich** aus `executor.py` aufgerufen werden. |
-| **BackendCapabilities** | Dataclass, die die Fähigkeiten eines konkrten Node-Backends beschreibt (`can_splice`, `can_auto_fee`, etc.). UI entscheidet anhand von Capabilities, nie anhand des Backend-Namens. |
+| **BackendCapabilities** | Dataclass, die die Fähigkeiten eines konkreten Node-Backends beschreibt (`can_splice`, `can_auto_fee`, etc.). UI entscheidet anhand von Capabilities, nie anhand des Backend-Namens. |
 | **Policy** | Konfigurierte Automatisierungsregel bestehend aus: Trigger + Aktion + Limits + Cooldown. Immer mit `dry_run=True` als Default. |
 | **PolicyRun** | Protokoll einer einzelnen Policy-Ausführung mit Auslöser, Zeitstempel, ausgeführten Aktionen und Ergebnis. `executor.py` handelt nur auf Basis eines validierten `PolicyRun`. |
 | **Shadow Mode** | Betriebsmodus von ML-Funktionen: Empfehlungen werden berechnet und geloggt, aber **nicht ausgeführt**. Dient dem Vertrauensaufbau und der Modellvalidierung. |
