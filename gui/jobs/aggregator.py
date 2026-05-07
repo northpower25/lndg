@@ -16,7 +16,7 @@ WINDOW_TO_DELTA = {
 }
 
 
-def _fee_sum_to_msat(fee_sat: float | int | Decimal) -> int:
+def _fee_sat_to_msat(fee_sat: float | int | Decimal) -> int:
     fee_sat = Decimal(str(fee_sat))
     return int((fee_sat * Decimal("1000")).to_integral_value(rounding=ROUND_HALF_UP))
 
@@ -69,7 +69,7 @@ async def aggregate_forwarding_windows(
                 defaults={
                     "in_msat": row["in_msat"],
                     "out_msat": row["out_msat"],
-                    "fees_msat": _fee_sum_to_msat(row["fee_sum"]),
+                    "fees_msat": _fee_sat_to_msat(row["fee_sum"]),
                     "forward_count": row["forward_count"],
                     "fail_count": fail_counts.get(chan_id, 0),
                 },
