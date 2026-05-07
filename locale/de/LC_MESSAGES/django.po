@@ -120,3 +120,73 @@ msgstr "Nächste Aktion"
 
 msgid "AI features are disabled."
 msgstr "KI-Funktionen sind deaktiviert."
+
+msgid "Main navigation"
+msgstr "Hauptnavigation"
+
+msgid "Switch UI complexity mode"
+msgstr "UI-Komplexitätsmodus wechseln"
+
+msgid "Dashboard last updated"
+msgstr "Dashboard zuletzt aktualisiert"
+
+msgid "Auto Page Refresh"
+msgstr "Automatische Seitenaktualisierung"
+
+msgid "Forwarding events and fees in the last 7 and 30 days."
+msgstr "Weiterleitungsereignisse und Gebühren der letzten 7 und 30 Tage."
+
+msgid "events"
+msgstr "Ereignisse"
+
+msgid "sats fees"
+msgstr "Sat Gebühren"
+
+msgid "Outbound and inbound distribution across all open channels."
+msgstr "Ausgangs- und Eingangsverteilung über alle offenen Kanäle."
+
+msgid "Outbound"
+msgstr "Ausgang"
+
+msgid "Inbound"
+msgstr "Eingang"
+
+msgid "of capacity"
+msgstr "Kapazität"
+
+msgid "Your average fee rate compared to the median across all open channels."
+msgstr "Deine durchschnittliche Gebührenrate verglichen mit dem Median aller offenen Kanäle."
+
+msgid "Avg. Fee Rate"
+msgstr "Ø Gebührenrate"
+
+msgid "ppm"
+msgstr "ppm"
+
+msgid "channels below median"
+msgstr "Kanäle unter dem Median"
+
+msgid "channels above median"
+msgstr "Kanäle über dem Median"
+
+msgid "Disabled channels and failed HTLCs in the last 24 hours."
+msgstr "Deaktivierte Kanäle und fehlgeschlagene HTLCs in den letzten 24 Stunden."
+
+msgid "No issues detected"
+msgstr "Keine Probleme erkannt"
+
+msgid "Failed HTLCs (24h)"
+msgstr "Fehlgeschlagene HTLCs (24h)"
+
+msgid "Disabled"
+msgstr "Deaktiviert"
+
+msgid "Heuristic recommendations based on current channel state."
+msgstr "Heuristische Empfehlungen basierend auf dem aktuellen Kanalzustand."
+
+msgid "All good"
+msgstr "Alles in Ordnung"
+
+msgid "Risk"
+msgstr "Risiko"
+
