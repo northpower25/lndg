@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value
+from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ..forms import *
 from ..serializers import *
-from ..models import Channels, Forwards, PendingHTLCs, FailedHTLCs, HistFailedHTLC, PendingChannels, Onchain
+from ..models import Channels, Forwards, PendingHTLCs, FailedHTLCs, HistFailedHTLC, PendingChannels, Onchain, PaymentHops
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr

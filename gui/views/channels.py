@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ..forms import *
 from ..serializers import *
-from ..models import Channels, LocalSettings, PendingChannels, Peers, Forwards, Rebalancer
+from ..models import Channels, LocalSettings, PendingChannels, Peers, Forwards, Rebalancer, Payments, Invoices, Autofees, AvoidNodes, FailedHTLCs
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
