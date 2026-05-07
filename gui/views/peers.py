@@ -19,7 +19,7 @@ from gui.lnd_deps import walletkit_pb2 as walletrpc
 from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, graph_links
+from .utils import is_login_required, graph_links, network_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def peers(request):
