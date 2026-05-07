@@ -75,6 +75,7 @@ urlpatterns = [
     path('addresses/', views.addresses, name='addresses'),
     path('reset/', views.reset, name='reset'),
     path('api/', include(router.urls), name='api-root'),
+    path('api/v2/', include('gui.api.v2.urls'), name='api-v2-root'),
     path('api-auth/', include('rest_framework.urls'), name='api-auth'),
     path('api/connectpeer/', views.connect_peer, name='connect-peer'),
     path('api/disconnectpeer/', views.disconnect_peer, name='disconnect-peer'),

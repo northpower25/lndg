@@ -114,7 +114,7 @@ Jede Zahl, jede Empfehlung, jede Automatisierungs-Aktion hat einen „Warum?"-Ko
 └──────────────────────────────────────────────────────┘
 ```
 
-Diese Struktur ersetzt die „gewachsene" Seitenliste (Advanced/Stats/Performance verteilt über viele URLs), **ohne** existierende Views zu entfernen: Alle alten Views bleiben als **„Legacy / Expert"** erreichbar (über dediziertes Menü oder direkten URL-Aufruf).
+Diese Struktur ersetzt die „gewachsene" Seitenliste (Advanced/Stats/Performance verteilt über viele URLs). Alte Views werden nicht parallel weitergeführt, sondern domänenbasiert in die neue Struktur überführt oder entfernt.
 
 ### 3.2 Cockpit (Einsteiger-Dashboard)
 
@@ -1194,7 +1194,7 @@ Für alles, was technisch, tabellarisch, selten benutzt oder Expert-only ist:
 
 → Läuft weiterhin unter bestehenden URLs
 
-**Wichtig:** Keine Views werden entfernt. Sie werden als „Expert / Legacy" gekennzeichnet.
+**Wichtig:** Keine dauerhafte Legacy-Schiene. Technische Altsichten werden in die neue Domänenstruktur migriert und anschließend entfernt.
 
 ### 13.3 Technologie-Stack (SPA)
 
@@ -1921,9 +1921,9 @@ Dies öffnet einen neuen Nutzerkreis:
 Die bestehenden Jobs werden in Phase 1 nicht verändert, aber in Phase 2 schrittweise in die neue Service-Architektur überführt:
 
 - Forwarding-Collector → `collector.py`
-- Auto-Fee-Logik (`af.py`) → bleibt vorerst eigenständig, wird in Phase 4 in Policy-Engine integriert
-- Rebalancer (`rebalancer.py`) → bleibt eigenständig, Policy-Engine wrappt ihn
-- HTLC-Stream (`htlc_stream.py`) → wird als Input für `FailedHTLCs` beibehalten
+- Auto-Fee-Logik (`af.py`) → wird in die neue Policy-/Executor-Struktur überführt
+- Rebalancer (`rebalancer.py`) → wird in die neue Job-/Policy-Struktur überführt
+- HTLC-Stream (`htlc_stream.py`) → wird als Collector-Modul in die neue Jobstruktur überführt
 
 **Wichtig für alle Jobs:** Kein Job darf `LightningWriteAdapter` direkt importieren – ausschließlich über den Validation Layer (Abschnitt 9.0). KI-Jobs (`recommender.py`, `ml_predictor.py`) sind rein lesend und haben keinen Zugriff auf `LightningWriteAdapter`.
 
