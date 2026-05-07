@@ -550,3 +550,69 @@ msgstr "Netzwerkfehler"
 
 msgid "Create, download, or restore node backups. Restore is an expert-only operation."
 msgstr "Node-Backups erstellen, herunterladen oder wiederherstellen. Die Wiederherstellung ist nur für Experten."
+
+msgid "Charts"
+msgstr "Diagramme"
+
+msgid "Liquidity Distribution"
+msgstr "Liquiditätsverteilung"
+
+msgid "Outbound vs. inbound liquidity balance. Green = outbound (your funds), Blue = inbound (routing capacity)."
+msgstr "Ausgehende vs. eingehende Liquidität. Grün = ausgehend (Ihre Mittel), Blau = eingehend (Routing-Kapazität)."
+
+msgid "Channel"
+msgstr "Kanal"
+
+msgid "All Channels"
+msgstr "Alle Kanäle"
+
+msgid "Outbound (local)"
+msgstr "Ausgehend (lokal)"
+
+msgid "Inbound (remote)"
+msgstr "Eingehend (remote)"
+
+msgid "Channel Health over Time"
+msgstr "Kanalgesundheit über Zeit"
+
+msgid "Balance ratio per channel over the selected time period. Green = high outbound liquidity."
+msgstr "Gleichgewichtsverhältnis pro Kanal über den gewählten Zeitraum. Grün = hohe ausgehende Liquidität."
+
+msgid "Days"
+msgstr "Tage"
+
+msgid "Outbound ratio % per channel"
+msgstr "Ausgehend-Verhältnis % pro Kanal"
+
+msgid "outbound"
+msgstr "ausgehend"
+
+msgid "Outbound %"
+msgstr "Ausgehend %"
+
+msgid "Fee Rate vs. Routed Volume"
+msgstr "Gebührenrate vs. geroutetem Volumen"
+
+msgid "Fee elasticity: each dot is a channel. X = fee rate (ppm), Y = volume routed (sat). Larger dots = more fees earned."
+msgstr "Gebührenelastizität: Jeder Punkt ist ein Kanal. X = Gebührenrate (ppm), Y = geroutetes Volumen (sat). Größere Punkte = mehr Gebühren verdient."
+
+msgid "Channels"
+msgstr "Kanäle"
+
+msgid "Fee rate"
+msgstr "Gebührenrate"
+
+msgid "Volume"
+msgstr "Volumen"
+
+msgid "Fees earned"
+msgstr "Verdiente Gebühren"
+
+msgid "Forwards"
+msgstr "Weiterleitungen"
+
+msgid "Fee rate (ppm)"
+msgstr "Gebührenrate (ppm)"
+
+msgid "Volume routed (sat)"
+msgstr "Geroutetes Volumen (sat)"

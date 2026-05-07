@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %} {{ block.super }} - {% trans "Charts" %}{% endblock %}
+{% block content %}
+<script src="{% static 'charts.js' %}"></script>
+<div class="w3-container w3-padding-small">
+  <h2>{% trans "Charts" %}</h2>
+
+  <!-- Chart 1: Liquidity Donut -->
+  <div class="w3-card w3-margin-bottom">
+    <div class="w3-container w3-padding">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>{% trans "Liquidity Distribution" %}</strong>
+        <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Outbound vs. inbound liquidity balance. Green = outbound (your funds), Blue = inbound (routing capacity).' %}">❓</span>
+      </div>
+      <div class="w3-bar w3-margin-top" style="margin-bottom:8px;">
+        <label class="w3-bar-item w3-small" style="padding-top:10px;">{% trans "Channel" %}:</label>
+        <select id="liquidityChannelSelect" class="w3-select w3-small" style="width:auto;min-height:44px;padding:4px 8px;" onchange="renderLiquidityChart()">
+          <option value="all">{% trans "All Channels" %}</option>
+        </select>
+      </div>
+      <canvas id="liquidityChart" style="max-height:350px"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Channel Health Heatmap -->
+  <div class="w3-card w3-margin-bottom">
+    <div class="w3-container w3-padding">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>{% trans "Channel Health over Time" %}</strong>
+        <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Balance ratio per channel over the selected time period. Green = high outbound liquidity.' %}">❓</span>
+      </div>
+      <div class="w3-bar w3-margin-top" style="margin-bottom:8px;">
+        <label class="w3-bar-item w3-small" style="padding-top:10px;">{% trans "Days" %}:</label>
+        <select id="healthDays" class="w3-select w3-small" style="width:auto;min-height:44px;padding:4px 8px;" onchange="loadHealthChart()">
+          <option value="1">1</option>
+          <option value="3">3</option>
+          <option value="7" selected>7</option>
+          <option value="14">14</option>
+          <option value="30">30</option>
+        </select>
+      </div>
+      <canvas id="healthChart" style="max-height:400px"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: Fee vs. Volume Scatter -->
+  <div class="w3-card w3-margin-bottom">
+    <div class="w3-container w3-padding">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>{% trans "Fee Rate vs. Routed Volume" %}</strong>
+        <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Fee elasticity: each dot is a channel. X = fee rate (ppm), Y = volume routed (sat). Larger dots = more fees earned.' %}">❓</span>
+      </div>
+      <div class="w3-bar w3-margin-top" style="margin-bottom:8px;">
+        <label class="w3-bar-item w3-small" style="padding-top:10px;">{% trans "Days" %}:</label>
+        <select id="feeVolumeDays" class="w3-select w3-small" style="width:auto;min-height:44px;padding:4px 8px;" onchange="loadFeeVolumeChart()">
+          <option value="7">7</option>
+          <option value="14">14</option>
+          <option value="30" selected>30</option>
+          <option value="90">90</option>
+        </select>
+      </div>
+      <canvas id="feeVolumeChart" style="max-height:400px"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  const token = document.getElementById('api').dataset.token;
+
+  // ── Shared helpers ────────────────────────────────────────────────
+  function isDark() {
+    return document.body.classList.contains('dark-mode');
+  }
+  function gridColor() {
+    return isDark() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  }
+  function textColor() {
+    return isDark() ? '#eee' : '#333';
+  }
+
+  async function apiFetch(url) {
+    const resp = await fetch(url, {
+      headers: {'X-CSRFToken': token, 'Accept': 'application/json'}
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.json();
+  }
+
+  // ── Chart 1: Liquidity Donut ──────────────────────────────────────
+  let liquidityData = null;
+  let liquidityChartInstance = null;
+
+  async function loadLiquidityData() {
+    liquidityData = await apiFetch('/api/v2/charts/liquidity/');
+    const sel = document.getElementById('liquidityChannelSelect');
+    // clear existing channel options (keep "All Channels")
+    while (sel.options.length > 1) sel.remove(1);
+    (liquidityData.channels || []).forEach(function(ch) {
+      const opt = document.createElement('option');
+      opt.value = ch.channel_id;
+      opt.textContent = ch.alias || ch.channel_id;
+      sel.appendChild(opt);
+    });
+    renderLiquidityChart();
+  }
+
+  window.renderLiquidityChart = function() {
+    if (!liquidityData) return;
+    const sel = document.getElementById('liquidityChannelSelect');
+    const val = sel.value;
+    let outbound, inbound, title;
+    if (val === 'all') {
+      outbound = liquidityData.node.total_outbound_sat || 0;
+      inbound = liquidityData.node.total_inbound_sat || 0;
+      title = '{% trans "All Channels" %}';
+    } else {
+      const ch = (liquidityData.channels || []).find(function(c) { return c.channel_id === val; });
+      if (!ch) return;
+      outbound = ch.local_balance_sat || 0;
+      inbound = ch.remote_balance_sat || 0;
+      title = ch.alias || ch.channel_id;
+    }
+    const chartData = {
+      labels: ['{% trans "Outbound (local)" %}', '{% trans "Inbound (remote)" %}'],
+      datasets: [{
+        data: [outbound, inbound],
+        backgroundColor: ['rgba(76,175,80,0.8)', 'rgba(33,150,243,0.8)'],
+        borderColor: ['rgba(76,175,80,1)', 'rgba(33,150,243,1)'],
+        borderWidth: 2
+      }]
+    };
+    const opts = {
+      responsive: true,
+      plugins: {
+        title: {display: true, text: title, color: textColor()},
+        legend: {labels: {color: textColor()}},
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const val = ctx.raw;
+              const total = outbound + inbound;
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+              return ctx.label + ': ' + val.toLocaleString() + ' sat (' + pct + '%)';
+            }
+          }
+        }
+      }
+    };
+    if (liquidityChartInstance) {
+      liquidityChartInstance.data = chartData;
+      liquidityChartInstance.options.plugins.title.text = title;
+      liquidityChartInstance.update();
+    } else {
+      liquidityChartInstance = new Chart(document.getElementById('liquidityChart'), {
+        type: 'doughnut',
+        data: chartData,
+        options: opts
+      });
+    }
+  };
+
+  // ── Chart 2: Channel Health (stacked bar) ────────────────────────
+  let healthChartInstance = null;
+
+  window.loadHealthChart = async function() {
+    const days = document.getElementById('healthDays').value;
+    const data = await apiFetch('/api/v2/charts/channel-health/?days=' + days);
+    const snapshots = data.snapshots || [];
+
+    // collect unique channels and time buckets
+    const channelMap = {};
+    const timeBuckets = [];
+    snapshots.forEach(function(s) {
+      const day = s.timestamp.slice(0, 10);
+      if (!timeBuckets.includes(day)) timeBuckets.push(day);
+      if (!channelMap[s.channel_id]) channelMap[s.channel_id] = s.alias || s.channel_id;
+    });
+    timeBuckets.sort();
+
+    // for each (channel, day) compute avg outbound ratio
+    const ratioMap = {};
+    snapshots.forEach(function(s) {
+      const day = s.timestamp.slice(0, 10);
+      const key = s.channel_id + '|' + day;
+      if (!ratioMap[key]) ratioMap[key] = {sum: 0, count: 0};
+      const cap = s.capacity_sat || 1;
+      ratioMap[key].sum += s.local_balance_sat / cap;
+      ratioMap[key].count++;
+    });
+
+    const channelIds = Object.keys(channelMap);
+    // Build one dataset per time bucket (grouped horizontal bar, one bar per day per channel)
+    const datasets = timeBuckets.map(function(day, i) {
+      const hue = Math.round((i / Math.max(timeBuckets.length - 1, 1)) * 200);
+      return {
+        label: day,
+        data: channelIds.map(function(cid) {
+          const k = cid + '|' + day;
+          if (!ratioMap[k]) return 0;
+          return Math.round((ratioMap[k].sum / ratioMap[k].count) * 100);
+        }),
+        backgroundColor: channelIds.map(function(cid) {
+          const k = cid + '|' + day;
+          if (!ratioMap[k]) return 'rgba(150,150,150,0.3)';
+          const ratio = ratioMap[k].sum / ratioMap[k].count;
+          // green (high outbound) → red (low outbound)
+          const r = Math.round(255 * (1 - ratio));
+          const g = Math.round(200 * ratio);
+          return 'rgba(' + r + ',' + g + ',80,0.75)';
+        }),
+        borderWidth: 0
+      };
+    });
+
+    const chartData = {
+      labels: channelIds.map(function(cid) { return channelMap[cid]; }),
+      datasets: datasets
+    };
+    const opts = {
+      responsive: true,
+      indexAxis: 'y',
+      plugins: {
+        title: {display: true, text: '{% trans "Outbound ratio % per channel" %}', color: textColor()},
+        legend: {display: false},
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + ctx.raw + '% {% trans "outbound" %}';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: false,
+          max: 100,
+          title: {display: true, text: '{% trans "Outbound %" %}', color: textColor()},
+          ticks: {color: textColor()},
+          grid: {color: gridColor()}
+        },
+        y: {
+          ticks: {color: textColor()},
+          grid: {color: gridColor()}
+        }
+      }
+    };
+
+    if (healthChartInstance) {
+      healthChartInstance.data = chartData;
+      healthChartInstance.options = opts;
+      healthChartInstance.update();
+    } else {
+      healthChartInstance = new Chart(document.getElementById('healthChart'), {
+        type: 'bar',
+        data: chartData,
+        options: opts
+      });
+    }
+  };
+
+  // ── Chart 3: Fee vs. Volume Scatter ──────────────────────────────
+  let feeVolumeChartInstance = null;
+
+  window.loadFeeVolumeChart = async function() {
+    const days = document.getElementById('feeVolumeDays').value;
+    const data = await apiFetch('/api/v2/charts/fee-volume/?days=' + days);
+    const points = data.points || [];
+
+    const maxFees = Math.max.apply(null, points.map(function(p) { return p.fees_sat || 0; })) || 1;
+    const dataset = {
+      label: '{% trans "Channels" %}',
+      data: points.map(function(p) { return {x: p.fee_rate_ppm, y: p.volume_sat, r: Math.max(4, Math.round((p.fees_sat / maxFees) * 20))}; }),
+      backgroundColor: 'rgba(33,150,243,0.6)',
+      borderColor: 'rgba(33,150,243,1)',
+      pointHoverRadius: 12,
+      extra: points
+    };
+
+    const chartData = {datasets: [dataset]};
+    const opts = {
+      responsive: true,
+      plugins: {
+        title: {display: true, text: '{% trans "Fee Rate vs. Routed Volume" %}', color: textColor()},
+        legend: {display: false},
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const p = ctx.dataset.extra[ctx.dataIndex];
+              return [
+                (p.alias || p.channel_id),
+                '{% trans "Fee rate" %}: ' + p.fee_rate_ppm + ' ppm',
+                '{% trans "Volume" %}: ' + (p.volume_sat || 0).toLocaleString() + ' sat',
+                '{% trans "Fees earned" %}: ' + (p.fees_sat || 0).toLocaleString() + ' sat',
+                '{% trans "Forwards" %}: ' + (p.forward_count || 0)
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {display: true, text: '{% trans "Fee rate (ppm)" %}', color: textColor()},
+          ticks: {color: textColor()},
+          grid: {color: gridColor()}
+        },
+        y: {
+          title: {display: true, text: '{% trans "Volume routed (sat)" %}', color: textColor()},
+          ticks: {color: textColor()},
+          grid: {color: gridColor()}
+        }
+      }
+    };
+
+    if (feeVolumeChartInstance) {
+      feeVolumeChartInstance.data = chartData;
+      feeVolumeChartInstance.options = opts;
+      feeVolumeChartInstance.update();
+    } else {
+      feeVolumeChartInstance = new Chart(document.getElementById('feeVolumeChart'), {
+        type: 'bubble',
+        data: chartData,
+        options: opts
+      });
+    }
+  };
+
+  // ── Theme update ──────────────────────────────────────────────────
+  function applyTheme() {
+    [liquidityChartInstance, healthChartInstance, feeVolumeChartInstance].forEach(function(c) {
+      if (!c) return;
+      if (c.options.plugins.title) c.options.plugins.title.color = textColor();
+      if (c.options.plugins.legend && c.options.plugins.legend.labels) c.options.plugins.legend.labels.color = textColor();
+      if (c.options.scales) {
+        Object.values(c.options.scales).forEach(function(s) {
+          if (s.ticks) s.ticks.color = textColor();
+          if (s.grid) s.grid.color = gridColor();
+          if (s.title) s.title.color = textColor();
+        });
+      }
+      c.update();
+    });
+  }
+
+  const toggleBtn = document.getElementById('toggleTheme');
+  if (toggleBtn) toggleBtn.addEventListener('click', applyTheme);
+
+  // ── Init ──────────────────────────────────────────────────────────
+  await loadLiquidityData();
+  await loadHealthChart();
+  await loadFeeVolumeChart();
+});
+</script>
+{% endblock %}

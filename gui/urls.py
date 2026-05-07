@@ -109,6 +109,7 @@ urlpatterns = [
     path('api/cert_validity/', views.cert_validity, name='cert-validity'),
     path('onboarding/', views.onboarding, name='onboarding'),
     path('backup/', views.backup_restore_view, name='backup-restore'),
+    path('charts/', views.charts_view, name='charts'),
     # Notifications
     path('notification_settings/', views.notification_settings, name='notification-settings'),
     path('api/test_notification/', views.test_notification, name='test-notification'),
