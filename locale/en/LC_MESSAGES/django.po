@@ -1,0 +1,122 @@
+# English translations for LNDg Next.
+# Copyright (C) LNDg contributors
+# This file is distributed under the same license as the LNDg package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lndg\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Cockpit"
+msgstr "Cockpit"
+
+msgid "Channels"
+msgstr "Channels"
+
+msgid "Peers"
+msgstr "Peers"
+
+msgid "Automations"
+msgstr "Automations"
+
+msgid "Learn & History"
+msgstr "Learn & History"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Guided"
+msgstr "Guided"
+
+msgid "Advanced"
+msgstr "Advanced"
+
+msgid "Expert"
+msgstr "Expert"
+
+msgid "Mode"
+msgstr "Mode"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Loading..."
+msgstr "Loading..."
+
+msgid "No data available"
+msgstr "No data available"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Inactive"
+msgstr "Inactive"
+
+msgid "Capacity"
+msgstr "Capacity"
+
+msgid "Local Balance"
+msgstr "Local Balance"
+
+msgid "Remote Balance"
+msgstr "Remote Balance"
+
+msgid "Fee Rate (ppm)"
+msgstr "Fee Rate (ppm)"
+
+msgid "Base Fee (msat)"
+msgstr "Base Fee (msat)"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "Public Key"
+msgstr "Public Key"
+
+msgid "Connected"
+msgstr "Connected"
+
+msgid "Disconnected"
+msgstr "Disconnected"
+
+msgid "Routing Activity"
+msgstr "Routing Activity"
+
+msgid "Liquidity Balance"
+msgstr "Liquidity Balance"
+
+msgid "Fee Positioning"
+msgstr "Fee Positioning"
+
+msgid "Issues"
+msgstr "Issues"
+
+msgid "Next Action"
+msgstr "Next Action"
+
+msgid "AI features are disabled."
+msgstr "AI features are disabled."

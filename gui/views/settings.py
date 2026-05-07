@@ -49,10 +49,13 @@ def logs(request):
         try:
             count = request.GET.get('tail', 20)
             grep = request.GET.get('grep', None)
-            docker_logfile = '/app/data/lndg-controller.log'
+            docker_logfile = '/lndg/data/lndg-controller.log'
+            docker_logfile_legacy = '/app/data/lndg-controller.log'
             supervisord_logfile = '/var/log/lndg-controller.log'
             if path.exists(docker_logfile):
                 logfile = docker_logfile
+            elif path.exists(docker_logfile_legacy):
+                logfile = docker_logfile_legacy
             elif path.exists(supervisord_logfile):
                 logfile = supervisord_logfile
             else:

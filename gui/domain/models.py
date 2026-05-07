@@ -1,6 +1,29 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
+
+
+@dataclass(frozen=True)
+class AssetContext:
+    """Identifies the asset denomination.  Defaults to BTC (sats / msats)."""
+
+    asset_id: str = "btc"
+    asset_group: str = "bitcoin"
+    denomination: str = "msat"
+    display_unit: str = "sats"
+    decimals: int = 0
+
+
+_BTC = AssetContext()
+
+
+@dataclass(frozen=True)
+class Node:
+    pubkey: str
+    alias: str
+    color: str
+    version: str
+    uris: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -30,6 +53,16 @@ class ForwardingEvent:
     amount_out_msat: int
     fee_msat: int
     forwarded_at: datetime
+    asset: AssetContext = field(default_factory=AssetContext)
+
+
+@dataclass(frozen=True)
+class LiquidityState:
+    channel_id: str
+    local_balance_msat: int
+    remote_balance_msat: int
+    capacity_sat: int
+    asset: AssetContext = field(default_factory=AssetContext)
 
 
 @dataclass(frozen=True)
@@ -40,6 +73,7 @@ class FeePolicy:
     inbound_fee_rate_ppm: int
     min_htlc_msat: int
     max_htlc_msat: int
+    asset: AssetContext = field(default_factory=AssetContext)
 
 
 @dataclass(frozen=True)
@@ -48,3 +82,14 @@ class SpliceAction:
     direction: Literal["in", "out"]
     amount_sat: int
     requested_at: datetime
+
+
+@dataclass(frozen=True)
+class RebalanceAction:
+    source_channel_id: str
+    target_channel_id: str
+    amount_sat: int
+    max_fee_sat: int
+    initiated_at: datetime
+    status: Literal["pending", "succeeded", "failed"] = "pending"
+    fees_paid_sat: int | None = None
