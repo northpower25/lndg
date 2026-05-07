@@ -29,8 +29,8 @@ async def collect_channel_snapshots(
             remote_balance_sat=channel.remote_balance_sat,
             capacity_sat=channel.capacity_sat,
             # Domain Channel currently does not expose local fee-policy flags.
-            # They are initialized with safe defaults and filled in Phase 2
-            # once adapter policy metadata is available.
+            # They are initialized with safe defaults and will be populated
+            # when backend adapters expose fee-policy metadata in list_channels().
             local_fee_rate=0,
             local_base_fee=0,
             local_disabled=False,
