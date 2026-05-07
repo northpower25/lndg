@@ -56,7 +56,10 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
         """
         self._base_url = base_url.rstrip("/")
         self._rune = rune
-        self._ca_cert: str | bool = ca_cert if ca_cert is not None else False
+        # Pass a CA certificate path to enable TLS verification,
+        # or None to use the default system CA bundle.
+        # Setting verify=False disables TLS verification (not recommended for production).
+        self._ca_cert: str | bool = ca_cert if ca_cert is not None else True
         self._timeout = timeout
         self._session: requests.Session | None = None
 

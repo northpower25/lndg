@@ -9,5 +9,5 @@ pytz
 pandas>=2.0,<3
 requests>=2.28,<3
 bech32>=1.2,<2
-cryptography>=41,<45
+cryptography>=41,<44
 paramiko>=3.0,<4

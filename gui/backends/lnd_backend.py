@@ -164,7 +164,7 @@ class LndBackend(LightningReadAdapter, LightningWriteAdapter):
                 ln.PolicyUpdateRequest(
                     chan_point=channel_point,
                     base_fee_msat=policy.base_fee_msat,
-                    fee_rate=policy.fee_rate_ppm / 1_000_000,
+                    fee_rate=policy.fee_rate_ppm / 1_000_000.0,
                     time_lock_delta=db_channel.local_cltv,
                     min_htlc_msat_specified=True,
                     min_htlc_msat=policy.min_htlc_msat,
