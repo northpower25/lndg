@@ -5,11 +5,13 @@ from datetime import timedelta
 from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from gui.models import ChannelSnapshot, ChangeLog, ForwardingAggregate
+from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate
 
 DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS = 90
 DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS = 180
 DEFAULT_CHANGELOG_RETENTION_DAYS = 365
+DEFAULT_BACKUP_LOG_RETENTION_DAYS = 90
+DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS = 90
 
 
 async def _delete_older_than(
@@ -50,3 +52,28 @@ async def clean_forwarding_aggregates(
 async def clean_change_log(retention_days: int = DEFAULT_CHANGELOG_RETENTION_DAYS) -> int:
     cutoff = timezone.now() - timedelta(days=retention_days)
     return await _delete_older_than(ChangeLog.objects, cutoff)
+
+
+async def clean_backup_log(retention_days: int = DEFAULT_BACKUP_LOG_RETENTION_DAYS) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(BackupLog.objects, cutoff, time_field="created_at")
+
+
+async def clean_failed_payments(
+    retention_days: int = DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
+) -> int:
+    """Delete failed and in-flight payment records older than *retention_days*.
+
+    Integrates the existing ``clean_failed_payments`` view logic so that it
+    can be triggered both manually (via the API endpoint) and by the scheduled
+    retention job.  Records with status 1 (in-flight) or 3 (failed) that were
+    created more than *retention_days* ago are removed.
+    """
+    from gui.models import Payments
+
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(
+        Payments.objects.filter(status__in=[1, 3]),
+        cutoff,
+        time_field="creation_date",
+    )

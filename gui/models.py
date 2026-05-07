@@ -489,3 +489,33 @@ class ChangeLog(models.Model):
 
     class Meta:
         app_label = 'gui'
+
+
+class BackupLog(models.Model):
+    """Audit record for every backup (settings export or database dump)."""
+
+    TYPE_SETTINGS = 'settings'
+    TYPE_DATABASE = 'database'
+    TYPE_CHOICES = [
+        (TYPE_SETTINGS, 'Settings JSON'),
+        (TYPE_DATABASE, 'Database Dump'),
+    ]
+
+    STATUS_OK = 'ok'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_OK, 'OK'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    backup_type = models.CharField(max_length=16, choices=TYPE_CHOICES)
+    file_path = models.CharField(max_length=512, blank=True, default='')
+    file_size_bytes = models.BigIntegerField(default=0)
+    checksum = models.CharField(max_length=64, blank=True, default='')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_OK)
+    actor = models.CharField(max_length=128, default='manual')
+    error_message = models.TextField(blank=True, default='')
+
+    class Meta:
+        app_label = 'gui'

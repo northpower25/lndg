@@ -1,4 +1,5 @@
 import datetime
+import dataclasses
 from statistics import median as _median
 
 from django.db.models import Count, Sum
@@ -204,4 +205,292 @@ def cockpit_stats(request) -> Response:
             "issues": issues,
             "next_actions": next_actions[:3],
         }
+    )
+
+
+# ── Capability Registry ────────────────────────────────────────────────────────
+
+class _CapabilitiesThrottle(UserRateThrottle):
+    rate = "120/minute"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_CapabilitiesThrottle])
+def capabilities(request) -> Response:
+    """Return the capability flags of the currently active backend.
+
+    Clients should use these flags to decide which features to enable in the
+    UI.  Buttons for unsupported capabilities should be disabled with an
+    explanatory tooltip (R-GUI-7).
+    """
+    from gui.backends.registry import get_capabilities
+
+    caps = get_capabilities()
+    return Response(dataclasses.asdict(caps))
+
+
+# ── Chart data APIs ────────────────────────────────────────────────────────────
+
+class _ChartThrottle(UserRateThrottle):
+    rate = "60/minute"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_ChartThrottle])
+def chart_liquidity(request) -> Response:
+    """Liquidity Donut – inbound vs. outbound per channel and node total.
+
+    Returns per-channel liquidity data suitable for a donut / pie chart
+    as well as aggregated node totals.
+
+    Response shape::
+
+        {
+            "node": {"total_outbound_sat": int, "total_inbound_sat": int, "total_capacity_sat": int},
+            "channels": [
+                {"channel_id": str, "alias": str,
+                 "local_balance_sat": int, "remote_balance_sat": int, "capacity_sat": int}
+            ]
+        }
+    """
+    from gui.models import Channels
+
+    qs = Channels.objects.filter(is_open=True).values(
+        "chan_id", "alias", "local_balance", "remote_balance", "capacity"
+    )
+    channels = [
+        {
+            "channel_id": ch["chan_id"],
+            "alias": ch["alias"] or ch["chan_id"][:8],
+            "local_balance_sat": ch["local_balance"],
+            "remote_balance_sat": ch["remote_balance"],
+            "capacity_sat": ch["capacity"],
+        }
+        for ch in qs
+    ]
+    total_out = sum(c["local_balance_sat"] for c in channels)
+    total_in = sum(c["remote_balance_sat"] for c in channels)
+    total_cap = sum(c["capacity_sat"] for c in channels)
+    return Response(
+        {
+            "node": {
+                "total_outbound_sat": total_out,
+                "total_inbound_sat": total_in,
+                "total_capacity_sat": total_cap,
+            },
+            "channels": channels,
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_ChartThrottle])
+def chart_channel_health(request) -> Response:
+    """Channel Health Heatmap – time vs. channel based on ChannelSnapshot.
+
+    Query parameters:
+        channel_id (optional): filter to a single channel.
+        days (optional, default 7): number of past days to include.
+
+    Response shape::
+
+        {
+            "snapshots": [
+                {"timestamp": ISO8601, "channel_id": str,
+                 "local_balance_sat": int, "remote_balance_sat": int,
+                 "capacity_sat": int, "is_active": bool}
+            ]
+        }
+    """
+    from gui.models import ChannelSnapshot
+
+    days = int(request.query_params.get("days", 7))
+    since = timezone.now() - datetime.timedelta(days=days)
+    qs = ChannelSnapshot.objects.filter(timestamp__gte=since).order_by("timestamp")
+    channel_id = request.query_params.get("channel_id")
+    if channel_id:
+        qs = qs.filter(channel_id=channel_id)
+    snapshots = list(
+        qs.values(
+            "timestamp", "channel_id", "local_balance_sat",
+            "remote_balance_sat", "capacity_sat", "is_active",
+        )
+    )
+    for s in snapshots:
+        s["timestamp"] = s["timestamp"].isoformat()
+    return Response({"snapshots": snapshots})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_ChartThrottle])
+def chart_fee_volume(request) -> Response:
+    """Fee vs. Volume Scatter – fee elasticity from Forwards and FeeLog.
+
+    Query parameters:
+        days (optional, default 30): number of past days to include.
+
+    Response shape::
+
+        {
+            "points": [
+                {"channel_id": str, "alias": str,
+                 "fee_rate_ppm": int, "volume_sat": int, "fees_sat": float}
+            ]
+        }
+    """
+    from gui.models import Channels, Forwards
+
+    days = int(request.query_params.get("days", 30))
+    since = timezone.now() - datetime.timedelta(days=days)
+
+    fwd_agg = (
+        Forwards.objects.filter(forward_date__gte=since)
+        .values("chan_id_out")
+        .annotate(
+            volume_msat=Sum("amt_out_msat"),
+            fees_sat_sum=Sum("fee"),
+            count=Count("id"),
+        )
+    )
+    channel_map = {
+        ch["chan_id"]: ch
+        for ch in Channels.objects.filter(is_open=True).values(
+            "chan_id", "alias", "local_fee_rate"
+        )
+    }
+    points = []
+    for row in fwd_agg:
+        cid = row["chan_id_out"]
+        ch = channel_map.get(cid, {})
+        points.append(
+            {
+                "channel_id": cid,
+                "alias": ch.get("alias") or cid[:8],
+                "fee_rate_ppm": ch.get("local_fee_rate", 0),
+                "volume_sat": round((row["volume_msat"] or 0) / _MSAT_PER_SAT),
+                "fees_sat": round(row["fees_sat_sum"] or 0, 3),
+                "forward_count": row["count"],
+            }
+        )
+    return Response({"points": points})
+
+
+# ── Cleaner ────────────────────────────────────────────────────────────────────
+
+class _CleanerThrottle(UserRateThrottle):
+    rate = "10/minute"
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_CleanerThrottle])
+def cleaner_run(request) -> Response:
+    """Manually trigger the DB retention cleaner for the given table.
+
+    Request body (JSON)::
+
+        {
+            "table": "channel_snapshots" | "forwarding_aggregates" | "change_log" | "failed_payments",
+            "retention_days": int  (optional, uses defaults when omitted)
+        }
+
+    Returns the number of rows deleted.
+    """
+    from asgiref.sync import async_to_sync
+    from gui.jobs.cleaner import (
+        clean_channel_snapshots,
+        clean_change_log,
+        clean_failed_payments,
+        clean_forwarding_aggregates,
+        DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS,
+        DEFAULT_CHANGELOG_RETENTION_DAYS,
+        DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
+        DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
+    )
+
+    table = request.data.get("table", "")
+    retention_days = request.data.get("retention_days")
+
+    dispatch: dict = {
+        "channel_snapshots": (clean_channel_snapshots, DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS),
+        "forwarding_aggregates": (clean_forwarding_aggregates, DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS),
+        "change_log": (clean_change_log, DEFAULT_CHANGELOG_RETENTION_DAYS),
+        "failed_payments": (clean_failed_payments, DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS),
+    }
+    if table not in dispatch:
+        return Response(
+            {"error": f"Unknown table '{table}'. Choose from: {list(dispatch)}."},
+            status=400,
+        )
+    fn, default_days = dispatch[table]
+    days = int(retention_days) if retention_days is not None else default_days
+    deleted = async_to_sync(fn)(retention_days=days)
+    return Response({"table": table, "retention_days": days, "deleted": deleted})
+
+
+# ── Backup ─────────────────────────────────────────────────────────────────────
+
+class _BackupThrottle(UserRateThrottle):
+    rate = "5/minute"
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_BackupThrottle])
+def backup_create(request) -> Response:
+    """Trigger a backup of the requested type.
+
+    Request body (JSON)::
+
+        {"type": "settings" | "database"}
+
+    Returns metadata about the created backup including its ID, path, and checksum.
+    """
+    from gui.jobs.backup import run_backup
+
+    backup_type = request.data.get("type", "settings")
+    if backup_type not in ("settings", "database"):
+        return Response({"error": "type must be 'settings' or 'database'"}, status=400)
+
+    try:
+        log = run_backup(backup_type=backup_type, actor="manual")
+        return Response(
+            {
+                "id": log.pk,
+                "backup_type": log.backup_type,
+                "status": log.status,
+                "file_size_bytes": log.file_size_bytes,
+                "checksum": log.checksum,
+                "created_at": log.created_at.isoformat(),
+            }
+        )
+    except Exception as exc:
+        return Response({"error": str(exc)}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_BackupThrottle])
+def backup_list(request) -> Response:
+    """List recent backups (most recent first, limit 50)."""
+    from gui.models import BackupLog
+
+    qs = BackupLog.objects.order_by("-created_at")[:50]
+    return Response(
+        [
+            {
+                "id": b.pk,
+                "backup_type": b.backup_type,
+                "status": b.status,
+                "file_size_bytes": b.file_size_bytes,
+                "checksum": b.checksum,
+                "created_at": b.created_at.isoformat(),
+                "actor": b.actor,
+            }
+            for b in qs
+        ]
     )
