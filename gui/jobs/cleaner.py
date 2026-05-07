@@ -66,11 +66,13 @@ async def clean_failed_payments(
 
     Integrates the existing ``clean_failed_payments`` view logic so that it
     can be triggered both manually (via the API endpoint) and by the scheduled
-    retention job.  Records with status 1 (in-flight) or 3 (failed) that were
-    created more than *retention_days* ago are removed.
+    retention job.  Records with status 1 (in-flight / HTLC_INFLIGHT) or
+    status 3 (failed / FAILED) that were created more than *retention_days*
+    ago are removed.
     """
     from gui.models import Payments
 
+    # Status values: 1 = in-flight (HTLC_INFLIGHT), 3 = failed (FAILED)
     cutoff = timezone.now() - timedelta(days=retention_days)
     return await _delete_older_than(
         Payments.objects.filter(status__in=[1, 3]),

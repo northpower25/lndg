@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -97,10 +98,13 @@ def _backup_database() -> Path:
     db_engine = db_settings.get("ENGINE", "")
 
     if "sqlite3" in db_engine:
-        db_path = db_settings.get("NAME", "")
-        if db_path and Path(db_path).exists():
+        db_path_str = db_settings.get("NAME", "")
+        db_path_obj = Path(db_path_str) if db_path_str else Path()
+        if db_path_str and db_path_obj.exists() and db_path_obj.is_file():
+            # Resolve to an absolute path to prevent path traversal
+            db_path_resolved = str(db_path_obj.resolve())
             result = subprocess.run(
-                ["sqlite3", str(db_path), ".dump"],
+                ["sqlite3", db_path_resolved, ".dump"],
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -113,9 +117,9 @@ def _backup_database() -> Path:
             # In-memory or missing DB – write empty dump
             out_path.write_text("-- empty --\n")
     else:
-        # Generic fallback: Django's dumpdata
+        # Generic fallback: Django's dumpdata via the same interpreter
         result = subprocess.run(
-            ["python", "manage.py", "dumpdata", "--indent=2"],
+            [sys.executable, "manage.py", "dumpdata", "--indent=2"],
             capture_output=True,
             text=True,
             timeout=300,

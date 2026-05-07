@@ -427,7 +427,15 @@ def cleaner_run(request) -> Response:
             status=400,
         )
     fn, default_days = dispatch[table]
-    days = int(retention_days) if retention_days is not None else default_days
+    if retention_days is not None:
+        try:
+            days = int(retention_days)
+        except (TypeError, ValueError):
+            return Response({"error": "retention_days must be a positive integer."}, status=400)
+        if days < 1 or days > 3650:
+            return Response({"error": "retention_days must be between 1 and 3650."}, status=400)
+    else:
+        days = default_days
     deleted = async_to_sync(fn)(retention_days=days)
     return Response({"table": table, "retention_days": days, "deleted": deleted})
 
@@ -469,7 +477,9 @@ def backup_create(request) -> Response:
             }
         )
     except Exception as exc:
-        return Response({"error": str(exc)}, status=500)
+        import logging as _logging
+        _logging.getLogger(__name__).error("Backup creation failed: %s", exc, exc_info=True)
+        return Response({"error": "Backup creation failed. See server logs for details."}, status=500)
 
 
 @api_view(["GET"])
