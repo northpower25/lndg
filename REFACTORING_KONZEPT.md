@@ -1,6 +1,6 @@
 # LNDg Next – Umfassendes Refactoring-Konzept
 
-> **Version:** 1.4 · **Status:** Konzept / Entwurf  
+> **Version:** 1.5 · **Status:** Konzept / Aktiv (Grundentscheidungen getroffen, Phase 1 kann beginnen)  
 > **Sprache dieses Dokuments:** Deutsch (Multilanguage-Fähigkeit ist Teil des Konzepts)
 
 ---
@@ -1470,7 +1470,7 @@ Die folgenden Punkte wurden entschieden oder sind noch offen. Entschiedene Punkt
 | S4 ✅ | Rollback: Wie weit zurück? | Letzte 1 Änderung **vs.** Letzten 7 Tage **vs.** Unbegrenzt | Speicherbedarf vs. Flexibilität | **Letzte 7 Tage** – ausreichend für Fehlerdiagnose; beherrschbarer Speicherbedarf |
 | S5 ✅ | Darf KI (`ai_mode=shadow`) Empfehlungen automatisch in Policies überführen? | Nein (immer manuell) **vs.** Ja, nach Konfidenz-Schwelle + Cooldown | Kernfrage der KI-Sicherheitsarchitektur (Abschnitt 18) | **Nein (immer manuell)** – Shadow-Mode ist Beobachtungs-Modus; automatische Überführung würde Sicherheitsversprechen brechen |
 | S6 ✅ | Welche ML-Bibliothek für lokale Modelle? | scikit-learn (lokal, privacy-safe) **vs.** externe ML-API (komfortabler, aber Datenweitergabe) | Privacy vs. Wartungsaufwand; externe API erfordert explizite Einwilligung + klare Datenschutzerklärung | **scikit-learn (lokal, privacy-safe)** – identisch mit A5; externe ML-APIs sind für self-hosted Privacy-First-Anwendung keine valide Option |
-| S7 🔲 | Ab welchem `ai_mode`-Level darf KI Policy-Ausführung auslösen? | Nur `policy_bound` (nie `shadow`/`advisory`) **vs.** konfigurierbar | Sicherheit vs. Komfort; `policy_bound` ist der frühestmögliche sichere Level (Abschnitt 18.2) | *Noch offen* |
+| S7 ✅ | Ab welchem `ai_mode`-Level darf KI Policy-Ausführung auslösen? | Nur `policy_bound` (nie `shadow`/`advisory`) **vs.** konfigurierbar | Sicherheit vs. Komfort; `policy_bound` ist der frühestmögliche sichere Level (Abschnitt 18.2) | **Nur `policy_bound`** – folgt direkt aus S5 (Shadow-Mode nie ausführend) und Abschnitt 18.2; `advisory` und `shadow` sind per Architekturentscheidung rein beobachtend |
 
 ### Betrieb & Deployment
 
@@ -1933,7 +1933,7 @@ Alle bestehenden `/api/`-Endpunkte bleiben unverändert. Die neuen `/api/v2/`-En
 
 ---
 
-*Dieses Dokument ist ein lebendes Konzept. Änderungen und Ergänzungen sind erwünscht. Bitte offene Punkte aus Abschnitt 16 vor Beginn der jeweiligen Implementierungsphase klären.*
+*Dieses Dokument ist ein lebendes Konzept. Änderungen und Ergänzungen sind erwünscht. Die Grundentscheidungen aus Abschnitt 16 sind getroffen (nur P4 – Community-Sharing – ist bewusst zurückgestellt). Implementierung kann mit Phase 1 beginnen.*
 
 ---
 
@@ -2104,4 +2104,4 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 
 ---
 
-*Dieses Dokument ist ein lebendes Konzept. Änderungen und Ergänzungen sind erwünscht. Bitte offene Punkte aus Abschnitt 16 vor Beginn der jeweiligen Implementierungsphase klären.*
+*Dieses Dokument ist ein lebendes Konzept. Änderungen und Ergänzungen sind erwünscht. Die Grundentscheidungen aus Abschnitt 16 sind getroffen (nur P4 – Community-Sharing – ist bewusst zurückgestellt). Implementierung kann mit Phase 1 beginnen.*
