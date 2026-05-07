@@ -31,6 +31,7 @@ async def collect_channel_snapshots(
             # Domain Channel currently does not expose local fee-policy flags.
             # They are initialized with safe defaults and will be populated
             # when backend adapters expose fee-policy metadata in list_channels().
+            # default=0 here means "unknown/unset until adapter metadata is wired".
             local_fee_rate=0,
             local_base_fee=0,
             local_disabled=False,

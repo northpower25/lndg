@@ -16,8 +16,8 @@ WINDOW_TO_DELTA = {
 }
 
 
-def _fee_sum_to_msat(fee_sum: float | int | Decimal) -> int:
-    fee_sat = Decimal(str(fee_sum))
+def _fee_sum_to_msat(fee_sat: float | int | Decimal) -> int:
+    fee_sat = Decimal(str(fee_sat))
     return int((fee_sat * Decimal("1000")).to_integral_value(rounding=ROUND_HALF_UP))
 
 
