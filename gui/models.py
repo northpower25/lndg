@@ -435,3 +435,57 @@ class UserMode(models.Model):
         """Return the singleton row, creating it if it doesn't exist."""
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class ChannelSnapshot(models.Model):
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    chan_id = models.CharField(max_length=20, db_index=True)
+    local_balance = models.BigIntegerField()
+    remote_balance = models.BigIntegerField()
+    capacity = models.BigIntegerField()
+    local_fee_rate = models.IntegerField(default=0)
+    local_base_fee = models.IntegerField(default=0)
+    local_disabled = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['chan_id', 'timestamp'])]
+
+
+class ForwardingAggregate(models.Model):
+    WINDOW_1D = '1d'
+    WINDOW_7D = '7d'
+    WINDOW_30D = '30d'
+    WINDOW_CHOICES = [
+        (WINDOW_1D, '1d'),
+        (WINDOW_7D, '7d'),
+        (WINDOW_30D, '30d'),
+    ]
+
+    window = models.CharField(max_length=4, choices=WINDOW_CHOICES)
+    chan_id = models.CharField(max_length=20, db_index=True)
+    window_start = models.DateTimeField(db_index=True)
+    in_msat = models.BigIntegerField(default=0)
+    out_msat = models.BigIntegerField(default=0)
+    fees_msat = models.BigIntegerField(default=0)
+    forward_count = models.IntegerField(default=0)
+    fail_count = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'gui'
+        unique_together = (('window', 'chan_id', 'window_start'),)
+
+
+class ChangeLog(models.Model):
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    change_type = models.CharField(max_length=64)
+    target_chan_id = models.CharField(max_length=20, blank=True, default='', db_index=True)
+    actor = models.CharField(max_length=128)
+    old_value = models.JSONField(default=dict, blank=True)
+    new_value = models.JSONField(default=dict, blank=True)
+    rationale = models.JSONField(default=dict, blank=True)
+    policy_run_ref = models.CharField(max_length=64, blank=True, default='')
+
+    class Meta:
+        app_label = 'gui'
