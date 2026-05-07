@@ -394,3 +394,159 @@ msgstr "Schritt"
 
 msgid "Wizard progress"
 msgstr "Assistenten-Fortschritt"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Backup & Restore"
+msgstr "Backup & Wiederherstellung"
+
+msgid "Create Backup"
+msgstr "Backup erstellen"
+
+msgid "Backup Type"
+msgstr "Backup-Typ"
+
+msgid "Settings (JSON)"
+msgstr "Einstellungen (JSON)"
+
+msgid "Database (dump)"
+msgstr "Datenbank (Dump)"
+
+msgid "Creating backup..."
+msgstr "Backup wird erstellt..."
+
+msgid "Backup created successfully."
+msgstr "Backup erfolgreich erstellt."
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Size (KB)"
+msgstr "Größe (KB)"
+
+msgid "Created At"
+msgstr "Erstellt am"
+
+msgid "Actor"
+msgstr "Akteur"
+
+msgid "Checksum"
+msgstr "Prüfsumme"
+
+msgid "Recent Backups"
+msgstr "Letzte Backups"
+
+msgid "Refresh List"
+msgstr "Liste aktualisieren"
+
+msgid "No backups found."
+msgstr "Keine Backups gefunden."
+
+msgid "Error loading backups."
+msgstr "Fehler beim Laden der Backups."
+
+msgid "Restore from Backup"
+msgstr "Aus Backup wiederherstellen"
+
+msgid "HIGH RISK"
+msgstr "HOHES RISIKO"
+
+msgid "This action overwrites all current data"
+msgstr "Diese Aktion überschreibt alle aktuellen Daten"
+
+msgid "Impact Preview"
+msgstr "Auswirkungsvorschau"
+
+msgid "Restore will overwrite ALL current settings or database data."
+msgstr "Die Wiederherstellung überschreibt ALLE aktuellen Einstellungs- oder Datenbankdaten."
+
+msgid "An automatic backup is created before the restore (safety net)."
+msgstr "Vor der Wiederherstellung wird automatisch ein Backup erstellt (Sicherheitsnetz)."
+
+msgid "Use Dry Run to preview which tables would be affected without making changes."
+msgstr "Verwenden Sie Dry Run, um eine Vorschau der betroffenen Tabellen ohne Änderungen zu erhalten."
+
+msgid "Risk Level"
+msgstr "Risikoniveau"
+
+msgid "high"
+msgstr "hoch"
+
+msgid "Dry Run (preview only)"
+msgstr "Testlauf (nur Vorschau)"
+
+msgid "Check this to preview the restore without applying any changes."
+msgstr "Aktivieren, um die Wiederherstellung ohne Änderungen zu testen."
+
+msgid "Select Backup File"
+msgstr "Backup-Datei auswählen"
+
+msgid "File Checksum (SHA-256)"
+msgstr "Datei-Prüfsumme (SHA-256)"
+
+msgid "This checksum is verified server-side before the restore is applied."
+msgstr "Diese Prüfsumme wird serverseitig vor der Wiederherstellung verifiziert."
+
+msgid "Computing..."
+msgstr "Wird berechnet..."
+
+msgid "Checksum computation failed"
+msgstr "Berechnung der Prüfsumme fehlgeschlagen"
+
+msgid "Restore Backup"
+msgstr "Backup wiederherstellen"
+
+msgid "Processing restore..."
+msgstr "Wiederherstellung wird verarbeitet..."
+
+msgid "Dry Run Preview"
+msgstr "Testlauf-Vorschau"
+
+msgid "Tables that would be affected"
+msgstr "Betroffene Tabellen"
+
+msgid "No changes were made. Uncheck Dry Run to apply the restore."
+msgstr "Keine Änderungen vorgenommen. Deaktivieren Sie Testlauf, um die Wiederherstellung anzuwenden."
+
+msgid "Restore completed."
+msgstr "Wiederherstellung abgeschlossen."
+
+msgid "Auto-backup ID"
+msgstr "Automatisches Backup-ID"
+
+msgid "Tables affected"
+msgstr "Betroffene Tabellen"
+
+msgid "Please select a backup file first."
+msgstr "Bitte zuerst eine Backup-Datei auswählen."
+
+msgid "Please wait for the checksum to be computed before restoring."
+msgstr "Bitte warten Sie, bis die Prüfsumme berechnet wurde."
+
+msgid "Run a dry-run preview? No data will be changed."
+msgstr "Testlauf-Vorschau ausführen? Es werden keine Daten geändert."
+
+msgid "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?"
+msgstr "WARNUNG: Die Wiederherstellung überschreibt alle aktuellen Daten. Dies kann nicht rückgängig gemacht werden. Fortfahren?"
+
+msgid "Restore is available in Expert mode only."
+msgstr "Wiederherstellung ist nur im Experten-Modus verfügbar."
+
+msgid "Switch to Expert mode using the mode selector in the navigation bar."
+msgstr "Wechseln Sie zum Experten-Modus über die Modusauswahl in der Navigationsleiste."
+
+msgid "Backup & Restore is available in Advanced or Expert mode only."
+msgstr "Backup & Wiederherstellung ist nur im Erweitert- oder Experten-Modus verfügbar."
+
+msgid "Switch mode using the selector in the navigation bar."
+msgstr "Wechseln Sie den Modus über die Modusauswahl in der Navigationsleiste."
+
+msgid "Network error"
+msgstr "Netzwerkfehler"
+
+msgid "Create, download, or restore node backups. Restore is an expert-only operation."
+msgstr "Node-Backups erstellen, herunterladen oder wiederherstellen. Die Wiederherstellung ist nur für Experten."

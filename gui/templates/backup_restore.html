@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %} {{ block.super }} - {% trans "Backup" %}{% endblock %}
+{% block content %}
+{% if user_mode == 'expert' or user_mode == 'advanced' %}
+<div class="w3-container w3-padding">
+
+  <h2>{% trans "Backup & Restore" %}</h2>
+  <p class="w3-text-grey">{% trans "Create, download, or restore node backups. Restore is an expert-only operation." %}</p>
+
+  <!-- ── Backup Section ──────────────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <h3>{% trans "Create Backup" %}</h3>
+    <div class="w3-row-padding">
+      <div class="w3-col m6 s12">
+        <label for="backup-type">{% trans "Backup Type" %}</label>
+        <select id="backup-type" class="w3-select w3-border" style="min-height:44px;">
+          <option value="settings">{% trans "Settings (JSON)" %}</option>
+          <option value="database">{% trans "Database (dump)" %}</option>
+        </select>
+      </div>
+      <div class="w3-col m6 s12 w3-padding-top">
+        <button id="btn-create-backup"
+                class="w3-button w3-blue w3-round"
+                style="min-height:44px;min-width:160px;"
+                onclick="createBackup()">
+          {% trans "Create Backup" %}
+        </button>
+      </div>
+    </div>
+    <div id="backup-status" class="w3-margin-top" style="display:none;"></div>
+  </div>
+
+  <!-- ── Recent Backups List ────────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <h3>{% trans "Recent Backups" %}</h3>
+    <button class="w3-button w3-light-grey w3-round w3-small w3-margin-bottom"
+            style="min-height:44px;"
+            onclick="loadBackupList()">
+      {% trans "Refresh List" %}
+    </button>
+    <div id="backup-list-container">
+      <p class="w3-text-grey">{% trans "Loading..." %}</p>
+    </div>
+  </div>
+
+  <!-- ── Restore Section (expert only) ─────────────────────────────── -->
+  {% if user_mode == 'expert' %}
+  <div class="w3-card w3-padding w3-margin-bottom w3-border-left w3-border-red" style="border-left-width:4px!important;">
+    <h3>{% trans "Restore from Backup" %}
+      <span class="w3-badge w3-red w3-small" title="{% trans 'This action overwrites all current data' %}">{% trans "HIGH RISK" %}</span>
+    </h3>
+
+    <!-- Impact preview (R-GUI-2) -->
+    <div class="w3-panel w3-pale-yellow w3-border">
+      <h4>⚠ {% trans "Impact Preview" %}</h4>
+      <ul>
+        <li>{% trans "Restore will overwrite ALL current settings or database data." %}</li>
+        <li>{% trans "An automatic backup is created before the restore (safety net)." %}</li>
+        <li>{% trans "Use Dry Run to preview which tables would be affected without making changes." %}</li>
+      </ul>
+      <p><strong>{% trans "Risk Level" %}:</strong>
+        <span class="w3-badge w3-red">{% trans "high" %}</span>
+      </p>
+    </div>
+
+    <!-- dry_run toggle (R-GUI-3) – defaults to True -->
+    <div class="w3-margin-bottom">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px;">
+        <input type="checkbox" id="dry-run-toggle" checked style="width:20px;height:20px;">
+        <span><strong>{% trans "Dry Run (preview only)" %}</strong> –
+          {% trans "Check this to preview the restore without applying any changes." %}
+        </span>
+      </label>
+    </div>
+
+    <div class="w3-margin-bottom">
+      <label for="restore-file">{% trans "Select Backup File" %}</label>
+      <input type="file" id="restore-file" class="w3-input w3-border" style="min-height:44px;"
+             accept=".json,.sql,.dump" onchange="previewChecksum()">
+    </div>
+
+    <!-- Client-side SHA-256 preview (Web Crypto API) -->
+    <div id="checksum-preview" class="w3-margin-bottom" style="display:none;">
+      <label>{% trans "File Checksum (SHA-256)" %}</label>
+      <div class="w3-row">
+        <div class="w3-col" style="flex:1;">
+          <input type="text" id="checksum-display" class="w3-input w3-border w3-light-grey"
+                 readonly style="font-family:monospace;font-size:12px;">
+        </div>
+      </div>
+      <p class="w3-small w3-text-grey">{% trans "This checksum is verified server-side before the restore is applied." %}</p>
+    </div>
+
+    <div id="restore-status" class="w3-margin-bottom" style="display:none;"></div>
+
+    <button id="btn-restore"
+            class="w3-button w3-red w3-round"
+            style="min-height:44px;min-width:160px;"
+            onclick="triggerRestore()">
+      {% trans "Restore Backup" %}
+    </button>
+  </div>
+  {% else %}
+  <div class="w3-panel w3-pale-yellow w3-border">
+    <p>{% trans "Restore is available in Expert mode only." %}
+      {% trans "Switch to Expert mode using the mode selector in the navigation bar." %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const API_BACKUP_CREATE  = '{% url "api-v2-backup-create" %}';
+const API_BACKUP_LIST    = '{% url "api-v2-backup-list" %}';
+const API_BACKUP_RESTORE = '{% url "api-v2-backup-restore" %}';
+
+// ── Create Backup ──────────────────────────────────────────────────────────
+async function createBackup() {
+  const btn = document.getElementById('btn-create-backup');
+  const statusDiv = document.getElementById('backup-status');
+  const backupType = document.getElementById('backup-type').value;
+
+  btn.disabled = true;
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Creating backup..." %}</p>';
+
+  try {
+    const resp = await fetch(API_BACKUP_CREATE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN,
+      },
+      body: JSON.stringify({ type: backupType }),
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      statusDiv.innerHTML = `
+        <div class="w3-panel w3-pale-green w3-border">
+          <p>✓ {% trans "Backup created successfully." %}</p>
+          <p><strong>{% trans "ID" %}:</strong> ${data.id} &nbsp;
+             <strong>{% trans "Type" %}:</strong> ${data.backup_type} &nbsp;
+             <strong>{% trans "Size" %}:</strong> ${(data.file_size_bytes / 1024).toFixed(1)} KB</p>
+          <p><strong>{% trans "Checksum" %}:</strong> <code style="font-size:11px;">${data.checksum}</code></p>
+        </div>`;
+      loadBackupList();
+    } else {
+      statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Error" %}: ${data.error || resp.statusText}</p></div>`;
+    }
+  } catch (e) {
+    statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Network error" %}: ${e.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Load Backup List ───────────────────────────────────────────────────────
+async function loadBackupList() {
+  const container = document.getElementById('backup-list-container');
+  container.innerHTML = '<p class="w3-text-grey">{% trans "Loading..." %}</p>';
+
+  try {
+    const resp = await fetch(API_BACKUP_LIST, {
+      headers: { 'X-CSRFToken': CSRF_TOKEN },
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      container.innerHTML = `<p class="w3-text-red">{% trans "Error loading backups." %}</p>`;
+      return;
+    }
+
+    if (!data.length) {
+      container.innerHTML = '<p class="w3-text-grey">{% trans "No backups found." %}</p>';
+      return;
+    }
+
+    let html = '<div class="w3-responsive"><table class="w3-table w3-striped w3-bordered w3-small">';
+    html += `<thead><tr>
+      <th>{% trans "ID" %}</th>
+      <th>{% trans "Type" %}</th>
+      <th>{% trans "Status" %}</th>
+      <th>{% trans "Size (KB)" %}</th>
+      <th>{% trans "Created At" %}</th>
+      <th>{% trans "Actor" %}</th>
+      <th>{% trans "Checksum" %}</th>
+    </tr></thead><tbody>`;
+
+    for (const b of data) {
+      const sizeKb = (b.file_size_bytes / 1024).toFixed(1);
+      const shortChecksum = b.checksum ? b.checksum.substring(0, 16) + '...' : '-';
+      const statusBadge = b.status === 'ok'
+        ? '<span class="w3-badge w3-green">ok</span>'
+        : '<span class="w3-badge w3-red">failed</span>';
+      html += `<tr>
+        <td>${b.id}</td>
+        <td>${b.backup_type}</td>
+        <td>${statusBadge}</td>
+        <td>${sizeKb}</td>
+        <td>${new Date(b.created_at).toLocaleString()}</td>
+        <td>${b.actor}</td>
+        <td title="${b.checksum}"><code style="font-size:10px;">${shortChecksum}</code></td>
+      </tr>`;
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<p class="w3-text-red">{% trans "Network error" %}: ${e.message}</p>`;
+  }
+}
+
+// ── Client-side SHA-256 checksum preview ───────────────────────────────────
+async function previewChecksum() {
+  const fileInput = document.getElementById('restore-file');
+  const previewDiv = document.getElementById('checksum-preview');
+  const checksumDisplay = document.getElementById('checksum-display');
+
+  if (!fileInput.files.length) {
+    previewDiv.style.display = 'none';
+    return;
+  }
+
+  const file = fileInput.files[0];
+  previewDiv.style.display = 'block';
+  checksumDisplay.value = '{% trans "Computing..." %}';
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    checksumDisplay.value = hashHex;
+  } catch (e) {
+    checksumDisplay.value = '{% trans "Checksum computation failed" %}';
+  }
+}
+
+// ── Trigger Restore ────────────────────────────────────────────────────────
+async function triggerRestore() {
+  const fileInput = document.getElementById('restore-file');
+  const checksumDisplay = document.getElementById('checksum-display');
+  const dryRun = document.getElementById('dry-run-toggle').checked;
+  const statusDiv = document.getElementById('restore-status');
+  const btn = document.getElementById('btn-restore');
+
+  if (!fileInput.files.length) {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div class="w3-panel w3-pale-red w3-border"><p>{% trans "Please select a backup file first." %}</p></div>';
+    return;
+  }
+
+  const expectedChecksum = checksumDisplay.value;
+  if (!expectedChecksum || expectedChecksum.length !== 64) {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div class="w3-panel w3-pale-red w3-border"><p>{% trans "Please wait for the checksum to be computed before restoring." %}</p></div>';
+    return;
+  }
+
+  const confirmMsg = dryRun
+    ? '{% trans "Run a dry-run preview? No data will be changed." %}'
+    : '{% trans "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?" %}';
+
+  if (!confirm(confirmMsg)) return;
+
+  btn.disabled = true;
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Processing restore..." %}</p>';
+
+  try {
+    const formData = new FormData();
+    formData.append('backup_file', fileInput.files[0]);
+    formData.append('expected_checksum', expectedChecksum);
+    formData.append('dry_run', dryRun ? 'true' : 'false');
+
+    const resp = await fetch(API_BACKUP_RESTORE, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF_TOKEN },
+      body: formData,
+    });
+    const data = await resp.json();
+
+    if (resp.ok) {
+      if (data.status === 'preview') {
+        statusDiv.innerHTML = `
+          <div class="w3-panel w3-pale-yellow w3-border">
+            <p>🔍 <strong>{% trans "Dry Run Preview" %}</strong></p>
+            <p>{% trans "Tables that would be affected" %}: <code>${JSON.stringify(data.tables_affected)}</code></p>
+            <p class="w3-text-grey">{% trans "No changes were made. Uncheck Dry Run to apply the restore." %}</p>
+          </div>`;
+      } else {
+        statusDiv.innerHTML = `
+          <div class="w3-panel w3-pale-green w3-border">
+            <p>✓ <strong>{% trans "Restore completed." %}</strong></p>
+            <p>{% trans "Auto-backup ID" %}: ${data.auto_backup_id}</p>
+            <p>{% trans "Tables affected" %}: <code>${JSON.stringify(data.tables_affected)}</code></p>
+          </div>`;
+      }
+    } else {
+      statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Error" %}: ${data.error || resp.statusText}</p></div>`;
+    }
+  } catch (e) {
+    statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Network error" %}: ${e.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Load backup list on page load
+document.addEventListener('DOMContentLoaded', loadBackupList);
+</script>
+{% else %}
+<div class="w3-container w3-padding">
+  <div class="w3-panel w3-pale-yellow w3-border">
+    <p>{% trans "Backup & Restore is available in Advanced or Expert mode only." %}
+      {% trans "Switch mode using the selector in the navigation bar." %}
+    </p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

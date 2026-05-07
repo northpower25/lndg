@@ -452,6 +452,15 @@ def reset_api(request):
         }
         try:
             target_table = tables[table]
+            # Auto-backup before bulk delete (R-SEC-6)
+            try:
+                import logging as _logging
+                from gui.jobs.backup import run_backup
+                run_backup(backup_type='settings', actor='pre-reset-auto')
+            except Exception as backup_exc:
+                _logging.getLogger(__name__).warning(
+                    "Pre-reset auto-backup failed (proceeding with reset): %s", backup_exc
+                )
             target_table.delete()
             return Response({'message': f'Successfully deleted table: {table}'})
         except Exception as e:
@@ -488,6 +497,22 @@ def cert_validity(request):
         })
     except Exception:
         return Response({'error': 'Failed to read TLS certificate. Check server logs.'}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# Backup & Restore UI
+# ---------------------------------------------------------------------------
+
+@is_login_required(login_required(login_url='/lndg-admin/login/?next=/backup/'), settings.LOGIN_REQUIRED)
+def backup_restore_view(request):
+    """Render the Backup & Restore page (expert/advanced mode)."""
+    from gui.models import UserMode
+    user_mode_obj = UserMode.load()
+    context = {
+        'user_mode': user_mode_obj.mode,
+    }
+    return render(request, 'backup_restore.html', context)
+
 
 # ---------------------------------------------------------------------------
 # Notification Settings

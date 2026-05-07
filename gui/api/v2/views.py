@@ -504,3 +504,149 @@ def backup_list(request) -> Response:
             for b in qs
         ]
     )
+
+
+class _RestoreThrottle(UserRateThrottle):
+    rate = "3/minute"
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_RestoreThrottle])
+def backup_restore(request) -> Response:
+    """Restore from a previously created backup file.
+
+    Accepts a multipart/form-data POST with:
+        backup_file       – the backup file to restore
+        expected_checksum – SHA-256 hex digest of the uploaded file
+        dry_run           – 'true' | 'false' (default: 'true')
+
+    For ``dry_run=true`` the endpoint validates the file and returns which
+    tables / keys would be affected without making any changes.
+
+    For ``dry_run=false`` (settings type only):
+        1. Creates an automatic safety backup (R-SEC-6).
+        2. Validates the SHA-256 checksum.
+        3. Writes the settings back.
+
+    Returns::
+
+        {"status": "ok", "auto_backup_id": int, "tables_affected": [...]}
+        {"status": "preview", "tables_affected": [...]}
+    """
+    import hashlib
+    import json as _json
+    import logging as _logging
+
+    logger = _logging.getLogger(__name__)
+
+    if "backup_file" not in request.FILES:
+        return Response({"error": "No backup_file provided."}, status=400)
+
+    uploaded = request.FILES["backup_file"]
+    expected_checksum: str = (request.data.get("expected_checksum") or "").strip().lower()
+    dry_run: bool = (request.data.get("dry_run", "true")).lower() != "false"
+
+    # ── Validate checksum ──────────────────────────────────────────────────
+    file_bytes: bytes = uploaded.read()
+    actual_checksum = hashlib.sha256(file_bytes).hexdigest()
+    if expected_checksum and actual_checksum != expected_checksum:
+        return Response(
+            {
+                "error": "Checksum mismatch. Expected "
+                f"{expected_checksum!r}, got {actual_checksum!r}."
+            },
+            status=400,
+        )
+
+    # ── Determine backup type from filename ───────────────────────────────
+    filename: str = uploaded.name or ""
+    if filename.startswith("settings_") or filename.endswith(".json"):
+        backup_type = "settings"
+    else:
+        backup_type = "database"
+
+    # ── Parse settings payload ────────────────────────────────────────────
+    if backup_type == "settings":
+        try:
+            payload: dict = _json.loads(file_bytes.decode("utf-8"))
+        except _json.JSONDecodeError:
+            return Response({"error": "Invalid settings backup: file is not valid JSON."}, status=400)
+        except UnicodeDecodeError:
+            return Response({"error": "Invalid settings backup: backup file encoding is not UTF-8."}, status=400)
+        tables_affected = list(payload.keys())
+    else:
+        tables_affected = ["database"]
+
+    if dry_run:
+        return Response({"status": "preview", "tables_affected": tables_affected})
+
+    # ── Live restore (settings only; database restore requires manual process) ──
+    if backup_type != "settings":
+        return Response(
+            {
+                "error": (
+                    "Live database restore is not supported via the API. "
+                    "Use dry_run=true to preview. Restore the database file manually."
+                )
+            },
+            status=400,
+        )
+
+    # ── Auto-backup before restore (R-SEC-6) ──────────────────────────────
+    from gui.jobs.backup import run_backup
+
+    auto_backup_id: int | None = None
+    try:
+        auto_log = run_backup(backup_type="settings", actor="pre-restore-auto")
+        auto_backup_id = auto_log.pk
+    except Exception as exc:
+        logger.error("Pre-restore auto-backup failed: %s", exc, exc_info=True)
+        return Response(
+            {"error": "Safety auto-backup before restore failed. Restore aborted. See server logs."},
+            status=500,
+        )
+
+    # ── Apply settings ────────────────────────────────────────────────────
+    try:
+        from lndg import settings as _s
+        from gui.models import LocalSettings
+
+        _safe_keys = {
+            "LND_RPC_SERVER",
+            "LND_MACAROON_PATH",
+            "LND_TLS_PATH",
+            "LND_MAX_MESSAGE",
+            "LOGIN_REQUIRED",
+            "TIME_ZONE",
+            "LANGUAGE_CODE",
+        }
+        applied: list[str] = []
+        for key, value in payload.items():
+            if key in _safe_keys and value is not None:
+                setattr(_s, key, value)
+                applied.append(key)
+
+        # Persist known keys to LocalSettings for LND connection overrides
+        _lnd_key_map = {
+            "LND_RPC_SERVER": "LND-RPC-Server",
+            "LND_MACAROON_PATH": "LND-Macaroon",
+            "LND_TLS_PATH": "LND-TLS",
+        }
+        for django_key, db_key in _lnd_key_map.items():
+            if django_key in payload and payload[django_key] is not None:
+                LocalSettings.objects.update_or_create(
+                    key=db_key,
+                    defaults={"value": str(payload[django_key])},
+                )
+    except Exception as exc:
+        logger.error("Settings restore failed: %s", exc, exc_info=True)
+        return Response({"error": "Settings restore failed. See server logs for details."}, status=500)
+
+    return Response(
+        {
+            "status": "ok",
+            "auto_backup_id": auto_backup_id,
+            "tables_affected": applied,
+        }
+    )

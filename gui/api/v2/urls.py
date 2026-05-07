@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     backup_create,
     backup_list,
+    backup_restore,
     capabilities,
     chart_channel_health,
     chart_fee_volume,
@@ -23,5 +24,6 @@ urlpatterns = [
     path("charts/fee-volume/", chart_fee_volume, name="api-v2-chart-fee-volume"),
     path("cleaner/run/", cleaner_run, name="api-v2-cleaner-run"),
     path("backup/create/", backup_create, name="api-v2-backup-create"),
+    path("backup/restore/", backup_restore, name="api-v2-backup-restore"),
     path("backup/", backup_list, name="api-v2-backup-list"),
 ]

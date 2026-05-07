@@ -394,3 +394,159 @@ msgstr "Step"
 
 msgid "Wizard progress"
 msgstr "Wizard progress"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Backup & Restore"
+msgstr "Backup & Restore"
+
+msgid "Create Backup"
+msgstr "Create Backup"
+
+msgid "Backup Type"
+msgstr "Backup Type"
+
+msgid "Settings (JSON)"
+msgstr "Settings (JSON)"
+
+msgid "Database (dump)"
+msgstr "Database (dump)"
+
+msgid "Creating backup..."
+msgstr "Creating backup..."
+
+msgid "Backup created successfully."
+msgstr "Backup created successfully."
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Size (KB)"
+msgstr "Size (KB)"
+
+msgid "Created At"
+msgstr "Created At"
+
+msgid "Actor"
+msgstr "Actor"
+
+msgid "Checksum"
+msgstr "Checksum"
+
+msgid "Recent Backups"
+msgstr "Recent Backups"
+
+msgid "Refresh List"
+msgstr "Refresh List"
+
+msgid "No backups found."
+msgstr "No backups found."
+
+msgid "Error loading backups."
+msgstr "Error loading backups."
+
+msgid "Restore from Backup"
+msgstr "Restore from Backup"
+
+msgid "HIGH RISK"
+msgstr "HIGH RISK"
+
+msgid "This action overwrites all current data"
+msgstr "This action overwrites all current data"
+
+msgid "Impact Preview"
+msgstr "Impact Preview"
+
+msgid "Restore will overwrite ALL current settings or database data."
+msgstr "Restore will overwrite ALL current settings or database data."
+
+msgid "An automatic backup is created before the restore (safety net)."
+msgstr "An automatic backup is created before the restore (safety net)."
+
+msgid "Use Dry Run to preview which tables would be affected without making changes."
+msgstr "Use Dry Run to preview which tables would be affected without making changes."
+
+msgid "Risk Level"
+msgstr "Risk Level"
+
+msgid "high"
+msgstr "high"
+
+msgid "Dry Run (preview only)"
+msgstr "Dry Run (preview only)"
+
+msgid "Check this to preview the restore without applying any changes."
+msgstr "Check this to preview the restore without applying any changes."
+
+msgid "Select Backup File"
+msgstr "Select Backup File"
+
+msgid "File Checksum (SHA-256)"
+msgstr "File Checksum (SHA-256)"
+
+msgid "This checksum is verified server-side before the restore is applied."
+msgstr "This checksum is verified server-side before the restore is applied."
+
+msgid "Computing..."
+msgstr "Computing..."
+
+msgid "Checksum computation failed"
+msgstr "Checksum computation failed"
+
+msgid "Restore Backup"
+msgstr "Restore Backup"
+
+msgid "Processing restore..."
+msgstr "Processing restore..."
+
+msgid "Dry Run Preview"
+msgstr "Dry Run Preview"
+
+msgid "Tables that would be affected"
+msgstr "Tables that would be affected"
+
+msgid "No changes were made. Uncheck Dry Run to apply the restore."
+msgstr "No changes were made. Uncheck Dry Run to apply the restore."
+
+msgid "Restore completed."
+msgstr "Restore completed."
+
+msgid "Auto-backup ID"
+msgstr "Auto-backup ID"
+
+msgid "Tables affected"
+msgstr "Tables affected"
+
+msgid "Please select a backup file first."
+msgstr "Please select a backup file first."
+
+msgid "Please wait for the checksum to be computed before restoring."
+msgstr "Please wait for the checksum to be computed before restoring."
+
+msgid "Run a dry-run preview? No data will be changed."
+msgstr "Run a dry-run preview? No data will be changed."
+
+msgid "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?"
+msgstr "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?"
+
+msgid "Restore is available in Expert mode only."
+msgstr "Restore is available in Expert mode only."
+
+msgid "Switch to Expert mode using the mode selector in the navigation bar."
+msgstr "Switch to Expert mode using the mode selector in the navigation bar."
+
+msgid "Backup & Restore is available in Advanced or Expert mode only."
+msgstr "Backup & Restore is available in Advanced or Expert mode only."
+
+msgid "Switch mode using the selector in the navigation bar."
+msgstr "Switch mode using the selector in the navigation bar."
+
+msgid "Network error"
+msgstr "Network error"
+
+msgid "Create, download, or restore node backups. Restore is an expert-only operation."
+msgstr "Create, download, or restore node backups. Restore is an expert-only operation."
