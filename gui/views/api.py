@@ -4,8 +4,26 @@ from datetime import datetime
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..serializers import *  # noqa: F403
-from ..models import Payments, PaymentHops, Invoices, Forwards, Channels, Rebalancer, LocalSettings, Peers, Onchain, Closures, Resolutions, PendingHTLCs, FailedHTLCs, InboundFeeLog, PeerEvents, TradeSales
+from ..serializers import (
+    ChannelSerializer,
+    ClosuresSerializer,
+    FailedHTLCSerializer,
+    FeeLogSerializer,
+    ForwardSerializer,
+    InboundFeeLogSerializer,
+    InvoiceSerializer,
+    LocalSettingsSerializer,
+    OnchainSerializer,
+    PaymentHopsSerializer,
+    PaymentSerializer,
+    PeerEventsSerializer,
+    PeerSerializer,
+    PendingHTLCSerializer,
+    RebalancerSerializer,
+    ResolutionsSerializer,
+    TradeSalesSerializer,
+)
+from ..models import Payments, PaymentHops, Invoices, Forwards, Channels, Rebalancer, LocalSettings, Peers, Onchain, Closures, Resolutions, PendingHTLCs, FailedHTLCs, InboundFeeLog, PeerEvents, TradeSales, Autofees
 from lndg import settings
 from django.shortcuts import get_object_or_404
 
@@ -206,4 +224,3 @@ class RebalancerViewSet(viewsets.ReadOnlyModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-

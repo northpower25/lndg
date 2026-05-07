@@ -8,9 +8,9 @@ from pandas import DataFrame
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *  # noqa: F403
-from ..serializers import *  # noqa: F403
-from ..models import Payments, Invoices, Forwards, Channels, Onchain, TradeSales
+from ..forms import AddInvoiceForm
+from ..serializers import AddInvoiceSerializer, ConsolidateSerializer, CreateTradeSerializer, DecodeInvoiceSerializer, NewAddressSerializer, PayInvoiceSerializer
+from ..models import Payments, Invoices, Forwards, Channels, Onchain, TradeSales, Closures
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps.lnd_connect import lnd_connect
@@ -387,7 +387,7 @@ def api_income(request):
         stub = lnrpc.LightningStub(lnd_connect())
         try:
             days = int(request.GET.urlencode()[1:])
-        except:
+        except ValueError:
             days = None
         day_filter = datetime.now() - timedelta(days=days) if days else None
         node_info = stub.GetInfo(ln.GetInfoRequest())
@@ -584,5 +584,3 @@ def pay_invoice(request):
         debug_end = error.find('debug_error_string =') - 3
         error_msg = error[details_index:debug_end]
         return Response({'error': f'Payment failed: {error_msg}'})
-
-

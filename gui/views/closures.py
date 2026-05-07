@@ -7,7 +7,7 @@ from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, find_next_block_maturity, network_links, graph_links, pending_channel_details
+from .utils import find_next_block_maturity, grpc_error_message, graph_links, is_login_required, network_links, pending_channel_details
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def closures(request):
@@ -68,10 +68,7 @@ def closures(request):
             }
             return render(request, 'closures.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -90,4 +87,3 @@ def resolutions(request):
         return render(request, 'resolutions.html', context)
     else:
         return redirect('home')
-

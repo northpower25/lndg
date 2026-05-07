@@ -4,9 +4,9 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *  # noqa: F403
-from ..serializers import *  # noqa: F403
-from ..models import Channels, Peers
+from ..forms import AddTowerForm, BatchOpenForm, CloseChannelForm, ConnectPeerForm, DeleteTowerForm, OpenChannelForm, RemoveTowerForm
+from ..serializers import CloseChannelSerializer, ConnectPeerSerializer, DisconnectPeerSerializer, OpenChannelSerializer, UpdateAliasSerializer
+from ..models import Channels, Onchain, Peers
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import wtclient_pb2 as wtrpc
@@ -15,7 +15,7 @@ from gui.lnd_deps import walletkit_pb2 as walletrpc
 from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, graph_links, network_links
+from .utils import graph_links, grpc_error_message, is_login_required, network_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def peers(request):
@@ -87,10 +87,7 @@ def towers(request):
             }
             return render(request, 'towers.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect(request.META.get('HTTP_REFERER'))
@@ -190,10 +187,7 @@ def addresses(request):
             }
             return render(request, 'addresses.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect(request.META.get('HTTP_REFERER'))
@@ -209,7 +203,7 @@ def open_peer(peer_pubkey, stub):
             ln_addr = ln.LightningAddress(pubkey=peer_pubkey, host=host)
             stub.ConnectPeer(ln.ConnectPeerRequest(addr=ln_addr))
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -312,7 +306,7 @@ def batch_open(request):
                 else:
                     fail = True
                     messages.error(request, 'Unable to connect with peer 10!')
-            if fail == True:
+            if fail:
                 return redirect('batch')
             if len (open_list) > 0:
                 try:
@@ -344,10 +338,7 @@ def peerevents(request):
         try:
             return render(request, 'peerevents.html')
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -626,4 +617,3 @@ def update_alias(request):
     else:
         messages.error(request, 'Invalid Request. Please try again.')
     return redirect('home')
-

@@ -19,6 +19,12 @@ def network_links():
         network_links = 'https://mempool.space'
     return network_links
 
+
+def grpc_error_message(error):
+    code = getattr(error, 'code', None)
+    return str(code()) if callable(code) else str(error)
+
+
 def get_tx_fees(txid):
     base_url = network_links() + ('/testnet' if settings.LND_NETWORK == 'testnet' else '') + '/api/tx/'
     request_data = get(base_url + txid).json()
@@ -114,4 +120,3 @@ def point(ch: Channels):
     channel_point.funding_txid_str = ch.funding_txid
     channel_point.output_index = ch.output_index
     return channel_point
-

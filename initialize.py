@@ -1,4 +1,7 @@
-import os, secrets, argparse, django
+import os
+import secrets
+import argparse
+import django
 from pathlib import Path
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
@@ -232,7 +235,7 @@ def initialize_django(adminuser, adminpw):
         DATA_DIR = os.path.join(BASE_DIR, 'data')
         try:
             os.mkdir(DATA_DIR)
-        except:
+        except FileExistsError:
             print('Data directory already found...')
         Path(os.path.join(DATA_DIR, 'db.sqlite3')).touch()
         settings.configure(

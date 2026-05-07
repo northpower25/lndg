@@ -5,7 +5,7 @@ from os import environ
 from pandas import DataFrame, Series
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Forwards, Channels, LocalSettings, FailedHTLCs
+from gui.models import Forwards, Channels, LocalSettings, FailedHTLCs  # noqa: E402
 
 def _get_setting(key, default):
     """Fetch a LocalSetting by key, creating it with the default value if absent."""

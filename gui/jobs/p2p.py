@@ -1,4 +1,5 @@
-import django, multiprocessing
+import django
+import multiprocessing
 from datetime import datetime
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps.lnd_connect import lnd_connect
@@ -6,8 +7,8 @@ from os import environ
 from time import sleep
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import LocalSettings
-from gui.jobs.trade import serve_trades
+from gui.models import LocalSettings  # noqa: E402
+from gui.jobs.trade import serve_trades  # noqa: E402
 
 def trade():
     stub = lnrpc.LightningStub(lnd_connect())

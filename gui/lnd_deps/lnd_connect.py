@@ -1,4 +1,6 @@
-import os, codecs, grpc
+import os
+import codecs
+import grpc
 from lndg import settings
 
 def get_creds():

@@ -7,7 +7,7 @@ from os import environ
 from time import sleep
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Channels, FailedHTLCs
+from gui.models import Channels, FailedHTLCs  # noqa: E402
 
 def main():
     while True:

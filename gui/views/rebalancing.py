@@ -8,11 +8,10 @@ from pandas import DataFrame
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *  # noqa: F403
-from ..serializers import *  # noqa: F403
+from ..forms import LocalSettingsForm, RebalancerForm
 from ..models import Channels, Rebalancer, LocalSettings, Autopilot, Autofees, InboundFeeLog
 from lndg import settings
-from .utils import is_login_required, get_local_settings, graph_links
+from .utils import get_local_settings, graph_links, grpc_error_message, is_login_required
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def rebalances(request):
@@ -20,10 +19,7 @@ def rebalances(request):
         try:
             return render(request, 'rebalances.html')
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -70,10 +66,7 @@ def outbound_fee_log(request):
             }
             return render(request, 'outbound_fee_log.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -93,10 +86,7 @@ def inbound_fee_log(request):
             }
             return render(request, 'inbound_fee_log.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -188,7 +178,7 @@ def update_settings(request):
                     value = field['parse'](value)
                     try:
                         db_value = LocalSettings.objects.get(key=field['id'])
-                    except:
+                    except LocalSettings.DoesNotExist:
                         LocalSettings(key=field['id'], value=field['value']).save()
                         db_value = LocalSettings.objects.get(key=field['id'])
                     if db_value.value == str(value) or len(str(value)) == 0:
@@ -222,4 +212,3 @@ def rebalance_stats(request):
     except Exception as e:
         error = str(e)
         return Response({'error': 'Unable to fetch stats! Error: ' + error})
-

@@ -5,7 +5,7 @@ from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, get_local_settings, graph_links, network_links
+from .utils import grpc_error_message, is_login_required, get_local_settings, graph_links, network_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def home(request):
@@ -15,10 +15,7 @@ def home(request):
         stub = lnrpc.LightningStub(lnd_connect())
         node_info = stub.GetInfo(ln.GetInfoRequest())
     except Exception as e:
-        try:
-            error = str(e.code())
-        except:
-            error = str(e)
+        error = grpc_error_message(e)
         return render(request, 'error.html', {'error': error})
     return render(request, 'home.html', {
         'node_info': {'color': node_info.color, 'alias': node_info.alias, 'version': node_info.version, 'identity_pubkey': node_info.identity_pubkey, 'uris': node_info.uris},
@@ -28,4 +25,3 @@ def home(request):
         'graph_links': graph_links(),
         'network_links': network_links(),
     })
-
