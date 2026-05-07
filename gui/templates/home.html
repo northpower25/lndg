@@ -70,6 +70,7 @@
 
 </div>
 <script>
+/* byId() is a global helper defined in helpers.js (loaded by base.html). */
 (async function loadCockpit() {
   try {
     const token = document.getElementById('api').dataset.token;
@@ -78,12 +79,13 @@
     });
     if (!resp.ok) return;
     const d = await resp.json();
+    const fmtFees = v => (v || 0).toLocaleString(undefined, {maximumFractionDigits: 3});
 
     // 1. Routing Activity
     byId('ct-r7-count').textContent  = (d.routing['7d'].count || 0).toLocaleString();
-    byId('ct-r7-fees').textContent   = (d.routing['7d'].fees_sat || 0).toLocaleString(undefined, {maximumFractionDigits: 3});
+    byId('ct-r7-fees').textContent   = fmtFees(d.routing['7d'].fees_sat);
     byId('ct-r30-count').textContent = (d.routing['30d'].count || 0).toLocaleString();
-    byId('ct-r30-fees').textContent  = (d.routing['30d'].fees_sat || 0).toLocaleString(undefined, {maximumFractionDigits: 3});
+    byId('ct-r30-fees').textContent  = fmtFees(d.routing['30d'].fees_sat);
 
     // 2. Liquidity Balance
     byId('ct-liq-out-pct').textContent = d.liquidity.outbound_pct;
@@ -125,6 +127,7 @@
   }
 })();
 </script>
+<noscript><p class="w3-small w3-text-grey w3-container">{% trans "Cockpit" %}: {% trans "No data available" %}</p></noscript>
 <!-- ── End Cockpit Tiles ──────────────────────────────────────────────────── -->
 <span style="position: absolute;top: 0;right: 0;padding: 5px;">{% trans "Dashboard last updated" %}: <span id='datetime'></span> <label title="{% trans 'Auto Page Refresh' %}" class="switch"><input type="checkbox" {% if request.COOKIES.refresh != 'false' %}checked="true"{% endif %}><span onclick="toggleAutoRefresh()" class="slider round"></span></label></span>
 <div class="w3-container w3-padding-small">

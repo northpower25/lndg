@@ -8,6 +8,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
+# msats per sat – used when converting amt_out_msat → sat
+_MSAT_PER_SAT = 1000
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -85,7 +88,7 @@ def cockpit_stats(request) -> Response:
         return {
             "count": agg["count"] or 0,
             "fees_sat": round(agg["fees_sat"] or 0, 3),
-            "volume_sat": round((agg["volume_msat"] or 0) / 1000),
+            "volume_sat": round((agg["volume_msat"] or 0) / _MSAT_PER_SAT),
         }
 
     routing = {
@@ -135,25 +138,26 @@ def cockpit_stats(request) -> Response:
     # ── 5. Next best actions (heuristic) ─────────────────────────────────────
     next_actions: list[dict] = []
 
-    # a) Channels with low outbound liquidity
+    # a) Channels with low outbound liquidity (limit to 3 at DB level)
     for ch in open_channels.filter(is_active=True, local_disabled=False).values(
         "chan_id", "alias", "local_balance", "capacity"
-    ):
+    )[:3]:
         if len(next_actions) >= 3:
             break
         cap = ch["capacity"]
-        if cap > 0 and ch["local_balance"] * 100 // cap < 20:
+        if cap > 0:
             pct = ch["local_balance"] * 100 // cap
-            next_actions.append(
-                {
-                    "type": "rebalance",
-                    "title": f"Rebalance: {ch['alias'] or ch['chan_id'][:8]}",
-                    "reason": f"Low outbound liquidity ({pct}%)",
-                    "risk": "low",
-                    "confidence": 0.8,
-                    "confidence_label": "heuristic",
-                }
-            )
+            if pct < 20:
+                next_actions.append(
+                    {
+                        "type": "rebalance",
+                        "title": f"Rebalance: {ch['alias'] or ch['chan_id'][:8]}",
+                        "reason": f"Low outbound liquidity ({pct}%)",
+                        "risk": "low",
+                        "confidence": 0.8,
+                        "confidence_label": "heuristic",
+                    }
+                )
 
     # b) Channels with no outbound routing in 7 days
     if len(next_actions) < 3:
