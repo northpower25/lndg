@@ -4,6 +4,7 @@ from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Va
 from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
+from pandas import DataFrame, merge
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
