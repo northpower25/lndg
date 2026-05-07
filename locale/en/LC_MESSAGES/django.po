@@ -120,3 +120,73 @@ msgstr "Next Action"
 
 msgid "AI features are disabled."
 msgstr "AI features are disabled."
+
+msgid "Main navigation"
+msgstr "Main navigation"
+
+msgid "Switch UI complexity mode"
+msgstr "Switch UI complexity mode"
+
+msgid "Dashboard last updated"
+msgstr "Dashboard last updated"
+
+msgid "Auto Page Refresh"
+msgstr "Auto Page Refresh"
+
+msgid "Forwarding events and fees in the last 7 and 30 days."
+msgstr "Forwarding events and fees in the last 7 and 30 days."
+
+msgid "events"
+msgstr "events"
+
+msgid "sats fees"
+msgstr "sats fees"
+
+msgid "Outbound and inbound distribution across all open channels."
+msgstr "Outbound and inbound distribution across all open channels."
+
+msgid "Outbound"
+msgstr "Outbound"
+
+msgid "Inbound"
+msgstr "Inbound"
+
+msgid "of capacity"
+msgstr "of capacity"
+
+msgid "Your average fee rate compared to the median across all open channels."
+msgstr "Your average fee rate compared to the median across all open channels."
+
+msgid "Avg. Fee Rate"
+msgstr "Avg. Fee Rate"
+
+msgid "ppm"
+msgstr "ppm"
+
+msgid "channels below median"
+msgstr "channels below median"
+
+msgid "channels above median"
+msgstr "channels above median"
+
+msgid "Disabled channels and failed HTLCs in the last 24 hours."
+msgstr "Disabled channels and failed HTLCs in the last 24 hours."
+
+msgid "No issues detected"
+msgstr "No issues detected"
+
+msgid "Failed HTLCs (24h)"
+msgstr "Failed HTLCs (24h)"
+
+msgid "Disabled"
+msgstr "Disabled"
+
+msgid "Heuristic recommendations based on current channel state."
+msgstr "Heuristic recommendations based on current channel state."
+
+msgid "All good"
+msgstr "All good"
+
+msgid "Risk"
+msgstr "Risk"
+

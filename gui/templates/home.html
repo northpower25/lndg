@@ -2,7 +2,131 @@
 {% block title %} {{ block.super }} - Dashboard{% endblock %}
 {% block content %}
 {% load euformat %}
-<span style="position: absolute;top: 0;right: 0;padding: 5px;">Dashboard Last Updated: <span id='datetime'></span> <label title="Auto Page Refresh" class="switch"><input type="checkbox" {% if request.COOKIES.refresh != 'false' %}checked="true"{% endif %}><span onclick="toggleAutoRefresh()" class="slider round"></span></label></span>
+{% load i18n %}
+<!-- ── Cockpit Tiles ─────────────────────────────────────────────────────── -->
+<div id="cockpit-tiles" class="w3-container w3-padding-small" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+
+  <!-- Tile 1: Routing Activity -->
+  <div class="w3-card w3-padding" style="flex:1;min-width:160px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>⚡ {% trans "Routing Activity" %}</strong>
+      <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Forwarding events and fees in the last 7 and 30 days.' %}">❓</span>
+    </div>
+    <div class="w3-small" style="margin-top:4px">
+      <div>7d: <strong><span id="ct-r7-count">—</span></strong> {% trans "events" %},&nbsp;<strong><span id="ct-r7-fees">—</span></strong> {% trans "sats fees" %}</div>
+      <div>30d: <strong><span id="ct-r30-count">—</span></strong> {% trans "events" %},&nbsp;<strong><span id="ct-r30-fees">—</span></strong> {% trans "sats fees" %}</div>
+    </div>
+  </div>
+
+  <!-- Tile 2: Liquidity Balance -->
+  <div class="w3-card w3-padding" style="flex:1;min-width:160px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>💧 {% trans "Liquidity Balance" %}</strong>
+      <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Outbound and inbound distribution across all open channels.' %}">❓</span>
+    </div>
+    <div class="w3-small" style="margin-top:4px">
+      <div>{% trans "Outbound" %}: <strong><span id="ct-liq-out-pct">—</span>%</strong></div>
+      <div class="progress w3-round w3-grey" style="height:6px;margin:4px 0">
+        <span id="ct-liq-bar" class="value w3-round w3-blue" style="display:block;height:6px;width:50%"></span>
+      </div>
+      <div class="w3-tiny w3-text-grey">{% trans "Inbound" %}: <span id="ct-liq-in-pct">—</span>% &nbsp;|&nbsp; {% trans "of capacity" %}: <span id="ct-liq-cap">—</span> sats</div>
+    </div>
+  </div>
+
+  <!-- Tile 3: Fee Positioning -->
+  <div class="w3-card w3-padding" style="flex:1;min-width:160px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>💰 {% trans "Fee Positioning" %}</strong>
+      <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Your average fee rate compared to the median across all open channels.' %}">❓</span>
+    </div>
+    <div class="w3-small" style="margin-top:4px">
+      <div>{% trans "Avg. Fee Rate" %}: <strong><span id="ct-fee-avg">—</span> {% trans "ppm" %}</strong></div>
+      <div class="w3-tiny w3-text-grey">
+        ↓ <span id="ct-fee-below">—</span> {% trans "channels below median" %} &nbsp;|&nbsp;
+        ↑ <span id="ct-fee-above">—</span> {% trans "channels above median" %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tile 4: Issues -->
+  <div class="w3-card w3-padding" style="flex:1;min-width:160px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>⚠️ {% trans "Issues" %}</strong>
+      <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Disabled channels and failed HTLCs in the last 24 hours.' %}">❓</span>
+    </div>
+    <div class="w3-small" style="margin-top:4px">
+      <div id="ct-issues-content">—</div>
+    </div>
+  </div>
+
+  <!-- Tile 5: Next Best Action -->
+  <div class="w3-card w3-padding" style="flex:1;min-width:180px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>🎯 {% trans "Next Action" %}</strong>
+      <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Heuristic recommendations based on current channel state.' %}">❓</span>
+    </div>
+    <div id="ct-actions-body" class="w3-small" style="margin-top:4px">—</div>
+  </div>
+
+</div>
+<script>
+(async function loadCockpit() {
+  try {
+    const token = document.getElementById('api').dataset.token;
+    const resp  = await fetch('/api/v2/cockpit/', {
+      headers: {'X-CSRFToken': token, 'Accept': 'application/json'}
+    });
+    if (!resp.ok) return;
+    const d = await resp.json();
+
+    // 1. Routing Activity
+    byId('ct-r7-count').textContent  = (d.routing['7d'].count || 0).toLocaleString();
+    byId('ct-r7-fees').textContent   = (d.routing['7d'].fees_sat || 0).toLocaleString(undefined, {maximumFractionDigits: 3});
+    byId('ct-r30-count').textContent = (d.routing['30d'].count || 0).toLocaleString();
+    byId('ct-r30-fees').textContent  = (d.routing['30d'].fees_sat || 0).toLocaleString(undefined, {maximumFractionDigits: 3});
+
+    // 2. Liquidity Balance
+    byId('ct-liq-out-pct').textContent = d.liquidity.outbound_pct;
+    byId('ct-liq-in-pct').textContent  = 100 - d.liquidity.outbound_pct;
+    byId('ct-liq-bar').style.width     = d.liquidity.outbound_pct + '%';
+    byId('ct-liq-cap').textContent     = (d.liquidity.total_capacity_sat || 0).toLocaleString();
+
+    // 3. Fee Positioning
+    byId('ct-fee-avg').textContent   = (d.fees.avg_fee_rate || 0).toLocaleString();
+    byId('ct-fee-below').textContent = d.fees.channels_below_median || 0;
+    byId('ct-fee-above').textContent = d.fees.channels_above_median || 0;
+
+    // 4. Issues
+    const iss = d.issues;
+    if (iss.total_issues === 0 && iss.inactive_channels === 0) {
+      byId('ct-issues-content').innerHTML = '<span class="w3-text-green">✓ {% trans "No issues detected" %}</span>';
+    } else {
+      let html = '';
+      if (iss.failed_htlc_24h   > 0) html += `<div>❌ ${iss.failed_htlc_24h} {% trans "Failed HTLCs (24h)" %}</div>`;
+      if (iss.disabled_channels > 0) html += `<div>⛔ ${iss.disabled_channels} {% trans "Disabled" %}</div>`;
+      if (iss.inactive_channels > 0) html += `<div>💤 ${iss.inactive_channels} {% trans "Inactive" %}</div>`;
+      byId('ct-issues-content').innerHTML = html || '—';
+    }
+
+    // 5. Next Best Actions
+    const acts = d.next_actions || [];
+    if (!acts.length) {
+      byId('ct-actions-body').innerHTML = '<span class="w3-text-green">✓ {% trans "All good" %}</span>';
+    } else {
+      byId('ct-actions-body').innerHTML = acts.map(a =>
+        `<div style="margin-bottom:4px">
+          <div><strong>${a.title}</strong></div>
+          <div class="w3-tiny w3-text-grey">${a.reason} &nbsp;|&nbsp; {% trans "Risk" %}: ${a.risk}</div>
+        </div>`
+      ).join('');
+    }
+  } catch(e) {
+    console.warn('Cockpit stats unavailable:', e);
+  }
+})();
+</script>
+<!-- ── End Cockpit Tiles ──────────────────────────────────────────────────── -->
+<span style="position: absolute;top: 0;right: 0;padding: 5px;">{% trans "Dashboard last updated" %}: <span id='datetime'></span> <label title="{% trans 'Auto Page Refresh' %}" class="switch"><input type="checkbox" {% if request.COOKIES.refresh != 'false' %}checked="true"{% endif %}><span onclick="toggleAutoRefresh()" class="slider round"></span></label></span>
 <div class="w3-container w3-padding-small">
   <script language="Javascript">
     function qr_gen(addr){
