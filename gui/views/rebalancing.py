@@ -1,23 +1,17 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value, FloatField
+from django.db.models import Sum, IntegerField, Count, F, Case, When
 from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
-from pandas import DataFrame, merge
+from pandas import DataFrame
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *
-from ..serializers import *
+from ..forms import *  # noqa: F403
+from ..serializers import *  # noqa: F403
 from ..models import Channels, Rebalancer, LocalSettings, Autopilot, Autofees, InboundFeeLog
-from gui.lnd_deps import lightning_pb2 as ln
-from gui.lnd_deps import lightning_pb2_grpc as lnrpc
-from gui.lnd_deps import router_pb2 as lnr
-from gui.lnd_deps import router_pb2_grpc as lnrouter
-from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-import af
 from .utils import is_login_required, get_local_settings, graph_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)

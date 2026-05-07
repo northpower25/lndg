@@ -1,27 +1,23 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value, FloatField, ExpressionWrapper, DurationField, DateTimeField
-from django.db.models.functions import Round, TruncDay, Coalesce
+from django.db.models import Sum, IntegerField, F, Value, FloatField, ExpressionWrapper, DurationField, DateTimeField
+from django.db.models.functions import Round, TruncDay
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
-from pandas import DataFrame, merge
+from pandas import DataFrame
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *
-from ..serializers import *
-from ..models import Payments, PaymentHops, Invoices, Forwards, Channels, LocalSettings, Onchain, TradeSales
+from ..forms import *  # noqa: F403
+from ..serializers import *  # noqa: F403
+from ..models import Payments, Invoices, Forwards, Channels, Onchain, TradeSales
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
-from gui.lnd_deps import router_pb2 as lnr
-from gui.lnd_deps import router_pb2_grpc as lnrouter
-from gui.lnd_deps import walletkit_pb2 as walletrpc
-from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
 from secrets import token_bytes
-from trade import create_trade_details
-from .utils import is_login_required, graph_links, network_links
+from gui.jobs.trade import create_trade_details
+from .utils import is_login_required, graph_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def income(request):

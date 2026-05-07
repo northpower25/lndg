@@ -1,6 +1,3 @@
-from django.contrib.auth.decorators import login_required
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from ..models import LocalSettings, Channels
 from gui.lnd_deps import lightning_pb2 as ln
 from lndg import settings

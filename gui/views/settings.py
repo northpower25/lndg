@@ -1,23 +1,21 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q, Value
-from django.db.models.functions import Round, Coalesce
+from django.db.models import Sum, Count, F, Q, Value
+from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *
-from ..serializers import *
+from ..forms import *  # noqa: F403
+from ..serializers import *  # noqa: F403
 from ..models import Channels, LocalSettings, AvoidNodes, Onchain, Forwards, Rebalancer, Payments, PaymentHops, Invoices, Closures, Resolutions, Peers, PendingChannels, PendingHTLCs, FailedHTLCs, HistFailedHTLC, Autopilot, Autofees, PeerEvents
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
-from gui.lnd_deps import walletkit_pb2 as walletrpc
-from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
 from os import path
-from pandas import DataFrame, merge
+from pandas import DataFrame
 from .utils import is_login_required, get_local_settings, graph_links, network_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
@@ -463,7 +461,7 @@ def reset_api(request):
 @is_login_required(permission_classes([IsAuthenticated]), settings.LOGIN_REQUIRED)
 def cert_validity(request):
     """bos cert-validity-days – return days remaining on the LND TLS certificate."""
-    import ssl, subprocess
+    import subprocess
     from datetime import timezone as tz
     try:
         cert_path = path.expanduser(settings.LND_TLS_PATH)

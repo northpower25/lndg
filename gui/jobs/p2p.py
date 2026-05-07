@@ -7,7 +7,7 @@ from time import sleep
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
 from gui.models import LocalSettings
-from trade import serve_trades
+from gui.jobs.trade import serve_trades
 
 def trade():
     stub = lnrpc.LightningStub(lnd_connect())

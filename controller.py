@@ -1,5 +1,10 @@
-import multiprocessing, sys
-import jobs, rebalancer, htlc_stream, p2p, manage
+import multiprocessing
+import sys
+import jobs
+import gui.jobs.rebalancer as rebalancer
+import gui.jobs.htlc_stream as htlc_stream
+import gui.jobs.p2p as p2p
+import manage
 
 def run_task(task):
     task()

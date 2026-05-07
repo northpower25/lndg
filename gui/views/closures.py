@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from pandas import DataFrame, merge
@@ -8,7 +7,7 @@ from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, get_tx_fees, find_next_block_maturity, network_links, graph_links, pending_channel_details
+from .utils import is_login_required, find_next_block_maturity, network_links, graph_links, pending_channel_details
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def closures(request):
