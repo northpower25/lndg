@@ -439,10 +439,10 @@ class UserMode(models.Model):
 
 class ChannelSnapshot(models.Model):
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
-    chan_id = models.CharField(max_length=20, db_index=True)
-    local_balance = models.BigIntegerField()
-    remote_balance = models.BigIntegerField()
-    capacity = models.BigIntegerField()
+    channel_id = models.CharField(max_length=20, db_index=True)
+    local_balance_sat = models.BigIntegerField()
+    remote_balance_sat = models.BigIntegerField()
+    capacity_sat = models.BigIntegerField()
     local_fee_rate = models.IntegerField(default=0)
     local_base_fee = models.IntegerField(default=0)
     local_disabled = models.BooleanField(default=False)
@@ -450,7 +450,7 @@ class ChannelSnapshot(models.Model):
 
     class Meta:
         app_label = 'gui'
-        indexes = [models.Index(fields=['chan_id', 'timestamp'])]
+        indexes = [models.Index(fields=['channel_id', 'timestamp'])]
 
 
 class ForwardingAggregate(models.Model):
@@ -464,7 +464,7 @@ class ForwardingAggregate(models.Model):
     ]
 
     window = models.CharField(max_length=4, choices=WINDOW_CHOICES)
-    chan_id = models.CharField(max_length=20, db_index=True)
+    channel_id = models.CharField(max_length=20, db_index=True)
     window_start = models.DateTimeField(db_index=True)
     in_msat = models.BigIntegerField(default=0)
     out_msat = models.BigIntegerField(default=0)
@@ -474,13 +474,13 @@ class ForwardingAggregate(models.Model):
 
     class Meta:
         app_label = 'gui'
-        unique_together = (('window', 'chan_id', 'window_start'),)
+        unique_together = (('window', 'channel_id', 'window_start'),)
 
 
 class ChangeLog(models.Model):
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     change_type = models.CharField(max_length=64)
-    target_chan_id = models.CharField(max_length=20, blank=True, default='', db_index=True)
+    target_channel_id = models.CharField(max_length=20, blank=True, default='', db_index=True)
     actor = models.CharField(max_length=128)
     old_value = models.JSONField(default=dict, blank=True)
     new_value = models.JSONField(default=dict, blank=True)

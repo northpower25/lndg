@@ -24,10 +24,13 @@ async def collect_channel_snapshots(
     snapshots = [
         ChannelSnapshot(
             timestamp=snapshot_time,
-            chan_id=channel.channel_id,
-            local_balance=channel.local_balance_sat,
-            remote_balance=channel.remote_balance_sat,
-            capacity=channel.capacity_sat,
+            channel_id=channel.channel_id,
+            local_balance_sat=channel.local_balance_sat,
+            remote_balance_sat=channel.remote_balance_sat,
+            capacity_sat=channel.capacity_sat,
+            # Domain Channel currently does not expose local fee-policy flags.
+            # They are initialized with safe defaults and filled once adapter
+            # policy metadata is available in a later phase.
             local_fee_rate=0,
             local_base_fee=0,
             local_disabled=False,

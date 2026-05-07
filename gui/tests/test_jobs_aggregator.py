@@ -33,7 +33,7 @@ class AggregatorJobTests(TestCase):
     def test_aggregate_forwarding_windows_creates_rows(self):
         upserted = async_to_sync(aggregate_forwarding_windows)(windows=("1d",))
         self.assertEqual(upserted, 1)
-        aggregate = ForwardingAggregate.objects.get(window="1d", chan_id="222")
+        aggregate = ForwardingAggregate.objects.get(window="1d", channel_id="222")
         self.assertEqual(aggregate.in_msat, 1200)
         self.assertEqual(aggregate.out_msat, 1000)
         self.assertEqual(aggregate.fees_msat, 2000)

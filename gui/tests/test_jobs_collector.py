@@ -35,6 +35,6 @@ class CollectorSnapshotTests(TestCase):
     def test_collect_channel_snapshots_creates_snapshot_rows(self):
         created = async_to_sync(collect_channel_snapshots)(self._FakeAdapter())
         self.assertEqual(created, 1)
-        snapshot = ChannelSnapshot.objects.get(chan_id="123")
-        self.assertEqual(snapshot.local_balance, 600_000)
+        snapshot = ChannelSnapshot.objects.get(channel_id="123")
+        self.assertEqual(snapshot.local_balance_sat, 600_000)
         self.assertTrue(snapshot.is_active)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta
 
 from django.db.models import Count, Sum
@@ -13,6 +14,11 @@ WINDOW_TO_DELTA = {
     ForwardingAggregate.WINDOW_7D: timedelta(days=7),
     ForwardingAggregate.WINDOW_30D: timedelta(days=30),
 }
+
+
+def _fee_sum_to_msat(fee_sum: float | int | Decimal) -> int:
+    fee_sat = Decimal(str(fee_sum))
+    return int((fee_sat * Decimal("1000")).to_integral_value(rounding=ROUND_HALF_UP))
 
 
 async def aggregate_forwarding_windows(
@@ -47,7 +53,7 @@ async def aggregate_forwarding_windows(
             .annotate(
                 in_msat=Coalesce(Sum("amt_in_msat"), 0),
                 out_msat=Coalesce(Sum("amt_out_msat"), 0),
-                fees_sat=Coalesce(Sum("fee"), 0.0),
+                fee_sum=Coalesce(Sum("fee"), 0.0),
                 forward_count=Count("id"),
             )
         )
@@ -58,12 +64,12 @@ async def aggregate_forwarding_windows(
             seen_chan_ids.add(chan_id)
             await ForwardingAggregate.objects.aupdate_or_create(
                 window=window,
-                chan_id=chan_id,
+                channel_id=chan_id,
                 window_start=window_start,
                 defaults={
                     "in_msat": row["in_msat"],
                     "out_msat": row["out_msat"],
-                    "fees_msat": int(round(float(row["fees_sat"]) * 1000)),
+                    "fees_msat": _fee_sum_to_msat(row["fee_sum"]),
                     "forward_count": row["forward_count"],
                     "fail_count": fail_counts.get(chan_id, 0),
                 },
@@ -75,7 +81,7 @@ async def aggregate_forwarding_windows(
                 continue
             await ForwardingAggregate.objects.aupdate_or_create(
                 window=window,
-                chan_id=chan_id,
+                channel_id=chan_id,
                 window_start=window_start,
                 defaults={
                     "in_msat": 0,
