@@ -18,6 +18,7 @@ from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
 from pandas import DataFrame
 from .utils import is_login_required, get_local_settings, graph_links, network_links, get_tx_fees, point
+import gui.jobs.auto_fees as af
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channels(request):

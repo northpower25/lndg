@@ -35,7 +35,7 @@ def notification_settings(request):
 def test_notification(request):
     """Send a test notification via all enabled backends."""
     try:
-        import notify as notify_module
+        import gui.jobs.notify as notify_module
         result = notify_module.send_notification('🔔 LNDg test notification – your setup is working!')
         tg_ok = result.get('telegram')
         summary = {}
