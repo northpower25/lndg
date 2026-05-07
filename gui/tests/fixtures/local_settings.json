@@ -1,0 +1,9 @@
+[
+  {
+    "model": "gui.localsettings",
+    "pk": "GUI-GraphLinks",
+    "fields": {
+      "value": "https://mempool.space/lightning"
+    }
+  }
+]
