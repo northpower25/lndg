@@ -453,7 +453,7 @@ def update_channels(stub):
             print(f"{datetime.now().strftime('%c')} : [Data] : Ext fee change detected on {db_channel.chan_id} for peer {db_channel.alias}: fee updated from {old_fee_rate} to {db_channel.local_fee_rate}")
             #External Fee change detected, update auto fee log
             db_channel.fees_updated = datetime.now()
-            Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=("Ext"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+            Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting="Ext", old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
         db_channel.save()
         counter += 1
         chan_list.append(channel.chan_id)
