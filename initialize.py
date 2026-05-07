@@ -85,6 +85,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',%s
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -101,11 +102,13 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
+                    'django.template.context_processors.debug',
+                    'django.template.context_processors.request',
+                    'django.contrib.auth.context_processors.auth',
+                    'django.contrib.messages.context_processors.messages',
+                    'django.template.context_processors.i18n',
+                    'gui.context_processors.user_mode',
+                ],
         },
     },
 ]
@@ -160,9 +163,20 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
+LANGUAGES = [
+    ('de', 'Deutsch'),
+    ('en', 'English'),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
+
+USE_L10N = True
 
 USE_TZ = False
 
@@ -272,9 +286,10 @@ def initialize_django(adminuser, adminpw):
                 admin.save()
                 try:
                     pw_file = os.path.join(DATA_DIR, 'lndg-admin.txt')
-                    Path(pw_file).touch()
+                    Path(pw_file).touch(mode=0o600)
                     with open(pw_file, 'w') as f:
                         f.write(login_pw)
+                    os.chmod(pw_file, 0o600)
                 except Exception as e:
                     print('Error writing password file:', str(e))
                 print('FIRST TIME LOGIN PASSWORD:' + login_pw)

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 {% load static %}
 {% load euformat %}
-<html>
+{% load i18n %}
+<html lang="{{ LANGUAGE_CODE }}">
   <style>
   </style>
   {% get_number_format as num_fmt %}
@@ -105,9 +106,22 @@
         {% endfor %}
       </div>
       {% endif %}
-      <div class="w3-container">
-        <h1><a href="/">My Lnd Overview</a></h1>
-      </div>
+      <nav class="lndg-nav w3-bar w3-theme-l2" aria-label="{% trans 'Main navigation' %}">
+        <span class="w3-bar-item w3-padding-small" style="font-weight:bold">⚡ LNDg</span>
+        <a href="/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'home' %} w3-theme{% endif %}">{% trans "Cockpit" %}</a>
+        <a href="/channels/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'channels' %} w3-theme{% endif %}">{% trans "Channels" %}</a>
+        <a href="/peers" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'peers' %} w3-theme{% endif %}">{% trans "Peers" %}</a>
+        <a href="/actions/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'actions' %} w3-theme{% endif %}">{% trans "Automations" %}</a>
+        <a href="/forwards" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'forwards' %} w3-theme{% endif %}">{% trans "Learn &amp; History" %}</a>
+        <span class="w3-bar-item w3-right w3-padding-small" style="display:flex;align-items:center;gap:6px;">
+          <label for="mode-switcher" class="w3-small">{% trans "Mode" %}:</label>
+          <select id="mode-switcher" class="w3-select w3-small" style="width:auto;padding:2px 4px;" onchange="lndgSetMode(this.value)" title="{% trans 'Switch UI complexity mode' %}">
+            <option value="guided"{% if user_mode == 'guided' %} selected{% endif %}>{% trans "Guided" %}</option>
+            <option value="advanced"{% if user_mode == 'advanced' or not user_mode %} selected{% endif %}>{% trans "Advanced" %}</option>
+            <option value="expert"{% if user_mode == 'expert' %} selected{% endif %}>{% trans "Expert" %}</option>
+          </select>
+        </span>
+      </nav>
       {% block content %}{% endblock %}
     </div>
   </body>
@@ -162,6 +176,20 @@
         await sleep(100)
       }
       await async_callback()
+    }
+    // ── Mode switcher ─────────────────────────────────────────────────────────
+    async function lndgSetMode(mode) {
+      try {
+        const token = document.getElementById('api').dataset.token;
+        await fetch('/api/v2/user/settings/', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+          body: JSON.stringify({mode}),
+        });
+        document.body.dataset.uiMode = mode;
+      } catch(e) {
+        console.error('Failed to save mode:', e);
+      }
     }
     //END: BASE CONFIG
     //-------------------------------------------------------------------------------------------------------------------------

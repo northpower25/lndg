@@ -1,0 +1,122 @@
+# German translations for LNDg Next.
+# Copyright (C) LNDg contributors
+# This file is distributed under the same license as the LNDg package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lndg\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Home"
+msgstr "Startseite"
+
+msgid "Cockpit"
+msgstr "Cockpit"
+
+msgid "Channels"
+msgstr "Kanäle"
+
+msgid "Peers"
+msgstr "Peers"
+
+msgid "Automations"
+msgstr "Automatisierungen"
+
+msgid "Learn & History"
+msgstr "Lernen & Verlauf"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Guided"
+msgstr "Geführt"
+
+msgid "Advanced"
+msgstr "Erweitert"
+
+msgid "Expert"
+msgstr "Experte"
+
+msgid "Mode"
+msgstr "Modus"
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Error"
+msgstr "Fehler"
+
+msgid "Loading..."
+msgstr "Laden..."
+
+msgid "No data available"
+msgstr "Keine Daten verfügbar"
+
+msgid "Actions"
+msgstr "Aktionen"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Inactive"
+msgstr "Inaktiv"
+
+msgid "Capacity"
+msgstr "Kapazität"
+
+msgid "Local Balance"
+msgstr "Lokales Guthaben"
+
+msgid "Remote Balance"
+msgstr "Fremdes Guthaben"
+
+msgid "Fee Rate (ppm)"
+msgstr "Gebührenrate (ppm)"
+
+msgid "Base Fee (msat)"
+msgstr "Grundgebühr (msat)"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "Public Key"
+msgstr "Öffentlicher Schlüssel"
+
+msgid "Connected"
+msgstr "Verbunden"
+
+msgid "Disconnected"
+msgstr "Getrennt"
+
+msgid "Routing Activity"
+msgstr "Routing-Aktivität"
+
+msgid "Liquidity Balance"
+msgstr "Liquiditätsbalance"
+
+msgid "Fee Positioning"
+msgstr "Gebühren-Positionierung"
+
+msgid "Issues"
+msgstr "Probleme"
+
+msgid "Next Action"
+msgstr "Nächste Aktion"
+
+msgid "AI features are disabled."
+msgstr "KI-Funktionen sind deaktiviert."

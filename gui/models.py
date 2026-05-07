@@ -390,3 +390,48 @@ class NotificationSettings(models.Model):
         """Return the singleton row, creating it if it doesn't exist."""
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class UserMode(models.Model):
+    """Singleton model that stores the user's UI mode preferences and AI feature flags."""
+
+    MODE_GUIDED = 'guided'
+    MODE_ADVANCED = 'advanced'
+    MODE_EXPERT = 'expert'
+    MODE_CHOICES = [
+        (MODE_GUIDED, 'Guided'),
+        (MODE_ADVANCED, 'Advanced'),
+        (MODE_EXPERT, 'Expert'),
+    ]
+
+    AI_MODE_OFF = 'off'
+    AI_MODE_ADVISORY = 'advisory'
+    AI_MODE_SHADOW = 'shadow'
+    AI_MODE_CHOICES = [
+        (AI_MODE_OFF, 'Off'),
+        (AI_MODE_ADVISORY, 'Advisory'),
+        (AI_MODE_SHADOW, 'Shadow'),
+    ]
+
+    mode = models.CharField(max_length=16, choices=MODE_CHOICES, default=MODE_ADVANCED)
+    onboarding_step = models.IntegerField(default=0)
+    onboarding_completed = models.BooleanField(default=False)
+    language = models.CharField(max_length=8, default='en')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # AI feature flags – all default off (R-AI-2)
+    ai_mode = models.CharField(max_length=16, choices=AI_MODE_CHOICES, default=AI_MODE_OFF)
+    ai_explain_always = models.BooleanField(default=False)
+    ai_min_data_days = models.IntegerField(default=30)
+    ai_max_auto_actions_day = models.IntegerField(default=0)
+    ai_cooldown_minutes = models.IntegerField(default=60)
+    ai_shadow_log_enabled = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'gui'
+
+    @classmethod
+    def load(cls) -> 'UserMode':
+        """Return the singleton row, creating it if it doesn't exist."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

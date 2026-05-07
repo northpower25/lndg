@@ -1,0 +1,13 @@
+# Direct dependencies for LNDg.
+# Run `pip-compile requirements.in` to regenerate requirements.txt with pinned versions.
+Django>=4.2,<6
+djangorestframework>=3.14,<4
+django-filter>=23,<25
+grpcio>=1.50,<2
+protobuf>=4.0,<6
+pytz
+pandas>=2.0,<3
+requests>=2.28,<3
+bech32>=1.2,<2
+cryptography>=41,<45
+paramiko>=3.0,<4
