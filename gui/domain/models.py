@@ -5,7 +5,7 @@ from typing import Literal
 
 @dataclass(frozen=True)
 class Channel:
-    chan_id: str
+    channel_id: str
     remote_pubkey: str
     capacity_sat: int
     local_balance_sat: int
@@ -24,8 +24,8 @@ class Peer:
 
 @dataclass(frozen=True)
 class ForwardingEvent:
-    chan_id_in: str
-    chan_id_out: str
+    channel_id_in: str
+    channel_id_out: str
     amount_in_msat: int
     amount_out_msat: int
     fee_msat: int
@@ -34,7 +34,7 @@ class ForwardingEvent:
 
 @dataclass(frozen=True)
 class FeePolicy:
-    chan_id: str
+    channel_id: str
     fee_rate_ppm: int
     base_fee_msat: int
     inbound_fee_rate_ppm: int
@@ -44,7 +44,7 @@ class FeePolicy:
 
 @dataclass(frozen=True)
 class SpliceAction:
-    chan_id: str
+    channel_id: str
     direction: Literal["in", "out"]
     amount_sat: int
     requested_at: datetime
