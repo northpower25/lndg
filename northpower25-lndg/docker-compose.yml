@@ -12,7 +12,7 @@ services:
     stop_grace_period: 1m
     volumes:
       - ${APP_LIGHTNING_NODE_DATA_DIR}:/lnd:ro
-      - ${APP_DATA_DIR}/data:/app/data:rw
+      - ${APP_DATA_DIR}/data:/lndg/data:rw
     environment:
       - LND_TLS_PATH=/lnd/tls.cert
       - LND_MACAROON_PATH=/lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
@@ -29,5 +29,5 @@ services:
         -net '${APP_BITCOIN_NETWORK}'
         -pw '${APP_PASSWORD}'
         -wn &&
-        python controller.py runserver 0.0.0.0:8000 > /app/data/lndg-controller.log 2>&1
+        python controller.py runserver 0.0.0.0:8000 > /lndg/data/lndg-controller.log 2>&1
     ports: []

@@ -97,7 +97,7 @@ services:
     volumes:
       # Adjust paths according to your setup
       - /home/<user>/.lnd:/root/.lnd:ro
-      - /home/<user>/<path-to>/lndg/data:/app/data:rw
+      - /home/<user>/<path-to>/lndg/data:/lndg/data:rw
     command:
       - sh
       - -c
@@ -119,6 +119,7 @@ cat data/lndg-admin.txt
 
 - This example configuration will host LNDg at `http://<your-machine-ip>:8889`.
 - Log in to LNDg using the username `lndg-admin` and the password retrieved from `data/lndg-admin.txt`.
+- **Upgrade-Hinweis (Breaking Change):** Das Container-Arbeitsverzeichnis ist jetzt `/lndg` (statt `/app`). Passe bestehende Volume-Mounts und Dateipfade entsprechend an (z. B. `/app/data` → `/lndg/data`).
 
 ### Manual Installation
 
@@ -506,4 +507,3 @@ Configure Auto-Rebalancer (AR) globally:
 *(Requires `accept-keysend=true` in lnd.conf)*
 
 ![image](https://user-images.githubusercontent.com/38626122/134045287-086d56e3-5959-4f5f-a06e-cb6d2ac4957c.png)
-

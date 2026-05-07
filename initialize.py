@@ -195,6 +195,7 @@ SESSION_COOKIE_AGE = %s
     try:
         with open("lndg/settings.py", "w") as f:
             f.write(settings_file)
+        os.chmod("lndg/settings.py", 0o600)
     except Exception as e:
         print('Error creating the settings file: ', str(e))
 
@@ -241,6 +242,7 @@ stdout_logfile_backups = 15
     try:
         with open("/usr/local/supervisord.conf", "w") as f:
             f.write(supervisord_settings_file)
+        os.chmod("/usr/local/supervisord.conf", 0o600)
     except Exception as e:
         print('Error creating the settings file: ', str(e))
 
