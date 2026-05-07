@@ -14,7 +14,7 @@ from requests import get
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
 from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings
-import af
+import gui.jobs.auto_fees as af
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
@@ -23,7 +23,7 @@ EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent divisio
 def _safe_notify(message: str) -> None:
     """Send a notification, suppressing all exceptions so jobs never fail because of it."""
     try:
-        import notify as notify_module
+        import gui.jobs.notify as notify_module
         notify_module.send_notification(message)
     except Exception as exc:
         print(f"{datetime.now().strftime('%c')} : [Notify] : Error sending notification: {exc}")

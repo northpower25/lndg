@@ -1,26 +1,23 @@
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value, FloatField, ExpressionWrapper, DateTimeField
-from django.db.models.functions import Round, Coalesce
+from django.shortcuts import render, redirect
+from django.db.models import Sum, IntegerField, Count, Max, Q
+from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
-from collections import defaultdict
 from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *
-from ..serializers import *
+from ..forms import *  # noqa: F403
+from ..serializers import *  # noqa: F403
 from ..models import Channels, LocalSettings, PendingChannels, Peers, Forwards, Rebalancer, Payments, Invoices, Autofees, AvoidNodes, FailedHTLCs
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
 from gui.lnd_deps import router_pb2_grpc as lnrouter
-from gui.lnd_deps import walletkit_pb2 as walletrpc
-from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from pandas import DataFrame, merge
-from .utils import is_login_required, get_local_settings, graph_links, network_links, get_tx_fees, pending_channel_details, point
+from pandas import DataFrame
+from .utils import is_login_required, get_local_settings, graph_links, network_links, get_tx_fees, point
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channels(request):
@@ -903,7 +900,7 @@ def update_channel(request):
                 db_channel.local_fee_rate = target
                 db_channel.fees_updated = datetime.now()
                 db_channel.save()
-                Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=(f"Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+                Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=("Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
                 messages.success(request, 'Fee rate for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
             elif update_target == 12:
                 stub = lnrpc.LightningStub(lnd_connect())
@@ -916,7 +913,7 @@ def update_channel(request):
                     db_channel.save()
                     messages.success(request, 'Inbound base fee for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
                 else:
-                    messages.error(request, f'LND version too low to set inbound fees, update to v0.18+')
+                    messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')
             elif update_target == 13:
                 stub = lnrpc.LightningStub(lnd_connect())
                 version = stub.GetInfo(ln.GetInfoRequest()).version
@@ -928,7 +925,7 @@ def update_channel(request):
                     db_channel.save()
                     messages.success(request, 'Inbound fee rate for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
                 else:
-                    messages.error(request, f'LND version too low to set inbound fees, update to v0.18+')
+                    messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')
             elif update_target == 2:
                 db_channel.ar_amt_target = target
                 db_channel.save()
@@ -1066,7 +1063,7 @@ def update_setting(request):
                     db_channel.local_fee_rate = target
                     db_channel.fees_updated = datetime.now()
                     db_channel.save()
-                    Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=(f"Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+                    Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=("Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
                 messages.success(request, 'Fee rate for all open channels updated to a value of: ' + str(target))
             elif key == 'ALL-oBase':
                 target = int(value)
@@ -1092,7 +1089,7 @@ def update_setting(request):
                         db_channel.save()
                     messages.success(request, 'Inbound fee rate for all open channels updated to a value of: ' + str(target))
                 else:
-                    messages.error(request, f'LND version too low to set inbound fees, update to v0.18+')
+                    messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')
             elif key == 'ALL-iBase':
                 target = int(value)
                 stub = lnrpc.LightningStub(lnd_connect())
@@ -1107,7 +1104,7 @@ def update_setting(request):
                         db_channel.save()
                     messages.success(request, 'Inbound base fee for all channels updated to a value of: ' + str(target))
                 else:
-                    messages.error(request, f'LND version too low to set inbound fees, update to v0.18+')
+                    messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')
             elif key == 'ALL-CLTV':
                 target = int(value)
                 stub = lnrpc.LightningStub(lnd_connect())
@@ -1232,7 +1229,7 @@ def chan_policy(request):
                     if float(version[:4]) >= 0.18:
                         kwargs['inbound_fee'] = ln.InboundFee(base_fee_msat = inbound_base_fee_msat if inbound_base_fee_msat else 0, fee_rate_ppm = inbound_fee_rate if inbound_fee_rate else 0)
                     else:
-                        return Response({'error': f'LND version too low to set inbound fees, update to v0.18+'})
+                        return Response({'error': 'LND version too low to set inbound fees, update to v0.18+'})
                 stub.UpdateChannelPolicy(ln.PolicyUpdateRequest(**kwargs))
                 if serializer.validated_data['base_fee'] is not None:
                     db_channel.local_base_fee = serializer.validated_data['base_fee']
@@ -1244,7 +1241,7 @@ def chan_policy(request):
                     db_channel.fees_updated = datetime.now()
                     db_channel.save()
                     return_response['fee_rate'] = serializer.validated_data['fee_rate']
-                    Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=(f"Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+                    Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=("Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
                 if serializer.validated_data['inbound_base_fee'] is not None:
                     db_channel.local_inbound_base_fee = serializer.validated_data['inbound_base_fee']
                     db_channel.save()

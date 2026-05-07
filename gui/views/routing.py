@@ -1,6 +1,5 @@
-from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.db.models import Sum, IntegerField, Count, Max, F, Q, Case, When, Value
+from django.db.models import Sum, IntegerField, Count, Max
 from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
@@ -8,9 +7,9 @@ from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *
-from ..serializers import *
-from ..models import Channels, Forwards, PendingHTLCs, FailedHTLCs, HistFailedHTLC, PendingChannels, Onchain, PaymentHops
+from ..forms import *  # noqa: F403
+from ..serializers import *  # noqa: F403
+from ..models import Channels, Forwards, PendingHTLCs, FailedHTLCs, PaymentHops
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
@@ -214,7 +213,7 @@ def broadcast_tx(request):
             stub = walletstub.WalletKitStub(lnd_connect())
             response = stub.PublishTransaction(walletrpc.Transaction(tx_hex=bytes.fromhex(raw_tx)))
             if response.publish_error == '':
-                return Response({'message': f'Successfully broadcast tx!'})
+                return Response({'message': 'Successfully broadcast tx!'})
             else:
                 return Response({'error': f'Error while broadcasting TX: {response.publish_error}'})
         except Exception as e:
