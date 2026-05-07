@@ -495,6 +495,7 @@ make fmt    # = ruff format .
 ```
 
 Kein PR-Merge mit Lint-Fehlern. `ruff` ist der einzige Python-Linter (kein flake8, pylint parallel).
+Generierte bzw. vendored Protobuf-Ausgaben unter `gui/lnd_deps/*_pb2.py` und `gui/lnd_deps/*_pb2_grpc.py` sind bewusst vom Ruff-Lauf ausgenommen, weil sie toolchain-abhängig erzeugt werden und nicht manuell gepflegter Anwendungscode sind.
 
 ### R-CODE-2 – Typ-Annotationen für neue Funktionen
 
