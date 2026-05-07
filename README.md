@@ -119,7 +119,7 @@ cat data/lndg-admin.txt
 
 - This example configuration will host LNDg at `http://<your-machine-ip>:8889`.
 - Log in to LNDg using the username `lndg-admin` and the password retrieved from `data/lndg-admin.txt`.
-- **Upgrade-Hinweis (Breaking Change):** Das Container-Arbeitsverzeichnis ist jetzt `/lndg` (statt `/app`). Passe bestehende Volume-Mounts und Dateipfade entsprechend an (z. B. `/app/data` → `/lndg/data`).
+- **Upgrade note (breaking change):** The container working directory is now `/lndg` (instead of `/app`). Update existing volume mounts and file paths accordingly (for example, `/app/data` → `/lndg/data`).
 
 ### Manual Installation
 
