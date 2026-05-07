@@ -1,0 +1,5 @@
+[tool.ruff]
+extend-exclude = [
+    "gui/lnd_deps/*_pb2.py",
+    "gui/lnd_deps/*_pb2_grpc.py",
+]

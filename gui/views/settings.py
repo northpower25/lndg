@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *  # noqa: F403
-from ..serializers import *  # noqa: F403
+from ..forms import AddAvoid, RemoveAvoid, UpdateKeysend
+from ..serializers import ResetSerializer
 from ..models import Channels, LocalSettings, AvoidNodes, Onchain, Forwards, Rebalancer, Payments, PaymentHops, Invoices, Closures, Resolutions, Peers, PendingChannels, PendingHTLCs, FailedHTLCs, HistFailedHTLC, Autopilot, Autofees, PeerEvents
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
@@ -16,7 +16,7 @@ from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
 from os import path
 from pandas import DataFrame
-from .utils import is_login_required, get_local_settings, graph_links, network_links
+from .utils import find_next_block_maturity, get_local_settings, graph_links, is_login_required, network_links, pending_channel_details
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def advanced(request):
@@ -342,12 +342,12 @@ def node_info(request):
             item['local_base_fee'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].local_base_fee if updated else ''
             item['local_fee_rate'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].local_fee_rate if updated else ''
             item['local_cltv'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].local_cltv if updated else ''
-            item['auto_rebalance'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_rebalance if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_rebalance != None else False
-            item['ar_amt_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_amt_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_amt_target != None else int((amt_setting/100) * target_resp[i].channel.capacity)
-            item['ar_in_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_in_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_in_target != None else inbound_setting
-            item['ar_out_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_out_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_out_target != None else outbound_setting
-            item['ar_max_cost'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_max_cost if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_max_cost != None else cost_setting
-            item['auto_fees'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_fees if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_fees != None else (False if auto_fees == 0 else True)
+            item['auto_rebalance'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_rebalance if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_rebalance is not None else False
+            item['ar_amt_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_amt_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_amt_target is not None else int((amt_setting/100) * target_resp[i].channel.capacity)
+            item['ar_in_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_in_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_in_target is not None else inbound_setting
+            item['ar_out_target'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_out_target if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_out_target is not None else outbound_setting
+            item['ar_max_cost'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_max_cost if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].ar_max_cost is not None else cost_setting
+            item['auto_fees'] = pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_fees if updated and pending_changes.filter(funding_txid=funding_txid,output_index=output_index)[0].auto_fees is not None else (False if auto_fees == 0 else True)
             pending_open.append(item)
     if pending_channels.pending_closing_channels:
         target_resp = pending_channels.pending_closing_channels
@@ -378,7 +378,7 @@ def node_info(request):
     limbo_balance -= pending_closing_balance
     try:
         db_size = get_channeldb_file_size()
-    except:
+    except OSError:
         db_size = 0
     return Response({
         'version': node_info.version,
@@ -489,4 +489,3 @@ def cert_validity(request):
 # ---------------------------------------------------------------------------
 # Notification Settings
 # ---------------------------------------------------------------------------
-

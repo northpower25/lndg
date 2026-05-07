@@ -1,5 +1,7 @@
 import argparse
-import secrets, time, struct
+import secrets
+import time
+import struct
 from hashlib import sha256
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
@@ -19,7 +21,7 @@ def keysend(target_pubkey, msg, amount, fee_limit, timeout, sign):
         msg = str(msg)
         if len(msg) > 0:
             custom_records.append((34349334, bytes.fromhex(msg.encode('utf-8').hex())))
-            if sign == True:
+            if sign:
                 stub = lnrpc.LightningStub(lnd_connect())
                 signerstub = lnsigner.SignerStub(lnd_connect())
                 self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey

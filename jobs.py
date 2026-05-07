@@ -2,7 +2,7 @@ import django
 from time import sleep
 from django.db.models import Max, Sum, Avg, Count
 from django.db.models.functions import TruncDay, TruncHour
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import signer_pb2 as lns
@@ -13,8 +13,8 @@ from os import environ
 from requests import get
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings
-import gui.jobs.auto_fees as af
+from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings  # noqa: E402
+import gui.jobs.auto_fees as af  # noqa: E402
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
@@ -72,7 +72,7 @@ def update_payment(stub, payment, self_pubkey):
                     hop_count += 1
                     try:
                         alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=hop.pub_key, include_channels=False)).node.alias
-                    except:
+                    except Exception:
                         alias = ''
                     fee = hop.fee_msat/1000
                     if hop_count == total_hops:
@@ -126,13 +126,13 @@ def update_invoice(stub, invoice, db_invoice):
                 self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey
                 try:
                     valid = signerstub.VerifyMessage(lns.VerifyMessageReq(msg=(records[34349339]+bytes.fromhex(self_pubkey)+records[34349343]+records[34349334]), signature=records[34349337], pubkey=records[34349339])).valid
-                except:
+                except Exception:
                     print(f"{datetime.now().strftime('%c')} : [Data] : Unable to validate signature on invoice: {invoice.r_hash.hex()}")
                     valid = False
-                sender = records[34349339].hex() if valid == True else None
+                sender = records[34349339].hex() if valid else None
                 try:
-                    sender_alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=sender, include_channels=False)).node.alias if sender != None else None
-                except:
+                    sender_alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=sender, include_channels=False)).node.alias if sender is not None else None
+                except Exception:
                     sender_alias = None
             else:
                 sender = None
@@ -223,7 +223,7 @@ def update_channels(stub):
             #Create a record for this new channel
             try:
                 alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=channel.remote_pubkey, include_channels=False)).node.alias
-            except:
+            except Exception:
                 alias = ''
             channel_point = channel.channel_point
             txid, index = channel_point.split(':')
@@ -265,7 +265,7 @@ def update_channels(stub):
                 pending_htlc.forwarding_channel = htlc.forwarding_channel
                 pending_htlc.forwarding_alias = Channels.objects.filter(chan_id=htlc.forwarding_channel)[0].alias if Channels.objects.filter(chan_id=htlc.forwarding_channel).exists() else '---'
                 pending_htlc.save()
-                if htlc.incoming == True:
+                if htlc.incoming:
                     pending_in += htlc.amount
                 else:
                     pending_out += htlc.amount
@@ -324,7 +324,7 @@ def update_channels(stub):
                 try:
                     db_channel.local_inbound_base_fee = local_policy.inbound_fee_base_msat
                     db_channel.local_inbound_fee_rate = local_policy.inbound_fee_rate_milli_msat
-                except:
+                except Exception:
                     db_channel.local_inbound_base_fee = 0
                     db_channel.local_inbound_fee_rate = 0
             else:
@@ -352,7 +352,7 @@ def update_channels(stub):
                         db_channel.remote_inbound_base_fee = remote_policy.inbound_fee_base_msat
                         PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='IncomingFeeRate', old_value=None, new_value=remote_policy.inbound_fee_rate_milli_msat, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
                         db_channel.remote_inbound_fee_rate = remote_policy.inbound_fee_rate_milli_msat
-                    except:
+                    except Exception:
                         db_channel.remote_inbound_base_fee = 0
                         db_channel.remote_inbound_fee_rate = 0
                 else:
@@ -387,13 +387,13 @@ def update_channels(stub):
                         try:
                             PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='IncomingBaseFee', old_value=db_channel.remote_inbound_base_fee, new_value=remote_policy.inbound_fee_base_msat, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
                             db_channel.remote_inbound_base_fee = remote_policy.inbound_fee_base_msat
-                        except:
+                        except Exception:
                             db_channel.remote_inbound_base_fee = 0
                     if db_channel.remote_inbound_fee_rate != remote_policy.inbound_fee_rate_milli_msat:
                         try:
                             PeerEvents(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, event='IncomingFeeRate', old_value=db_channel.remote_inbound_fee_rate, new_value=remote_policy.inbound_fee_rate_milli_msat, out_liq=(db_channel.local_balance + db_channel.pending_outbound)).save()
                             db_channel.remote_inbound_fee_rate = remote_policy.inbound_fee_rate_milli_msat
-                        except:
+                        except Exception:
                             db_channel.remote_inbound_fee_rate = 0
                 else:
                     db_channel.remote_inbound_base_fee = 0
@@ -453,7 +453,7 @@ def update_channels(stub):
             print(f"{datetime.now().strftime('%c')} : [Data] : Ext fee change detected on {db_channel.chan_id} for peer {db_channel.alias}: fee updated from {old_fee_rate} to {db_channel.local_fee_rate}")
             #External Fee change detected, update auto fee log
             db_channel.fees_updated = datetime.now()
-            Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=(f"Ext"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+            Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting="Ext", old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
         db_channel.save()
         counter += 1
         chan_list.append(channel.chan_id)
@@ -481,17 +481,17 @@ def update_peers(stub):
             db_peer.sat_recv = peer.sat_recv
             db_peer.inbound = peer.inbound
             db_peer.ping_time = round(peer.ping_time/1000)
-            if db_peer.connected == False:
+            if not db_peer.connected:
                 try:
                     db_peer.alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=peer.pub_key, include_channels=False)).node.alias
-                except:
+                except Exception:
                     db_peer.alias = ''
             db_peer.connected = True
             db_peer.save()
         elif exists == 0:
             try:
                 alias = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=peer.pub_key, include_channels=False)).node.alias
-            except:
+            except Exception:
                 alias = ''
             Peers(pubkey = peer.pub_key, address = peer.address, sat_sent = peer.sat_sent, sat_recv = peer.sat_recv, inbound = peer.inbound, ping_time = round(peer.ping_time/1000), alias=alias, connected = True).save()
         counter += 1
@@ -505,7 +505,7 @@ def update_peers(stub):
 
 def update_onchain(stub):
     Onchain.objects.filter(block_height=0).delete()
-    last_block = 0 if Onchain.objects.aggregate(Max('block_height'))['block_height__max'] == None else Onchain.objects.aggregate(Max('block_height'))['block_height__max'] + 1
+    last_block = 0 if Onchain.objects.aggregate(Max('block_height'))['block_height__max'] is None else Onchain.objects.aggregate(Max('block_height'))['block_height__max'] + 1
     onchain_txs = stub.GetTransactions(ln.GetTransactionsRequest(start_height=last_block)).transactions
     for tx in onchain_txs:
         Onchain(tx_hash=tx.tx_hash, time_stamp=datetime.fromtimestamp(tx.time_stamp), amount=tx.amount, fee=tx.total_fees, block_hash=tx.block_hash, block_height=tx.block_height, label=tx.label[:100]).save()
@@ -562,9 +562,9 @@ def reconnect_peers(stub):
         for inactive_peer in inactive_peers:
             if peers.filter(pubkey=inactive_peer).exists():
                 peer = peers.filter(pubkey=inactive_peer)[0]
-                if peer.last_reconnected == None or (int((datetime.now() - peer.last_reconnected).total_seconds() / 60) > 2):
+                if peer.last_reconnected is None or (int((datetime.now() - peer.last_reconnected).total_seconds() / 60) > 2):
                     print(f"{datetime.now().strftime('%c')} : [Data] : Reconnecting peer {peer.alias} {peer.pubkey}, last reconnected at {peer.last_reconnected}")
-                    if peer.connected == True:
+                    if peer.connected:
                         print(f"{datetime.now().strftime('%c')} : [Data] : Inactive channel is still connected to peer, disconnecting peer {peer.alias} {inactive_peer}")
                         disconnectpeer(stub, peer)
                     try:
@@ -634,7 +634,7 @@ def auto_fees(stub):
         channels = Channels.objects.filter(is_open=True, is_active=True, private=False, auto_fees=True)
         results_df = af.main(channels)
         if not results_df.empty:
-            update_df = results_df[results_df['eligible'] == True]
+            update_df = results_df[results_df['eligible']]
             update_df = update_df[(update_df['adjustment']!=0) | (update_df['inbound_adjustment']!=0)]
             if not update_df.empty:
                 for target_channel in update_df.to_dict(orient='records'):
@@ -784,8 +784,6 @@ def predictive_schedule():
 
         filter_30day = datetime.now() - timedelta(days=30)
         now_hour = datetime.now().hour
-        now_weekday = datetime.now().weekday()
-
         ar_channels = Channels.objects.filter(is_open=True, is_active=True, private=False, auto_rebalance=True)
         if not ar_channels.exists():
             return

@@ -1,4 +1,7 @@
-import django, json, secrets, asyncio
+import django
+import json
+import secrets
+import asyncio
 from time import sleep
 from asgiref.sync import sync_to_async
 from django.db.models import Sum, F
@@ -13,7 +16,7 @@ from typing import List
 
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency, NotificationSettings
+from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency, NotificationSettings  # noqa: E402
 
 
 def _notify_rebalance(rebalance):
@@ -164,14 +167,14 @@ async def run_rebalancer(rebalance, worker):
         #Reduce potential rebalance value in percent out to avoid going below AR-OUT-Target
         auto_rebalance_channels = Channels.objects.filter(is_active=True, is_open=True, private=False).annotate(percent_outbound=((Sum('local_balance')+Sum('pending_outbound')-rebalance.value)*100)/Sum('capacity')).annotate(inbound_can=(((Sum('remote_balance')+Sum('pending_inbound'))*100)/Sum('capacity'))/Sum('ar_in_target'))
         outbound_cans = await get_out_cans(rebalance, auto_rebalance_channels)
-        if len(outbound_cans) == 0 and rebalance.manual == False:
+        if len(outbound_cans) == 0 and not rebalance.manual:
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : No outbound_cans")
             rebalance.status = 406
             rebalance.start = datetime.now()
             rebalance.stop = datetime.now()
             await save_record(rebalance)
             return None
-        elif str(outbound_cans).replace('\'', '') != rebalance.outgoing_chan_ids and rebalance.manual == False:
+        elif str(outbound_cans).replace('\'', '') != rebalance.outgoing_chan_ids and not rebalance.manual:
             rebalance.outgoing_chan_ids = str(outbound_cans).replace('\'', '')
         rebalance.start = datetime.now()
         try:
@@ -449,20 +452,20 @@ def auto_enable():
                 iapD = 0 if routed_in_apday == 0 else int(forwards.filter(chan_id_in__in=chan_list).aggregate(Sum('amt_in_msat'))['amt_in_msat__sum']/10000000)/100
                 oapD = 0 if routed_out_apday == 0 else int(forwards.filter(chan_id_out__in=chan_list).aggregate(Sum('amt_out_msat'))['amt_out_msat__sum']/10000000)/100
                 for peer_channel in lookup_channels.filter(chan_id__in=chan_list):
-                    if peer_channel.ar_out_target == 100 and peer_channel.auto_rebalance == True:
+                    if peer_channel.ar_out_target == 100 and peer_channel.auto_rebalance:
                         #Special Case for LOOP, Wos, etc. Always Auto Rebalance if enabled to keep outbound full.
                         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Skipping AR enabled and 100% oTarget channel: {peer_channel.alias} {peer_channel.chan_id}")
                         pass
                     elif oapD > (iapD*1.10) and outbound_percent > 75:
                         #print('Case 1: Pass')
                         pass
-                    elif oapD > (iapD*1.10) and inbound_percent > 75 and peer_channel.auto_rebalance == False:
+                    elif oapD > (iapD*1.10) and inbound_percent > 75 and not peer_channel.auto_rebalance:
                         #print('Case 2: Enable AR - o7D > i7D AND Inbound Liq > 75%')
                         peer_channel.auto_rebalance = True
                         peer_channel.save()
                         Autopilot(chan_id=peer_channel.chan_id, peer_alias=peer_channel.alias, setting='Enabled', old_value=0, new_value=1).save()
                         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Auto Pilot Enabled for {peer_channel.alias} {peer_channel.chan_id}: {oapD} {iapD}")
-                    elif oapD < (iapD*1.10) and outbound_percent > 75 and peer_channel.auto_rebalance == True:
+                    elif oapD < (iapD*1.10) and outbound_percent > 75 and peer_channel.auto_rebalance:
                         #print('Case 3: Disable AR - o7D < i7D AND Outbound Liq > 75%')
                         peer_channel.auto_rebalance = False
                         peer_channel.save()
@@ -490,7 +493,7 @@ async def async_queue_manager(rebalancer_queue):
     print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Queue manager is starting...")
     try:
         while True:
-            if shutdown_rebalancer == True:
+            if shutdown_rebalancer:
                 return
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Queue currently has {rebalancer_queue.qsize()} items...")
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : There are currently {len(active_rebalances)} tasks in progress...")
@@ -527,17 +530,17 @@ async def async_run_rebalancer(worker, rebalancer_queue):
             rebalance = await rebalancer_queue.get()
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} is starting a new request...")
             active_rebalance_id = None
-            if rebalance != None:
+            if rebalance is not None:
                 active_rebalance_id = rebalance.id
                 active_rebalances.append(active_rebalance_id)
                 scheduled_rebalances.remove(active_rebalance_id)
-            while rebalance != None:
+            while rebalance is not None:
                 rebalance = await run_rebalancer(rebalance, worker)
-            if active_rebalance_id != None:
+            if active_rebalance_id is not None:
                 active_rebalances.remove(active_rebalance_id)
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} completed its request...")
         else:
-            if shutdown_rebalancer == True:
+            if shutdown_rebalancer:
                 return
         await asyncio.sleep(3)
 

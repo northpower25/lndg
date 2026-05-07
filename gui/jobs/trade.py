@@ -1,4 +1,9 @@
-import django, base64, secrets, re, asyncio, json
+import django
+import base64
+import secrets
+import re
+import asyncio
+import json
 from django.db.models import Sum, IntegerField, Count, F, Q
 from django.db.models.functions import Round
 from time import time
@@ -18,7 +23,7 @@ from gui.lnd_deps.lnd_connect import lnd_connect, async_lnd_connect
 from os import environ
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import TradeSales, Payments, PaymentHops, Forwards, Peers
+from gui.models import TradeSales, Payments, PaymentHops, Forwards, Peers  # noqa: E402
 
 def is_hex(n):
     return len(n) % 2 == 0 and all(c in '0123456789ABCDEFabcdef' for c in n)
@@ -276,25 +281,6 @@ def parse_peer_request_message(message):
             },
         }
 
-def decode_basic_trade(records):
-    if not isinstance(records, list):
-        raise ValueError('ExpectedArrayOfRecordsToDecodeBasicTrade')
-
-    description_record = next((record for record in records if record['type'] == '2'), None)
-
-    if not description_record:
-        raise ValueError('ExpectedDescriptionRecordToDecodeBasicTrade')
-
-    id_record = next((record for record in records if record['type'] == '1'), None)
-
-    if not id_record:
-        raise ValueError('ExpectedIdRecordToDecodeBasicTradeDetails')
-
-    return {
-        'description': hex_as_utf8(description_record['value']),
-        'id': id_record['value']
-    }
-
 def decode_anchored_trade_data(encoded):
     anchor_prefix = 'anchor-trade-secret:'
 
@@ -305,7 +291,7 @@ def decode_anchored_trade_data(encoded):
 
     try:
         decoded_data = decode_tlv_stream(base64.b64decode(encoded_data).hex())
-    except Exception as e:
+    except Exception:
         return {}
 
     records = decoded_data
@@ -406,7 +392,7 @@ def encode_peer_response(data):
 def get_legacy_trades(stub):
     trades = []
     for invoice in stub.ListInvoices(ln.ListInvoiceRequest(pending_only=True)).invoices:
-        if invoice.is_keysend == False:
+        if not invoice.is_keysend:
             trade = decode_anchored_trade_data(invoice.memo)
             if trade:
                 trade['price'] = invoice.value
@@ -605,7 +591,7 @@ def decode_records_as_request(encoded, network):
         raise ValueError('ExpectedWordCountRecordInPaymentTlvRecord')
     try:
         words = int(decode_as_bigsize(word_count['value']))
-    except:
+    except Exception:
         raise ValueError('ExpectedPaymentRequestWordCountInRequestRecords')
     
     details = next((record for record in records if record['type'] == '1'), None)
@@ -619,7 +605,7 @@ def decode_records_as_request(encoded, network):
 
     try:
         request = byteDecodeRequest(details['value'], mtokens, network, words)
-    except:
+    except Exception:
         raise ValueError('ExpectedValidPaymentRequestDetailsToDecodeRecords')
     
     return request
@@ -746,7 +732,7 @@ def serve_trades(stub):
                         print(f"{datetime.now().strftime('%c')} : [P2P] : Expected request type in message:", request['id'])
                 if 'response' in msg_response:
                     request = msg_response['response']
-                    if 'failure' in request and request['failure'] != None:
+                    if 'failure' in request and request['failure'] is not None:
                         # failure message returned
                         print(f"{datetime.now().strftime('%c')} : [P2P] : Failure:", request['failure'])
                     else:
@@ -776,7 +762,7 @@ async def get_open_trades(astub, results):
                             raise ValueError('ExpectedRequestTypeInRequestMessage')
                     if 'response' in msg_response:
                         request = msg_response['response']
-                        if 'failure' in request and request['failure'] != None:
+                        if 'failure' in request and request['failure'] is not None:
                             # failure message returned
                             print('Failure:', request['failure'])
                             return
@@ -848,7 +834,7 @@ def decode_open_trade(network, records):
 
     try:
         decode_tlv_stream(nodes_record['value'])
-    except:
+    except Exception:
         raise ValueError('ExpectedValidNodesTlvStreamToDecodeOpenTradeDetails')
 
     node_records = decode_tlv_stream(nodes_record['value'])
@@ -862,7 +848,7 @@ def decode_trade_data(encoded):
         raise ValueError('UnexpectedFormatOfTradeToDecode')
     try:
         decoded_trade = decode_tlv_stream(encoded[8:])
-    except:
+    except Exception:
         raise ValueError('ExpectedValidTlvStreamForTradeData')
     records = decoded_trade
    
@@ -1041,10 +1027,10 @@ def main():
             if 'node' in connection[0]:
                 try:
                     to_peer = connection[0]['node']['id']
-                    if not (Peers.objects.filter(pubkey=to_peer).exists() and Peers.objects.filter(pubkey=to_peer)[0].connected == True):
+                    if not (Peers.objects.filter(pubkey=to_peer).exists() and Peers.objects.filter(pubkey=to_peer)[0].connected):
                         host = stub.GetNodeInfo(ln.NodeInfoRequest(pub_key=to_peer, include_channels=False)).node.addresses[0].addr
                         stub.ConnectPeer(ln.ConnectPeerRequest(addr=ln.LightningAddress(pubkey=to_peer, host=host), timeout=60))
-                except:
+                except Exception:
                     raise ValueError('PeerConnectionError')
             else:
                 raise ValueError('NoPeerFoundInConnectionData')

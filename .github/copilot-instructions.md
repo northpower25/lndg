@@ -66,7 +66,7 @@ Full rule details with rationale and code examples: [`ENTWICKLUNGSREGELN.md`](..
 
 ## Code Quality
 
-- **R-CODE-1**: `make lint` = `ruff check .`. No PR merge with lint errors.
+- **R-CODE-1**: `make lint` = `ruff check .`. No PR merge with lint errors. Generated/vendor protobuf outputs in `gui/lnd_deps/*_pb2.py` and `gui/lnd_deps/*_pb2_grpc.py` are intentionally excluded from Ruff because they are toolchain-generated, not hand-maintained code.
 - **R-CODE-2**: New Python functions get type annotations. Modified existing functions get type annotations too.
 - **R-CODE-3**: New API endpoints go under `/api/v2/`. No breaking changes to existing `/api/v1/` or `/api/` endpoints.
 - **R-CODE-4**: Existing views are not deleted. They are marked `[Expert/Legacy]` in navigation.

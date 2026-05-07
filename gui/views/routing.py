@@ -7,9 +7,8 @@ from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ..forms import *  # noqa: F403
-from ..serializers import *  # noqa: F403
-from ..models import Channels, Forwards, PendingHTLCs, FailedHTLCs, PaymentHops
+from ..serializers import BroadcastTXSerializer, BumpFeeSerializer, ProbeRouteSerializer, SignMessageSerializer
+from ..models import Channels, FailedHTLCs, Forwards, Invoices, PaymentHops, Payments, Peers, PendingHTLCs
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
@@ -18,7 +17,7 @@ from gui.lnd_deps import walletkit_pb2 as walletrpc
 from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
 from lndg import settings
-from .utils import is_login_required, graph_links, pending_channel_details
+from .utils import graph_links, grpc_error_message, is_login_required, pending_channel_details
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def route(request):
@@ -89,10 +88,7 @@ def failed_htlcs(request):
             }
             return render(request, 'failed_htlcs.html', context)
         except Exception as e:
-            try:
-                error = str(e.code())
-            except:
-                error = str(e)
+            error = grpc_error_message(e)
             return render(request, 'error.html', {'error': error})
     else:
         return redirect('home')
@@ -347,5 +343,3 @@ def probe_route(request):
         debug_end = error.find('debug_error_string =') - 3
         error_msg = error[details_index:debug_end]
         return Response({'error': f'Probe failed: {error_msg}'})
-
-
