@@ -190,3 +190,207 @@ msgstr "All good"
 msgid "Risk"
 msgstr "Risk"
 
+
+msgid "Setup Wizard"
+msgstr "Setup Wizard"
+
+msgid "Onboarding"
+msgstr "Onboarding"
+
+msgid "Welcome to LNDg"
+msgstr "Welcome to LNDg"
+
+msgid "This wizard will guide you through setting up LNDg with your Core Lightning (CLN) node."
+msgstr "This wizard will guide you through setting up LNDg with your Core Lightning (CLN) node."
+
+msgid "Detected backend: Core Lightning (CLN)"
+msgstr "Detected backend: Core Lightning (CLN)"
+
+msgid "CLN uses a Rune / API-Token and the clnrest endpoint for communication."
+msgstr "CLN uses a Rune / API-Token and the clnrest endpoint for communication."
+
+msgid "This wizard will guide you through setting up LNDg with your Lightning Network Daemon (LND) node."
+msgstr "This wizard will guide you through setting up LNDg with your Lightning Network Daemon (LND) node."
+
+msgid "Detected backend: LND"
+msgstr "Detected backend: LND"
+
+msgid "LND uses a Macaroon and TLS certificate for authentication."
+msgstr "LND uses a Macaroon and TLS certificate for authentication."
+
+msgid "You can re-run this wizard at any time from the navigation menu."
+msgstr "You can re-run this wizard at any time from the navigation menu."
+
+msgid "Connection Verification"
+msgstr "Connection Verification"
+
+msgid "For CLN, LNDg connects via the clnrest plugin. Please ensure the following are configured:"
+msgstr "For CLN, LNDg connects via the clnrest plugin. Please ensure the following are configured:"
+
+msgid "Rune / API-Token"
+msgstr "Rune / API-Token"
+
+msgid "A CLN Rune with read and write permissions"
+msgstr "A CLN Rune with read and write permissions"
+
+msgid "clnrest Endpoint"
+msgstr "clnrest Endpoint"
+
+msgid "The HTTPS address of the clnrest plugin (e.g. https://localhost:3010)"
+msgstr "The HTTPS address of the clnrest plugin (e.g. https://localhost:3010)"
+
+msgid "Plugin Status"
+msgstr "Plugin Status"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "clnrest plugin detected via supports_plugins capability"
+msgstr "clnrest plugin detected via supports_plugins capability"
+
+msgid "For LND, LNDg connects via gRPC. Please ensure the following are configured:"
+msgstr "For LND, LNDg connects via gRPC. Please ensure the following are configured:"
+
+msgid "Macaroon"
+msgstr "Macaroon"
+
+msgid "Path to the admin.macaroon file (or base64-encoded value)"
+msgstr "Path to the admin.macaroon file (or base64-encoded value)"
+
+msgid "TLS Certificate"
+msgstr "TLS Certificate"
+
+msgid "Path to the tls.cert file used by LND"
+msgstr "Path to the tls.cert file used by LND"
+
+msgid "gRPC Host"
+msgstr "gRPC Host"
+
+msgid "LND gRPC address (e.g. localhost:10009)"
+msgstr "LND gRPC address (e.g. localhost:10009)"
+
+msgid "Node Verification"
+msgstr "Node Verification"
+
+msgid "Fetching node information…"
+msgstr "Fetching node information…"
+
+msgid "Public Key"
+msgstr "Public Key"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Capabilities"
+msgstr "Capabilities"
+
+msgid "Automatic fee adjustment via API"
+msgstr "Automatic fee adjustment via API"
+
+msgid "Auto-Fee"
+msgstr "Auto-Fee"
+
+msgid "Circular payment rebalancing"
+msgstr "Circular payment rebalancing"
+
+msgid "Rebalance"
+msgstr "Rebalance"
+
+msgid "Keysend (spontaneous payments)"
+msgstr "Keysend (spontaneous payments)"
+
+msgid "Keysend"
+msgstr "Keysend"
+
+msgid "Channel splice (resize without close)"
+msgstr "Channel splice (resize without close)"
+
+msgid "Splice"
+msgstr "Splice"
+
+msgid "Inbound fee parameters"
+msgstr "Inbound fee parameters"
+
+msgid "Inbound Fees"
+msgstr "Inbound Fees"
+
+msgid "Plugin extension mechanism (CLN)"
+msgstr "Plugin extension mechanism (CLN)"
+
+msgid "Plugins (CLN)"
+msgstr "Plugins (CLN)"
+
+msgid "Channels Overview"
+msgstr "Channels Overview"
+
+msgid "Open Channels"
+msgstr "Open Channels"
+
+msgid "Average Fee Rate"
+msgstr "Average Fee Rate"
+
+msgid "Total Local Balance"
+msgstr "Total Local Balance"
+
+msgid "Total Remote Balance"
+msgstr "Total Remote Balance"
+
+msgid "Could not load live channel data. The values above reflect the database state."
+msgstr "Could not load live channel data. The values above reflect the database state."
+
+msgid "Recommended Settings"
+msgstr "Recommended Settings"
+
+msgid "Based on your node capabilities, here are the recommended starting points:"
+msgstr "Based on your node capabilities, here are the recommended starting points:"
+
+msgid "Fee Strategy"
+msgstr "Fee Strategy"
+
+msgid "Enable Autopilot fee management in"
+msgstr "Enable Autopilot fee management in"
+
+msgid "Review initial fee rates in"
+msgstr "Review initial fee rates in"
+
+msgid "Set fee rates manually in"
+msgstr "Set fee rates manually in"
+
+msgid "Configure inbound fees for advanced routing control"
+msgstr "Configure inbound fees for advanced routing control"
+
+msgid "Auto-Rebalance"
+msgstr "Auto-Rebalance"
+
+msgid "Configure rebalancing rules in"
+msgstr "Configure rebalancing rules in"
+
+msgid "Auto-rebalance is disabled by default (dry_run mode). Enable only when ready."
+msgstr "Auto-rebalance is disabled by default (dry_run mode). Enable only when ready."
+
+msgid "Advanced Settings"
+msgstr "Advanced Settings"
+
+msgid "All node parameters are accessible in"
+msgstr "All node parameters are accessible in"
+
+msgid "You can also review connection and credential settings there."
+msgstr "You can also review connection and credential settings there."
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Next"
+msgstr "Next"
+
+msgid "Finish"
+msgstr "Finish"
+
+msgid "Step"
+msgstr "Step"
+
+msgid "Wizard progress"
+msgstr "Wizard progress"
