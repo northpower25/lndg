@@ -318,10 +318,6 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
         return []
 
     # Data gate check (R-AI-3)
-    from datetime import timedelta
-
-    from django.utils import timezone
-
     cutoff_30d = timezone.now() - timedelta(days=30)
     event_count = RebalanceMLRecord.objects.filter(timestamp__gte=cutoff_30d).count()
     if event_count < 50:
@@ -333,7 +329,7 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
         return []
 
     open_channels = list(
-        __import__('gui.models', fromlist=['Channels']).Channels.objects.filter(
+        Channels.objects.filter(
             is_open=True, is_active=True
         )[:limit * 2]
     )

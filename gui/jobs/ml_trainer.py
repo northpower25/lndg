@@ -59,6 +59,7 @@ def _versioned_model_path(prefix: str) -> Path:
 
 _MIN_DATA_DAYS = 30
 _MIN_EVENTS = 50
+_MIN_FEE_RATE_PPM = 1  # Minimum allowed fee rate in ppm (node operators may override via LocalSettings)
 
 
 def _check_min_data(qs_count: int, oldest_days: float) -> tuple[bool, str]:
@@ -390,7 +391,7 @@ def get_autofee_suggestions(*, limit: int = 10) -> list[dict[str, Any]]:
         else:
             continue
 
-        suggested_fee = max(1, int(current_fee * factor))
+        suggested_fee = max(_MIN_FEE_RATE_PPM, int(current_fee * factor))
         confidence = min(0.90, 0.55 + 0.05 * current_level + abs(feat["confidence"]) * 0.2)
 
         suggestions.append(

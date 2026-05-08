@@ -933,6 +933,17 @@ def _get_interval_setting(key: str, default: int) -> int:
     return default
 
 
+def _parse_bool_setting(key: str, default: bool = True) -> bool:
+    """Read a boolean LocalSettings value; false strings: 'false', '0', 'no'."""
+    try:
+        row = LocalSettings.objects.filter(key=key).first()
+        if row is None:
+            return default
+        return row.value.strip().lower() not in ("false", "0", "no")
+    except Exception:
+        return default
+
+
 def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     """Run Phase-2 collector / aggregator / cleaner jobs at their configured intervals.
 
@@ -1013,10 +1024,7 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     ml_trainer_iters = _get_interval_setting("ML-TrainingInterval", _ML_TRAINER_DEFAULT_ITERS)
     if loop_counter % ml_trainer_iters == 0:
         try:
-            from gui.models import LocalSettings as _LS
-            ml_enabled_row = _LS.objects.filter(key="ML-TrainingEnabled").first()
-            ml_enabled = (ml_enabled_row.value.lower() not in ("false", "0", "no")) if ml_enabled_row else True
-            if ml_enabled:
+            if _parse_bool_setting("ML-TrainingEnabled", default=True):
                 from gui.jobs.ml_trainer import train_rebalance_model
                 result = train_rebalance_model()
                 if result.get("ok"):
