@@ -22,6 +22,7 @@ class RecommendationDraft:
 
 def _build_rationale(
     *,
+    title: str,
     reasons: list[dict],
     data_window_days: int,
     confidence: float,
@@ -30,6 +31,7 @@ def _build_rationale(
     simulation_available: bool = True,
 ) -> dict:
     return {
+        "title": title,
         "reasons": reasons,
         "data_source": "internal",
         "data_window_days": data_window_days,
@@ -72,7 +74,6 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
 
     now = timezone.now()
     cutoff_7d = now - timedelta(days=7)
-    cutoff_14d = now - timedelta(days=14)
     cutoff_30d = now - timedelta(days=30)
     cutoff_24h = now - timedelta(hours=24)
     drafts: list[RecommendationDraft] = []
@@ -112,6 +113,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_LOW,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title=f"Fee-Check: {ch.alias or ch.chan_id[:8]}",
                         reasons=[
                             {"rank": 1, "signal": "no_outbound_flow", "value": "No outbound flow in 7 days", "weight": 0.5},
                             {"rank": 2, "signal": "stagnation_window", "value": "Review window: 14 days", "weight": 0.3},
@@ -120,8 +122,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=14,
                         confidence=confidence,
                         alternatives=["rebalance", "close"],
-                    )
-                    | {"title": f"Fee-Check: {ch.alias or ch.chan_id[:8]}"},
+                    ),
                 )
             )
             continue
@@ -137,6 +138,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_LOW,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title=f"Rebalance: {ch.alias or ch.chan_id[:8]}",
                         reasons=[
                             {"rank": 1, "signal": "balance_ratio", "value": f"{inbound_pct}% inbound", "weight": 0.5},
                             {"rank": 2, "signal": "outbound_capacity", "value": f"{outbound_pct}% outbound", "weight": 0.3},
@@ -145,8 +147,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=30,
                         confidence=confidence,
                         alternatives=["fee", "splice_in"],
-                    )
-                    | {"title": f"Rebalance: {ch.alias or ch.chan_id[:8]}"},
+                    ),
                 )
             )
             continue
@@ -162,6 +163,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_MEDIUM,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title=f"Splice In: {ch.alias or ch.chan_id[:8]}",
                         reasons=[
                             {"rank": 1, "signal": "high_outbound_flow", "value": f"{flow_30d.get('total', 0)} forwards in 30d", "weight": 0.45},
                             {"rank": 2, "signal": "low_outbound_liquidity", "value": f"{outbound_pct}% outbound remaining", "weight": 0.35},
@@ -170,8 +172,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=30,
                         confidence=confidence,
                         alternatives=["open", "rebalance"],
-                    )
-                    | {"title": f"Splice In: {ch.alias or ch.chan_id[:8]}"},
+                    ),
                 )
             )
             continue
@@ -187,6 +188,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_MEDIUM,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title=f"Splice Out: {ch.alias or ch.chan_id[:8]}",
                         reasons=[
                             {"rank": 1, "signal": "unused_capacity", "value": "Very low forwarding activity (30d)", "weight": 0.5},
                             {"rank": 2, "signal": "capacity_size", "value": f"Capacity: {capacity} sats", "weight": 0.3},
@@ -195,8 +197,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=30,
                         confidence=confidence,
                         alternatives=["fee", "close"],
-                    )
-                    | {"title": f"Splice Out: {ch.alias or ch.chan_id[:8]}"},
+                    ),
                 )
             )
 
@@ -213,6 +214,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_HIGH,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title="Mitigate failed HTLC spike",
                         reasons=[
                             {"rank": 1, "signal": "failed_htlc_rate", "value": f"{failed_count} failed HTLCs in 24h", "weight": 0.6},
                             {"rank": 2, "signal": "routing_health", "value": "Potential route quality degradation", "weight": 0.25},
@@ -221,8 +223,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=1,
                         confidence=confidence,
                         alternatives=["disable", "rebalance", "fee"],
-                    )
-                    | {"title": "Mitigate failed HTLC spike"},
+                    ),
                 )
             )
 
@@ -241,6 +242,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     risk_level=Recommendation.RISK_LOW,
                     confidence=confidence,
                     rationale=_build_rationale(
+                        title="Diversify peer concentration",
                         reasons=[
                             {"rank": 1, "signal": "peer_concentration", "value": f"{concentration['channel_count']} channels to one peer", "weight": 0.6},
                             {"rank": 2, "signal": "resilience", "value": "Diversification reduces dependency risk", "weight": 0.25},
@@ -249,8 +251,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                         data_window_days=30,
                         confidence=confidence,
                         alternatives=["rebalance"],
-                    )
-                    | {"title": "Diversify peer concentration"},
+                    ),
                 )
             )
 

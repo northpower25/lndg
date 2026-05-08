@@ -733,3 +733,72 @@ msgstr "Failed Payments (failed/inflight)"
 
 msgid "Data Maintenance is available in Advanced or Expert mode only."
 msgstr "Data Maintenance is available in Advanced or Expert mode only."
+
+msgid "Recommendation not found."
+msgstr "Recommendation not found."
+
+msgid "No write action executed. Dry-run only."
+msgstr "No write action executed. Dry-run only."
+
+msgid "Policy not found."
+msgstr "Policy not found."
+
+msgid "trigger_data must be an object."
+msgstr "trigger_data must be an object."
+
+msgid "Policy execution recorded."
+msgstr "Policy execution recorded."
+
+msgid "Channel not found."
+msgstr "Channel not found."
+
+msgid "Invalid amount_sat or fee_rate."
+msgstr "Invalid amount_sat or fee_rate."
+
+msgid "Temporary routing degradation while splice confirms."
+msgstr "Temporary routing degradation while splice confirms."
+
+msgid "Backend does not support channel splicing."
+msgstr "Backend does not support channel splicing."
+
+msgid "No active backend configured."
+msgstr "No active backend configured."
+
+msgid "Invalid request payload."
+msgstr "Invalid request payload."
+
+msgid "Splice in failed."
+msgstr "Splice in failed."
+
+msgid "destination is required for splice out."
+msgstr "destination is required for splice out."
+
+msgid "Splice out failed."
+msgstr "Splice out failed."
+
+msgid "No splice operation found for this channel."
+msgstr "No splice operation found for this channel."
+
+msgid "Backend supports no channel splicing."
+msgstr "Backend supports no channel splicing."
+
+msgid "Plugin panel is only available for backends with plugin support."
+msgstr "Plugin panel is only available for backends with plugin support."
+
+msgid "Recommendations"
+msgstr "Recommendations"
+
+msgid "Policy Runs"
+msgstr "Policy Runs"
+
+msgid "Splice Log"
+msgstr "Splice Log"
+
+msgid "Why?"
+msgstr "Why?"
+
+msgid "Source"
+msgstr "Source"
+
+msgid "Confidence"
+msgstr "Confidence"

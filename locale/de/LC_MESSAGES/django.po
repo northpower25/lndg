@@ -736,3 +736,72 @@ msgstr "Datenpflege ist nur im Erweitert- oder Experten-Modus verfügbar."
 
 msgid "Inactive"
 msgstr "Inaktiv"
+
+msgid "Recommendation not found."
+msgstr "Empfehlung nicht gefunden."
+
+msgid "No write action executed. Dry-run only."
+msgstr "Keine Schreibaktion ausgeführt. Nur Testlauf."
+
+msgid "Policy not found."
+msgstr "Richtlinie nicht gefunden."
+
+msgid "trigger_data must be an object."
+msgstr "trigger_data muss ein Objekt sein."
+
+msgid "Policy execution recorded."
+msgstr "Richtlinienausführung protokolliert."
+
+msgid "Channel not found."
+msgstr "Kanal nicht gefunden."
+
+msgid "Invalid amount_sat or fee_rate."
+msgstr "Ungültiger Wert für amount_sat oder fee_rate."
+
+msgid "Temporary routing degradation while splice confirms."
+msgstr "Vorübergehende Routing-Einschränkung bis zur Splice-Bestätigung."
+
+msgid "Backend does not support channel splicing."
+msgstr "Das Backend unterstützt kein Channel-Splicing."
+
+msgid "No active backend configured."
+msgstr "Kein aktives Backend konfiguriert."
+
+msgid "Invalid request payload."
+msgstr "Ungültige Anfrage-Nutzlast."
+
+msgid "Splice in failed."
+msgstr "Splice-In fehlgeschlagen."
+
+msgid "destination is required for splice out."
+msgstr "Für Splice-Out ist ein Ziel erforderlich."
+
+msgid "Splice out failed."
+msgstr "Splice-Out fehlgeschlagen."
+
+msgid "No splice operation found for this channel."
+msgstr "Keine Splice-Operation für diesen Kanal gefunden."
+
+msgid "Backend supports no channel splicing."
+msgstr "Backend unterstützt kein Channel-Splicing."
+
+msgid "Plugin panel is only available for backends with plugin support."
+msgstr "Das Plugin-Panel ist nur für Backends mit Plugin-Unterstützung verfügbar."
+
+msgid "Recommendations"
+msgstr "Empfehlungen"
+
+msgid "Policy Runs"
+msgstr "Richtlinienläufe"
+
+msgid "Splice Log"
+msgstr "Splice-Protokoll"
+
+msgid "Why?"
+msgstr "Warum?"
+
+msgid "Source"
+msgstr "Quelle"
+
+msgid "Confidence"
+msgstr "Konfidenz"

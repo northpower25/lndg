@@ -714,7 +714,10 @@ def splice_in(request, channel_id: str) -> Response:
     try:
         action = execute_splice_in(channel_id=channel_id, amount_sat=amount_sat, fee_rate=fee_rate)
     except Exception as exc:
-        return Response({"error": _("Splice in failed."), "detail": str(exc)}, status=400)
+        import logging as _logging
+
+        _logging.getLogger(__name__).error("Splice in failed for %s: %s", channel_id, exc, exc_info=True)
+        return Response({"error": _("Splice in failed.")}, status=400)
     status = SpliceLog.STATUS_PENDING
     txid = ""
     if getattr(action, "txid", None):
@@ -774,7 +777,10 @@ def splice_out(request, channel_id: str) -> Response:
             fee_rate=fee_rate,
         )
     except Exception as exc:
-        return Response({"error": _("Splice out failed."), "detail": str(exc)}, status=400)
+        import logging as _logging
+
+        _logging.getLogger(__name__).error("Splice out failed for %s: %s", channel_id, exc, exc_info=True)
+        return Response({"error": _("Splice out failed.")}, status=400)
     status = SpliceLog.STATUS_PENDING
     txid = ""
     if getattr(action, "txid", None):

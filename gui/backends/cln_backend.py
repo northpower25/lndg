@@ -276,11 +276,8 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     def get_splice_status(self, splice_id: str) -> SpliceAction:
         try:
             data = self._post("splice_status", {"id": splice_id})
-            status = data.get("status", "")
             direction = "out" if data.get("direction") == "out" else "in"
             amount_sat = int(data.get("amount_sat", 0))
-            if status == "out":
-                direction = "out"
             return SpliceAction(
                 channel_id=str(data.get("channel_id", "")),
                 direction=direction,
