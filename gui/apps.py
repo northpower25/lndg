@@ -40,7 +40,9 @@ class GuiConfig(AppConfig):
         from django.core.signals import request_started
         from django.db.models.signals import post_migrate
 
-        def _detect_cln_backend(sender=None, **kwargs):  # type: ignore[no-untyped-def]
+        from typing import Any
+
+        def _detect_cln_backend(sender: Any = None, **kwargs: Any) -> None:
             """Check LocalSettings for CLN credentials and update the registry."""
             try:
                 from gui.backends.registry import get_active_backend, set_active_backend

@@ -995,8 +995,8 @@ def main():
             print(f"{datetime.now().strftime('%c')} : [Data] : Error processing background data: {str(e)}")
 
         # Phase-2 periodic jobs (collector / aggregator / cleaner).
-        # These run independently of the LND stub so that a connection failure
-        # above does not skip them.
+        # These run independently of the Lightning node connection so that a
+        # connection failure above does not skip them.
         try:
             _run_phase2_periodic_jobs(loop_counter)
         except Exception as exc:

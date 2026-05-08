@@ -238,7 +238,7 @@ async function loadRowCounts() {
       ['{% trans "Failed Payments (failed/inflight)" %}', data.failed_payments ?? '—'],
     ];
     let html = '<table class="w3-table w3-bordered w3-small" style="max-width:400px"><thead><tr><th>{% trans "Table" %}</th><th>{% trans "Rows" %}</th></tr></thead><tbody>';
-    rows.forEach(function(r) { html += `<tr><td>${r[0]}</td><td>${Number(r[1]).toLocaleString()}</td></tr>`; });
+    rows.forEach((r) => { html += `<tr><td>${r[0]}</td><td>${Number(r[1]).toLocaleString()}</td></tr>`; });
     html += '</tbody></table>';
     container.innerHTML = html;
   } catch (e) {

@@ -710,9 +710,6 @@ msgstr "WARNUNG: Dies löscht dauerhaft Datensätze, die älter als die konfigur
 msgid "Manual cleanup is available in Expert mode only."
 msgstr "Die manuelle Bereinigung ist nur im Experten-Modus verfügbar."
 
-msgid "Switch to Expert mode using the mode selector in the navigation bar."
-msgstr "Wechseln Sie zum Experten-Modus über die Modusauswahl in der Navigationsleiste."
-
 msgid "Current Row Counts"
 msgstr "Aktuelle Zeilenanzahlen"
 
@@ -732,7 +729,7 @@ msgid "Error loading row counts."
 msgstr "Fehler beim Laden der Zeilenanzahlen."
 
 msgid "Failed Payments (failed/inflight)"
-msgstr "Fehlgeschlagene Zahlungen (fehlgeschlagen/in-flight)"
+msgstr "Fehlgeschlagene Zahlungen (fehlgeschlagen/laufend)"
 
 msgid "Data Maintenance is available in Advanced or Expert mode only."
 msgstr "Datenpflege ist nur im Erweitert- oder Experten-Modus verfügbar."

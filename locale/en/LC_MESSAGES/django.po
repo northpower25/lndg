@@ -710,9 +710,6 @@ msgstr "WARNING: This will permanently delete records older than the configured 
 msgid "Manual cleanup is available in Expert mode only."
 msgstr "Manual cleanup is available in Expert mode only."
 
-msgid "Switch to Expert mode using the mode selector in the navigation bar."
-msgstr "Switch to Expert mode using the mode selector in the navigation bar."
-
 msgid "Current Row Counts"
 msgstr "Current Row Counts"
 
