@@ -476,7 +476,7 @@ def channel(request):
         try:
             cfg = NotificationSettings.load()
             channel_pubkey = (
-                channels_df.to_dict(orient='records')[0].get('remote_pubkey')
+                channels_df['remote_pubkey'].iloc[0]
                 if not channels_df.empty
                 else None
             )
@@ -487,7 +487,7 @@ def channel(request):
                     pubkeys=[channel_pubkey],
                 ).get(channel_pubkey, {})
         except Exception as exc:
-            logger.warning("Amboss peer context integration failed for channel %s: %s", chan_id, exc)
+            logger.warning("Unexpected Amboss peer context integration error for channel %s: %s", chan_id, exc)
             amboss_peer = {}
 
         context = {

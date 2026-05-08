@@ -146,7 +146,6 @@
     {% trans "Data source: local ML history (AutoFeeMLRecord) and channel snapshots." %}
     {% trans "The escalation level and confidence show the most recent ML shadow state for this channel." %}
   </details>
-  <span id="ml-toggle-disabled-note" class="w3-hide">{% trans "Channel record unavailable for toggle" %}</span>
   <table class="w3-table-all w3-centered w3-hoverable" style="margin-bottom:12px">
     <tr>
       <th title="{% trans 'Enable or disable ML shadow rebalancing suggestions for this channel.' %}">{% trans "ML Rebalancing" %}</th>
@@ -161,8 +160,7 @@
           {% csrf_token %}
           <input
             type="submit"
-            aria-label="{% trans 'Toggle ML Rebalancing' %}"
-            aria-describedby="ml-toggle-disabled-note"
+            aria-label="{% if ml_state.can_toggle %}{% trans 'Toggle ML Rebalancing' %}{% else %}{% trans 'Toggle ML Rebalancing unavailable: channel record missing' %}{% endif %}"
             {% if not ml_state.can_toggle %}disabled{% endif %}
             value="{% if ml_state.rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
           <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
@@ -175,8 +173,7 @@
           {% csrf_token %}
           <input
             type="submit"
-            aria-label="{% trans 'Toggle ML Auto-Fee' %}"
-            aria-describedby="ml-toggle-disabled-note"
+            aria-label="{% if ml_state.can_toggle %}{% trans 'Toggle ML Auto-Fee' %}{% else %}{% trans 'Toggle ML Auto-Fee unavailable: channel record missing' %}{% endif %}"
             {% if not ml_state.can_toggle %}disabled{% endif %}
             value="{% if ml_state.autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
           <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
