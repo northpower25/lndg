@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ block.super }} - {% trans "Splice Workflow" %}{% endblock %}
+{% block content %}
+<div class="w3-container w3-padding">
+  <h3>{% trans "Guided Splice Workflow" %}</h3>
+  <p class="w3-small w3-text-grey">
+    {% trans "Mode" %}: {{ page_mode }} · {% trans "Risk label" %}: <span id="splice-risk-label" class="w3-tag w3-orange">medium</span>
+  </p>
+
+  <div class="w3-card w3-padding" style="margin-bottom:10px">
+    <h5>{% trans "Step 1: Impact preview" %}</h5>
+    <p class="w3-small w3-text-grey">{% trans "Enter channel and amount to simulate on-chain fee and expected capacity impact." %}</p>
+    <div class="w3-row-padding">
+      <div class="w3-third">
+        <label>{% trans "Channel ID" %}</label>
+        <input id="splice-channel-id" class="w3-input w3-border" />
+      </div>
+      <div class="w3-third">
+        <label>{% trans "Amount (sat)" %}</label>
+        <input id="splice-amount" class="w3-input w3-border" value="100000" />
+      </div>
+      <div class="w3-third">
+        <label>{% trans "Fee rate" %}</label>
+        <input id="splice-fee-rate" class="w3-input w3-border" value="5" />
+      </div>
+    </div>
+    <button id="splice-preview-btn" class="w3-button w3-blue w3-margin-top" style="min-height:44px" onclick="loadSplicePreview()">{% trans "Preview" %}</button>
+    <pre id="splice-preview-result" class="w3-small w3-light-grey w3-padding" style="margin-top:8px;white-space:pre-wrap">{% trans "No preview yet." %}</pre>
+  </div>
+
+  <div class="w3-card w3-padding" style="margin-bottom:10px">
+    <h5>{% trans "Step 2: Execute splice" %}</h5>
+    <p class="w3-small w3-text-grey">{% trans "Dry-run stays enabled by default; disable it explicitly for live execution." %}</p>
+    <label class="w3-small"><input type="checkbox" id="splice-dry-run" checked /> {% trans "Dry-run only" %}</label>
+    <label class="w3-small" style="margin-left:8px">{% trans "Destination (for splice out)" %}</label>
+    <input id="splice-destination" class="w3-input w3-border w3-small" placeholder="{% trans 'bc1... optional for splice in' %}" />
+    <div class="w3-margin-top">
+      {% if capabilities.can_splice %}
+      <button id="splice-in-btn" class="w3-button w3-green" style="min-height:44px" onclick="executeSplice('in')" disabled>{% trans "Run Splice In" %}</button>
+      <button id="splice-out-btn" class="w3-button w3-orange" style="min-height:44px" onclick="executeSplice('out')" disabled>{% trans "Run Splice Out" %}</button>
+      {% else %}
+      <button class="w3-button w3-grey" style="min-height:44px" disabled title="{% trans 'Backend supports no channel splicing.' %}">{% trans "Splicing unavailable" %}</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="w3-card w3-padding">
+    <h5>{% trans "Step 3: Progress & policy snapshot" %}</h5>
+    <p class="w3-small w3-text-grey">{% trans "All actions are logged through API → Audit-Log → UI refresh." %}</p>
+    <div class="w3-small"><strong>{% trans "Policy snapshot" %}:</strong> <span id="splice-policy-snapshot">{% trans "No action yet." %}</span></div>
+    <pre id="splice-status-result" class="w3-small w3-light-grey w3-padding" style="margin-top:8px;white-space:pre-wrap">{% trans "No status yet." %}</pre>
+  </div>
+</div>
+<script>
+  let splicePreviewReady = false;
+  let latestSpliceId = null;
+
+  function normalizeNumber(v) {
+    return String(v || '').replace(/\D/g, '');
+  }
+
+  async function loadSplicePreview() {
+    const channelId = byId('splice-channel-id').value.trim();
+    const amount = normalizeNumber(byId('splice-amount').value);
+    const feeRate = normalizeNumber(byId('splice-fee-rate').value);
+    if (!channelId || !amount || !feeRate) return;
+    const resp = await fetch(`/api/v2/channels/${channelId}/splice/preview/?amount_sat=${amount}&fee_rate=${feeRate}`);
+    const data = await resp.json();
+    byId('splice-preview-result').textContent = JSON.stringify(data, null, 2);
+    splicePreviewReady = !!resp.ok;
+    byId('splice-in-btn') && (byId('splice-in-btn').disabled = !splicePreviewReady);
+    byId('splice-out-btn') && (byId('splice-out-btn').disabled = !splicePreviewReady);
+  }
+
+  async function executeSplice(direction) {
+    if (!splicePreviewReady) return;
+    const dryRun = byId('splice-dry-run').checked;
+    const channelId = byId('splice-channel-id').value.trim();
+    const amount = normalizeNumber(byId('splice-amount').value);
+    const feeRate = normalizeNumber(byId('splice-fee-rate').value);
+    const destination = byId('splice-destination').value.trim();
+    byId('splice-policy-snapshot').textContent = JSON.stringify({direction, dry_run: dryRun, amount_sat: amount, fee_rate: feeRate, destination});
+    if (dryRun) {
+      byId('splice-status-result').textContent = JSON.stringify({status: 'preview-only', message: '{% trans "Dry-run enabled: no write action executed." %}'}, null, 2);
+      return;
+    }
+    const token = document.getElementById('api').dataset.token;
+    const body = {amount_sat: Number(amount), fee_rate: Number(feeRate)};
+    if (direction === 'out' && destination) body.destination = destination;
+    const endpoint = `/api/v2/channels/${channelId}/splice/${direction}/`;
+    const resp = await fetch(endpoint, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify(body)});
+    const data = await resp.json();
+    latestSpliceId = data.splice_log_id || null;
+    byId('splice-status-result').textContent = JSON.stringify(data, null, 2);
+    if (latestSpliceId) await loadSpliceStatus();
+  }
+
+  async function loadSpliceStatus() {
+    const channelId = byId('splice-channel-id').value.trim();
+    if (!channelId) return;
+    const query = latestSpliceId ? `?splice_id=${latestSpliceId}` : '';
+    const resp = await fetch(`/api/v2/channels/${channelId}/splice/status/${query}`);
+    const data = await resp.json();
+    byId('splice-status-result').textContent = JSON.stringify(data, null, 2);
+  }
+</script>
+{% endblock %}

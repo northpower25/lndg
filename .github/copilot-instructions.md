@@ -95,6 +95,17 @@ Before writing any code, verify each applicable item:
 
 ---
 
+## Phase Continuity Rule (mandatory for all future prompts)
+
+If a prompt requests implementation of any development phase, you must always:
+1. Document at the end which items of the requested phase are still open and why.
+2. Re-check all previously skipped items from earlier phases and implement those now feasible.
+3. Update this file with what was completed, what remains open, and explicit reasons.
+
+This rule applies automatically for all future phase prompts and does not need to be repeated by the user.
+
+---
+
 ## Phase 1 + 2 – Remaining Gaps (Open Work)
 
 After every task execution, update this section with what was completed, what is still open,
@@ -124,6 +135,12 @@ and — most importantly — **why** something could not yet be completed.
 | **`/api/v2/cleaner/counts/`** (row-count overview) | `gui/api/v2/views.py` |
 | **`/api/v2/cleaner/run/` extended** | now supports `dry_run` + all-tables mode alongside single-table backward-compat |
 | ChangeLog in fee-update write paths | `gui/views/channels.py` |
+| **Phase 3 core models** (`Recommendation`, `Policy`, `PolicyRun`, `SpliceLog`) + migration | `gui/models.py`, `gui/migrations/0005_policy_recommendation_policyrun_splicelog.py` |
+| **Recommendation engine (heuristics + rationale schema + persistence)** | `gui/jobs/recommender.py`, `/api/v2/cockpit/` integration |
+| **Phase 3 API endpoints** (`/api/v2/recommendations/*/dryrun`, `/api/v2/policies/*/run`, `/api/v2/channels/*/splice/*`) | `gui/api/v2/views.py`, `gui/api/v2/urls.py`, `gui/jobs/executor.py` |
+| **Guided Splice Workflow UI + CLN Plugin Panel** | `gui/templates/splice.html`, `gui/templates/cln_plugins.html`, `gui/views/splice_view.py` |
+| **Cleaner retention coverage for Phase-3 models** | `gui/jobs/cleaner.py`, `gui/views/cleaner_view.py`, `gui/templates/cleaner.html`, `jobs.py` |
+| **ChangeLog for Rebalancer + Autopilot write paths** | `gui/jobs/rebalancer.py` |
 | Onboarding wizard (CLN + LND) | `gui/templates/onboarding.html`, `gui/views/onboarding.py` |
 | requirements.in with version bounds | `requirements.in` |
 
@@ -159,8 +176,8 @@ This is **Phase 3+ migration work** and carries high regression risk. The legacy
 **Why:** Existing templates (`home.html`, `channels.html`, `peers.html`, `advanced.html`, `payments.html`, etc.) contain 400+ strings that predate i18n and are not wrapped in `{% trans %}`. Marking all of them correctly without introducing regressions requires a dedicated pass per template. This is **Phase 1 housekeeping debt** to be resolved incrementally. New code follows R-I18N-1/R-I18N-5 strictly.
 
 #### 6. ChangeLog for all write operations (rebalancer, autopilot, etc.)
-**Status:** ⚠️ Fee-update writes are logged. Rebalancer, autopilot, peer/channel open/close are not.
-**Why:** The rebalancer (`jobs.py`, `gui/jobs/rebalancer.py`) and peer operations trigger writes that currently bypass `ChangeLog`. Completing this requires adding `ChangeLog.objects.create(...)` calls throughout ~15 functions without breaking their existing logic. This is lower-risk than item 1 and should be completed in Phase 2 housekeeping or early Phase 3.
+**Status:** ⚠️ Partially complete in Phase 3.
+**Why:** Rebalancer attempts and autopilot enable/disable paths are now logged in `gui/jobs/rebalancer.py`. Remaining gaps are additional write paths (peer/channel open/close and other legacy actions) that still bypass `ChangeLog` and require incremental hardening to avoid regressions.
 
 #### 7. Database restore via the `/api/v2/backup/restore/` API
 **Status:** ⚠️ The restore API currently accepts settings-file restores only; full DB restore is intentionally locked.
@@ -168,10 +185,18 @@ This is **Phase 3+ migration work** and carries high regression risk. The legacy
 
 ---
 
-### 🔜 Recommended Next Steps (Phase 3 Priority)
+### 🔜 Recommended Next Steps (post-Phase-3 follow-up)
 
-1. Run `pip-compile requirements.in -o requirements.txt` and commit to satisfy R-SEC-3.
-2. Add `ChangeLog` entries to the rebalancer and autopilot write paths.
-3. Begin Phase 3: migrate `gui/views/channels.py` fee-update path to use `LightningWriteAdapter` via `executor.py`.
-4. Add `pip-compile --check` to the CI `make lint` step to catch requirements drift.
-5. Progressively i18n legacy templates (one per PR, lowest-risk-first order).
+1. Complete legacy write-path migration to `executor.py` + adapter flow (`gui/views/channels.py`, peers/channels open/close, remaining legacy APIs).
+2. Expand `ChangeLog` coverage to all remaining write actions beyond rebalancer/autopilot.
+3. Wire real CLN splice status/confirmation tracking (`splice_update` / `splice_signed`) and block-height progress.
+4. Add full DE/EN translation entries for newly introduced Phase-3 strings in locale catalogs.
+5. Run `pip-compile requirements.in -o requirements.txt` in maintainer target environment and enforce `pip-compile --check` in CI.
+
+---
+
+## Phase 3 – Remaining Gaps (Open Work)
+
+- **End-to-end CLN splice execution lifecycle** is only partially implemented: preview and API flow exist, but confirmation progression and backend-specific finalize steps still need robust production handling.
+- **Simulation layer coverage** is partial: recommendation dry-run and policy-run recording exist, but no full historical “Was wäre passiert” learning widget yet.
+- **Legacy view migration to adapter-based writes** remains incomplete; phase-3 additions follow the executor path, but older write endpoints still require incremental migration.

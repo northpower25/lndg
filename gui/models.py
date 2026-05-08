@@ -519,3 +519,147 @@ class BackupLog(models.Model):
 
     class Meta:
         app_label = 'gui'
+
+
+class Recommendation(models.Model):
+    TYPE_OPEN = 'open'
+    TYPE_SPLICE_IN = 'splice_in'
+    TYPE_SPLICE_OUT = 'splice_out'
+    TYPE_CLOSE = 'close'
+    TYPE_REBALANCE = 'rebalance'
+    TYPE_FEE = 'fee'
+    TYPE_CHOICES = [
+        (TYPE_OPEN, 'Open Channel'),
+        (TYPE_SPLICE_IN, 'Splice In'),
+        (TYPE_SPLICE_OUT, 'Splice Out'),
+        (TYPE_CLOSE, 'Close / Deprioritize'),
+        (TYPE_REBALANCE, 'Rebalance'),
+        (TYPE_FEE, 'Fee Strategy'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_APPLIED = 'applied'
+    STATUS_DISMISSED = 'dismissed'
+    STATUS_EXPIRED = 'expired'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_APPLIED, 'Applied'),
+        (STATUS_DISMISSED, 'Dismissed'),
+        (STATUS_EXPIRED, 'Expired'),
+    ]
+
+    RISK_LOW = 'low'
+    RISK_MEDIUM = 'medium'
+    RISK_HIGH = 'high'
+    RISK_CHOICES = [
+        (RISK_LOW, 'Low'),
+        (RISK_MEDIUM, 'Medium'),
+        (RISK_HIGH, 'High'),
+    ]
+
+    CONFIDENCE_HEURISTIC = 'heuristic'
+    CONFIDENCE_RULE_BASED = 'rule_based'
+    CONFIDENCE_ML_SHADOW = 'ml_shadow'
+    CONFIDENCE_ML_MODEL = 'ml_model'
+    CONFIDENCE_LABEL_CHOICES = [
+        (CONFIDENCE_HEURISTIC, 'Heuristic'),
+        (CONFIDENCE_RULE_BASED, 'Rule Based'),
+        (CONFIDENCE_ML_SHADOW, 'ML Shadow'),
+        (CONFIDENCE_ML_MODEL, 'ML Model'),
+    ]
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    rec_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    target_chan_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    target_pubkey = models.CharField(max_length=66, null=True, blank=True)
+    rationale = models.JSONField(default=dict, blank=True)
+    confidence = models.FloatField(default=0.0)
+    confidence_label = models.CharField(
+        max_length=16, choices=CONFIDENCE_LABEL_CHOICES, default=CONFIDENCE_HEURISTIC
+    )
+    risk_level = models.CharField(max_length=10, choices=RISK_CHOICES, default=RISK_LOW)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    dry_run_result = models.JSONField(null=True, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'gui'
+
+
+class Policy(models.Model):
+    TYPE_AUTO_FEE = 'auto_fee'
+    TYPE_REBALANCE = 'rebalance'
+    TYPE_NOTIFY = 'notify'
+    TYPE_CHOICES = [
+        (TYPE_AUTO_FEE, 'Auto Fee'),
+        (TYPE_REBALANCE, 'Rebalance'),
+        (TYPE_NOTIFY, 'Notify'),
+    ]
+
+    MODE_GUIDED = 'guided'
+    MODE_ADVANCED = 'advanced'
+    MODE_EXPERT = 'expert'
+    MODE_CHOICES = [
+        (MODE_GUIDED, 'Guided'),
+        (MODE_ADVANCED, 'Advanced'),
+        (MODE_EXPERT, 'Expert'),
+    ]
+
+    name = models.CharField(max_length=100)
+    policy_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    definition = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=False)
+    dry_run = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_run = models.DateTimeField(null=True, blank=True)
+    mode_required = models.CharField(max_length=10, choices=MODE_CHOICES, default=MODE_ADVANCED)
+
+    class Meta:
+        app_label = 'gui'
+
+
+class PolicyRun(models.Model):
+    policy = models.ForeignKey('Policy', on_delete=models.CASCADE)
+    executed_at = models.DateTimeField(default=timezone.now, db_index=True)
+    was_dry_run = models.BooleanField(default=True)
+    trigger_data = models.JSONField(default=dict, blank=True)
+    actions_taken = models.JSONField(default=dict, blank=True)
+    outcome = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        app_label = 'gui'
+
+
+class SpliceLog(models.Model):
+    TYPE_IN = 'in'
+    TYPE_OUT = 'out'
+    TYPE_CHOICES = [
+        (TYPE_IN, 'Splice In'),
+        (TYPE_OUT, 'Splice Out'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_BROADCAST = 'broadcast'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_BROADCAST, 'Broadcast'),
+        (STATUS_CONFIRMED, 'Confirmed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    channel_id = models.CharField(max_length=20, db_index=True)
+    splice_type = models.CharField(max_length=5, choices=TYPE_CHOICES)
+    amount_sat = models.BigIntegerField()
+    on_chain_fee_sat = models.BigIntegerField(default=0)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    txid = models.CharField(max_length=64, blank=True, default='')
+    initiated_at = models.DateTimeField(default=timezone.now, db_index=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    rationale = models.JSONField(default=dict, blank=True)
+    recommendation = models.ForeignKey('Recommendation', null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['channel_id', 'initiated_at'])]

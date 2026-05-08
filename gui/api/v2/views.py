@@ -4,6 +4,7 @@ from statistics import median as _median
 
 from django.db.models import Count, Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -136,66 +137,10 @@ def cockpit_stats(request) -> Response:
         "total_issues": failed_24h + disabled_count,
     }
 
-    # ── 5. Next best actions (heuristic) ─────────────────────────────────────
-    next_actions: list[dict] = []
+    from gui.jobs.recommender import generate_recommendations
 
-    # a) Channels with low outbound liquidity (limit to 3 at DB level)
-    for ch in open_channels.filter(is_active=True, local_disabled=False).values(
-        "chan_id", "alias", "local_balance", "capacity"
-    )[:3]:
-        if len(next_actions) >= 3:
-            break
-        cap = ch["capacity"]
-        if cap > 0:
-            pct = ch["local_balance"] * 100 // cap
-            if pct < 20:
-                next_actions.append(
-                    {
-                        "type": "rebalance",
-                        "title": f"Rebalance: {ch['alias'] or ch['chan_id'][:8]}",
-                        "reason": f"Low outbound liquidity ({pct}%)",
-                        "risk": "low",
-                        "confidence": 0.8,
-                        "confidence_label": "heuristic",
-                    }
-                )
-
-    # b) Channels with no outbound routing in 7 days
-    if len(next_actions) < 3:
-        active_out_ids = set(
-            Forwards.objects.filter(forward_date__gte=cutoff_7d)
-            .values_list("chan_id_out", flat=True)
-            .distinct()
-        )
-        for ch in (
-            open_channels.filter(is_active=True, local_disabled=False)
-            .exclude(chan_id__in=active_out_ids)
-            .values("chan_id", "alias", "local_fee_rate")[:3]
-        ):
-            if len(next_actions) >= 3:
-                break
-            next_actions.append(
-                {
-                    "type": "fee_check",
-                    "title": f"Fee-Check: {ch['alias'] or ch['chan_id'][:8]}",
-                    "reason": "No outbound routing in 7 days",
-                    "risk": "low",
-                    "confidence": 0.7,
-                    "confidence_label": "heuristic",
-                }
-            )
-
-    if not next_actions:
-        next_actions.append(
-            {
-                "type": "info",
-                "title": "Node looks healthy",
-                "reason": "No urgent actions detected",
-                "risk": "none",
-                "confidence": 0.6,
-                "confidence_label": "heuristic",
-            }
-        )
+    # ── 5. Next best actions (heuristic recommender persisted in DB) ─────────
+    next_actions = generate_recommendations(limit=3)
 
     return Response(
         {
@@ -397,7 +342,8 @@ def cleaner_run(request) -> Response:
 
         {
             "table": "channel_snapshots" | "forwarding_aggregates" | "change_log"
-                     | "backup_log" | "failed_payments",
+                     | "backup_log" | "failed_payments" | "recommendations"
+                     | "policy_runs" | "splice_log",
             "retention_days": int  (optional – uses per-table LocalSettings/defaults)
         }
 
@@ -415,11 +361,17 @@ def cleaner_run(request) -> Response:
         clean_change_log,
         clean_failed_payments,
         clean_forwarding_aggregates,
+        clean_policy_runs,
+        clean_recommendations,
+        clean_splice_log,
         DEFAULT_BACKUP_LOG_RETENTION_DAYS,
         DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS,
         DEFAULT_CHANGELOG_RETENTION_DAYS,
         DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
         DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
+        DEFAULT_POLICYRUN_RETENTION_DAYS,
+        DEFAULT_RECOMMENDATION_RETENTION_DAYS,
+        DEFAULT_SPLICE_LOG_RETENTION_DAYS,
     )
 
     # ── All-tables mode ─────────────────────────────────────────────────────
@@ -441,12 +393,24 @@ def cleaner_run(request) -> Response:
         log_days = _retention("RETAIN-ChangeLog", DEFAULT_CHANGELOG_RETENTION_DAYS)
         bkp_days = _retention("RETAIN-BackupLog", DEFAULT_BACKUP_LOG_RETENTION_DAYS)
         pay_days = _retention("RETAIN-Payments", DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS)
+        rec_days = _retention("RETAIN-Recommendations", DEFAULT_RECOMMENDATION_RETENTION_DAYS)
+        run_days = _retention("RETAIN-PolicyRuns", DEFAULT_POLICYRUN_RETENTION_DAYS)
+        spl_days = _retention("RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS)
 
         if dry_run:
             # Count rows that would be deleted (read-only)
             from datetime import timedelta
             from django.utils import timezone
-            from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate, Payments
+            from gui.models import (
+                BackupLog,
+                ChannelSnapshot,
+                ChangeLog,
+                ForwardingAggregate,
+                Payments,
+                PolicyRun,
+                Recommendation,
+                SpliceLog,
+            )
             now = timezone.now()
             results = {
                 "channel_snapshots": ChannelSnapshot.objects.filter(timestamp__lt=now - timedelta(days=snap_days)).count(),
@@ -454,6 +418,9 @@ def cleaner_run(request) -> Response:
                 "change_log": ChangeLog.objects.filter(timestamp__lt=now - timedelta(days=log_days)).count(),
                 "backup_log": BackupLog.objects.filter(created_at__lt=now - timedelta(days=bkp_days)).count(),
                 "failed_payments": Payments.objects.filter(status__in=[1, 3], creation_date__lt=now - timedelta(days=pay_days)).count(),
+                "recommendations": Recommendation.objects.filter(created_at__lt=now - timedelta(days=rec_days)).count(),
+                "policy_runs": PolicyRun.objects.filter(executed_at__lt=now - timedelta(days=run_days)).count(),
+                "splice_log": SpliceLog.objects.filter(initiated_at__lt=now - timedelta(days=spl_days)).count(),
             }
         else:
             results = {
@@ -462,6 +429,9 @@ def cleaner_run(request) -> Response:
                 "change_log": async_to_sync(clean_change_log)(retention_days=log_days),
                 "backup_log": async_to_sync(clean_backup_log)(retention_days=bkp_days),
                 "failed_payments": async_to_sync(clean_failed_payments)(retention_days=pay_days),
+                "recommendations": async_to_sync(clean_recommendations)(retention_days=rec_days),
+                "policy_runs": async_to_sync(clean_policy_runs)(retention_days=run_days),
+                "splice_log": async_to_sync(clean_splice_log)(retention_days=spl_days),
             }
         return Response({"dry_run": dry_run, "results": results})
 
@@ -475,6 +445,9 @@ def cleaner_run(request) -> Response:
         "change_log": (clean_change_log, DEFAULT_CHANGELOG_RETENTION_DAYS),
         "backup_log": (clean_backup_log, DEFAULT_BACKUP_LOG_RETENTION_DAYS),
         "failed_payments": (clean_failed_payments, DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS),
+        "recommendations": (clean_recommendations, DEFAULT_RECOMMENDATION_RETENTION_DAYS),
+        "policy_runs": (clean_policy_runs, DEFAULT_POLICYRUN_RETENTION_DAYS),
+        "splice_log": (clean_splice_log, DEFAULT_SPLICE_LOG_RETENTION_DAYS),
     }
     if table not in dispatch:
         return Response(
@@ -508,7 +481,10 @@ def cleaner_settings(request) -> Response:
             "retention_forwarding_aggregates": int,
             "retention_change_log":            int,
             "retention_backup_log":            int,
-            "retention_failed_payments":       int
+            "retention_failed_payments":       int,
+            "retention_recommendations":       int,
+            "retention_policy_runs":           int,
+            "retention_splice_log":            int
         }
 
     All fields are optional; only provided fields are updated.
@@ -520,6 +496,9 @@ def cleaner_settings(request) -> Response:
         DEFAULT_CHANGELOG_RETENTION_DAYS,
         DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
         DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
+        DEFAULT_POLICYRUN_RETENTION_DAYS,
+        DEFAULT_RECOMMENDATION_RETENTION_DAYS,
+        DEFAULT_SPLICE_LOG_RETENTION_DAYS,
     )
 
     key_map = {
@@ -528,6 +507,9 @@ def cleaner_settings(request) -> Response:
         "retention_change_log": ("RETAIN-ChangeLog", DEFAULT_CHANGELOG_RETENTION_DAYS),
         "retention_backup_log": ("RETAIN-BackupLog", DEFAULT_BACKUP_LOG_RETENTION_DAYS),
         "retention_failed_payments": ("RETAIN-Payments", DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS),
+        "retention_recommendations": ("RETAIN-Recommendations", DEFAULT_RECOMMENDATION_RETENTION_DAYS),
+        "retention_policy_runs": ("RETAIN-PolicyRuns", DEFAULT_POLICYRUN_RETENTION_DAYS),
+        "retention_splice_log": ("RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS),
     }
     saved = {}
     errors = {}
@@ -553,7 +535,16 @@ def cleaner_settings(request) -> Response:
 @permission_classes([IsAuthenticated])
 def cleaner_counts(request) -> Response:
     """Return approximate row counts for all managed time-series tables."""
-    from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate, Payments
+    from gui.models import (
+        BackupLog,
+        ChannelSnapshot,
+        ChangeLog,
+        ForwardingAggregate,
+        Payments,
+        PolicyRun,
+        Recommendation,
+        SpliceLog,
+    )
 
     return Response({
         "channel_snapshots": ChannelSnapshot.objects.count(),
@@ -561,7 +552,298 @@ def cleaner_counts(request) -> Response:
         "change_log": ChangeLog.objects.count(),
         "backup_log": BackupLog.objects.count(),
         "failed_payments": Payments.objects.filter(status__in=[1, 3]).count(),
+        "recommendations": Recommendation.objects.count(),
+        "policy_runs": PolicyRun.objects.count(),
+        "splice_log": SpliceLog.objects.count(),
     })
+
+
+# ── Recommendations / Policies / Splice ────────────────────────────────────────
+
+class _RecommendationThrottle(UserRateThrottle):
+    rate = "30/minute"
+
+
+class _PolicyRunThrottle(UserRateThrottle):
+    rate = "10/minute"
+
+
+class _SpliceThrottle(UserRateThrottle):
+    rate = "20/minute"
+
+
+def _to_int(value, *, minimum: int | None = None, maximum: int | None = None) -> int:
+    parsed = int(value)
+    if minimum is not None and parsed < minimum:
+        raise ValueError("below_minimum")
+    if maximum is not None and parsed > maximum:
+        raise ValueError("above_maximum")
+    return parsed
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_RecommendationThrottle])
+def recommendation_dry_run(request, recommendation_id: int) -> Response:
+    from gui.models import Recommendation
+
+    recommendation = Recommendation.objects.filter(pk=recommendation_id).first()
+    if recommendation is None:
+        return Response({"error": _("Recommendation not found.")}, status=404)
+    now = timezone.now().isoformat()
+    recommendation.dry_run_result = {
+        "simulate": True,
+        "executed_at": now,
+        "estimate": {
+            "expected_effect": _("No write action executed. Dry-run only."),
+            "risk_level": recommendation.risk_level,
+            "confidence": recommendation.confidence,
+        },
+    }
+    recommendation.save(update_fields=["dry_run_result"])
+    return Response({"status": "ok", "recommendation_id": recommendation.id, "dry_run_result": recommendation.dry_run_result})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_PolicyRunThrottle])
+def policy_run(request, policy_id: int) -> Response:
+    from gui.models import Policy, PolicyRun
+
+    policy = Policy.objects.filter(pk=policy_id).first()
+    if policy is None:
+        return Response({"error": _("Policy not found.")}, status=404)
+
+    simulate = bool(request.data.get("simulate", True))
+    trigger_data = request.data.get("trigger_data") or {}
+    if not isinstance(trigger_data, dict):
+        return Response({"error": _("trigger_data must be an object.")}, status=400)
+
+    run = PolicyRun.objects.create(
+        policy=policy,
+        was_dry_run=simulate,
+        trigger_data=trigger_data,
+        actions_taken={"policy_type": policy.policy_type, "executed": not simulate},
+        outcome={
+            "status": "simulated" if simulate else "scheduled",
+            "message": _("Policy execution recorded."),
+        },
+    )
+    policy.last_run = timezone.now()
+    policy.save(update_fields=["last_run"])
+    return Response(
+        {
+            "status": "ok",
+            "policy_run_id": run.id,
+            "was_dry_run": run.was_dry_run,
+            "outcome": run.outcome,
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_SpliceThrottle])
+def splice_preview(request, channel_id: str) -> Response:
+    from gui.models import Channels
+
+    channel = Channels.objects.filter(chan_id=channel_id, is_open=True).first()
+    if channel is None:
+        return Response({"error": _("Channel not found.")}, status=404)
+    amount_sat = request.query_params.get("amount_sat", "0")
+    fee_rate = request.query_params.get("fee_rate", "5")
+    try:
+        parsed_amount = _to_int(amount_sat, minimum=0, maximum=10_000_000_000)
+        parsed_fee_rate = _to_int(fee_rate, minimum=1, maximum=5000)
+    except Exception:
+        return Response({"error": _("Invalid amount_sat or fee_rate.")}, status=400)
+
+    estimated_fee_sat = max(1, int(parsed_fee_rate * 120))
+    projected_capacity = (channel.capacity or 0) + parsed_amount
+    return Response(
+        {
+            "channel_id": channel_id,
+            "amount_sat": parsed_amount,
+            "estimated_on_chain_fee_sat": estimated_fee_sat,
+            "projected_capacity_sat": projected_capacity,
+            "routing_impact": _("Temporary routing degradation while splice confirms."),
+            "risk_label": "medium",
+        }
+    )
+
+
+def _resolve_recommendation_id(request_data) -> int | None:
+    recommendation_id = request_data.get("recommendation_id")
+    if recommendation_id in (None, ""):
+        return None
+    return int(recommendation_id)
+
+
+def _require_splice_capability():
+    from gui.backends.registry import get_active_backend, get_capabilities
+
+    caps = get_capabilities()
+    if not caps.can_splice:
+        return caps, Response(
+            {"error": _("Backend does not support channel splicing."), "can_splice": False},
+            status=400,
+        )
+    if get_active_backend() is None:
+        return caps, Response({"error": _("No active backend configured.")}, status=500)
+    return caps, None
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_SpliceThrottle])
+def splice_in(request, channel_id: str) -> Response:
+    from gui.models import ChangeLog, Recommendation, SpliceLog
+
+    _caps, error_response = _require_splice_capability()
+    if error_response is not None:
+        return error_response
+    from gui.jobs.executor import execute_splice_in
+    try:
+        amount_sat = _to_int(request.data.get("amount_sat"), minimum=1, maximum=10_000_000_000)
+        fee_rate = _to_int(request.data.get("fee_rate", 5), minimum=1, maximum=5000)
+        recommendation_id = _resolve_recommendation_id(request.data)
+    except Exception:
+        return Response({"error": _("Invalid request payload.")}, status=400)
+
+    recommendation = Recommendation.objects.filter(pk=recommendation_id).first() if recommendation_id else None
+    try:
+        action = execute_splice_in(channel_id=channel_id, amount_sat=amount_sat, fee_rate=fee_rate)
+    except Exception as exc:
+        import logging as _logging
+
+        _logging.getLogger(__name__).error("Splice in failed for %s: %s", channel_id, exc, exc_info=True)
+        return Response({"error": _("Splice in failed.")}, status=400)
+    status = SpliceLog.STATUS_PENDING
+    txid = ""
+    if getattr(action, "txid", None):
+        txid = action.txid
+        status = SpliceLog.STATUS_BROADCAST
+
+    splice_log = SpliceLog.objects.create(
+        channel_id=channel_id,
+        splice_type=SpliceLog.TYPE_IN,
+        amount_sat=amount_sat,
+        on_chain_fee_sat=max(1, fee_rate * 120),
+        status=status,
+        txid=txid,
+        rationale={
+            "requested_by": "manual",
+            "recommendation_id": recommendation.id if recommendation else None,
+        },
+        recommendation=recommendation,
+    )
+    ChangeLog.objects.create(
+        change_type='splice_in',
+        target_channel_id=channel_id,
+        actor='manual',
+        old_value={},
+        new_value={"amount_sat": amount_sat, "fee_rate": fee_rate, "splice_log_id": splice_log.id},
+        rationale={"risk_label": "medium"},
+    )
+    return Response({"status": "ok", "splice_log_id": splice_log.id, "channel_id": channel_id, "txid": txid})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_SpliceThrottle])
+def splice_out(request, channel_id: str) -> Response:
+    from gui.models import ChangeLog, Recommendation, SpliceLog
+
+    _caps, error_response = _require_splice_capability()
+    if error_response is not None:
+        return error_response
+    from gui.jobs.executor import execute_splice_out
+    try:
+        amount_sat = _to_int(request.data.get("amount_sat"), minimum=1, maximum=10_000_000_000)
+        fee_rate = _to_int(request.data.get("fee_rate", 5), minimum=1, maximum=5000)
+        destination = str(request.data.get("destination", "")).strip()
+        recommendation_id = _resolve_recommendation_id(request.data)
+    except Exception:
+        return Response({"error": _("Invalid request payload.")}, status=400)
+    if not destination:
+        return Response({"error": _("destination is required for splice out.")}, status=400)
+
+    recommendation = Recommendation.objects.filter(pk=recommendation_id).first() if recommendation_id else None
+    try:
+        action = execute_splice_out(
+            channel_id=channel_id,
+            amount_sat=amount_sat,
+            destination=destination,
+            fee_rate=fee_rate,
+        )
+    except Exception as exc:
+        import logging as _logging
+
+        _logging.getLogger(__name__).error("Splice out failed for %s: %s", channel_id, exc, exc_info=True)
+        return Response({"error": _("Splice out failed.")}, status=400)
+    status = SpliceLog.STATUS_PENDING
+    txid = ""
+    if getattr(action, "txid", None):
+        txid = action.txid
+        status = SpliceLog.STATUS_BROADCAST
+
+    splice_log = SpliceLog.objects.create(
+        channel_id=channel_id,
+        splice_type=SpliceLog.TYPE_OUT,
+        amount_sat=amount_sat,
+        on_chain_fee_sat=max(1, fee_rate * 120),
+        status=status,
+        txid=txid,
+        rationale={
+            "requested_by": "manual",
+            "destination": destination,
+            "recommendation_id": recommendation.id if recommendation else None,
+        },
+        recommendation=recommendation,
+    )
+    ChangeLog.objects.create(
+        change_type='splice_out',
+        target_channel_id=channel_id,
+        actor='manual',
+        old_value={},
+        new_value={
+            "amount_sat": amount_sat,
+            "destination": destination,
+            "fee_rate": fee_rate,
+            "splice_log_id": splice_log.id,
+        },
+        rationale={"risk_label": "high"},
+    )
+    return Response({"status": "ok", "splice_log_id": splice_log.id, "channel_id": channel_id, "txid": txid})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_SpliceThrottle])
+def splice_status(request, channel_id: str) -> Response:
+    from gui.models import SpliceLog
+
+    splice_id = request.query_params.get("splice_id")
+    if splice_id:
+        item = SpliceLog.objects.filter(pk=splice_id, channel_id=channel_id).first()
+    else:
+        item = SpliceLog.objects.filter(channel_id=channel_id).order_by("-initiated_at").first()
+    if item is None:
+        return Response({"error": _("No splice operation found for this channel.")}, status=404)
+    return Response(
+        {
+            "splice_id": item.id,
+            "channel_id": item.channel_id,
+            "splice_type": item.splice_type,
+            "status": item.status,
+            "txid": item.txid,
+            "amount_sat": item.amount_sat,
+            "on_chain_fee_sat": item.on_chain_fee_sat,
+            "initiated_at": item.initiated_at.isoformat(),
+            "confirmed_at": item.confirmed_at.isoformat() if item.confirmed_at else None,
+            "rationale": item.rationale,
+        }
+    )
 
 
 # ── Backup ─────────────────────────────────────────────────────────────────────

@@ -62,6 +62,27 @@
                      value="{{ retention.failed_payments|default:90 }}"></td>
           <td class="w3-text-grey">90</td>
         </tr>
+        <tr>
+          <td>{% trans "Recommendations" %}</td>
+          <td><input id="ret-recommendations" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.recommendations|default:90 }}"></td>
+          <td class="w3-text-grey">90</td>
+        </tr>
+        <tr>
+          <td>{% trans "Policy Runs" %}</td>
+          <td><input id="ret-policy-runs" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.policy_runs|default:90 }}"></td>
+          <td class="w3-text-grey">90</td>
+        </tr>
+        <tr>
+          <td>{% trans "Splice Log" %}</td>
+          <td><input id="ret-splice-log" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.splice_log|default:365 }}"></td>
+          <td class="w3-text-grey">365</td>
+        </tr>
       </tbody>
     </table>
     <p class="w3-small w3-text-grey w3-margin-top">
@@ -150,6 +171,9 @@ async function saveRetentionSettings() {
     retention_change_log:            parseInt(document.getElementById('ret-changelog').value, 10),
     retention_backup_log:            parseInt(document.getElementById('ret-backuplog').value, 10),
     retention_failed_payments:       parseInt(document.getElementById('ret-payments').value, 10),
+    retention_recommendations:       parseInt(document.getElementById('ret-recommendations').value, 10),
+    retention_policy_runs:           parseInt(document.getElementById('ret-policy-runs').value, 10),
+    retention_splice_log:            parseInt(document.getElementById('ret-splice-log').value, 10),
   };
   statusDiv.style.display = 'block';
   statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Saving..." %}</p>';
@@ -205,6 +229,9 @@ async function runCleaner() {
             <tr><td>{% trans "Change Log" %}</td><td>${r.change_log ?? '—'}</td></tr>
             <tr><td>{% trans "Backup Log" %}</td><td>${r.backup_log ?? '—'}</td></tr>
             <tr><td>{% trans "Failed Payments" %}</td><td>${r.failed_payments ?? '—'}</td></tr>
+            <tr><td>{% trans "Recommendations" %}</td><td>${r.recommendations ?? '—'}</td></tr>
+            <tr><td>{% trans "Policy Runs" %}</td><td>${r.policy_runs ?? '—'}</td></tr>
+            <tr><td>{% trans "Splice Log" %}</td><td>${r.splice_log ?? '—'}</td></tr>
           </table>
         </div>`;
       loadRowCounts();
@@ -236,6 +263,9 @@ async function loadRowCounts() {
       ['{% trans "Change Log" %}',               data.change_log ?? '—'],
       ['{% trans "Backup Log" %}',               data.backup_log ?? '—'],
       ['{% trans "Failed Payments (failed/inflight)" %}', data.failed_payments ?? '—'],
+      ['{% trans "Recommendations" %}',          data.recommendations ?? '—'],
+      ['{% trans "Policy Runs" %}',              data.policy_runs ?? '—'],
+      ['{% trans "Splice Log" %}',               data.splice_log ?? '—'],
     ];
     let html = '<table class="w3-table w3-bordered w3-small" style="max-width:400px"><thead><tr><th>{% trans "Table" %}</th><th>{% trans "Rows" %}</th></tr></thead><tbody>';
     rows.forEach((r) => { html += `<tr><td>${r[0]}</td><td>${Number(r[1]).toLocaleString()}</td></tr>`; });

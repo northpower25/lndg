@@ -111,6 +111,8 @@ urlpatterns = [
     path('backup/', views.backup_restore_view, name='backup-restore'),
     path('charts/', views.charts_view, name='charts'),
     path('maintenance/', views.cleaner_view, name='maintenance'),
+    path('splice/', views.splice_view, name='splice'),
+    path('cln-plugins/', views.cln_plugins_view, name='cln-plugins'),
     # Notifications
     path('notification_settings/', views.notification_settings, name='notification-settings'),
     path('api/test_notification/', views.test_notification, name='test-notification'),

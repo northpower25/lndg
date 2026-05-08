@@ -5,13 +5,24 @@ from datetime import timedelta
 from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate
+from gui.models import (
+    BackupLog,
+    ChannelSnapshot,
+    ChangeLog,
+    ForwardingAggregate,
+    PolicyRun,
+    Recommendation,
+    SpliceLog,
+)
 
 DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS = 90
 DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS = 180
 DEFAULT_CHANGELOG_RETENTION_DAYS = 365
 DEFAULT_BACKUP_LOG_RETENTION_DAYS = 90
 DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS = 90
+DEFAULT_RECOMMENDATION_RETENTION_DAYS = 90
+DEFAULT_POLICYRUN_RETENTION_DAYS = 90
+DEFAULT_SPLICE_LOG_RETENTION_DAYS = 365
 
 
 async def _delete_older_than(
@@ -79,3 +90,20 @@ async def clean_failed_payments(
         cutoff,
         time_field="creation_date",
     )
+
+
+async def clean_recommendations(
+    retention_days: int = DEFAULT_RECOMMENDATION_RETENTION_DAYS,
+) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(Recommendation.objects, cutoff, time_field="created_at")
+
+
+async def clean_policy_runs(retention_days: int = DEFAULT_POLICYRUN_RETENTION_DAYS) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(PolicyRun.objects, cutoff, time_field="executed_at")
+
+
+async def clean_splice_log(retention_days: int = DEFAULT_SPLICE_LOG_RETENTION_DAYS) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(SpliceLog.objects, cutoff, time_field="initiated_at")

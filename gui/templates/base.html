@@ -114,8 +114,20 @@
         <a href="/actions/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'actions' %} w3-theme{% endif %}">{% trans "Automations" %}</a>
         <a href="/forwards" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'forwards' %} w3-theme{% endif %}">{% trans "Learn & History" %}</a>
         <a href="/charts/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'charts' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Charts" %}</a>
+        {% if capabilities.can_splice %}
+        <a href="/splice/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'splice' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Splice" %}</a>
+        {% else %}
+        <span class="w3-bar-item w3-button w3-opacity" style="min-height:44px;cursor:not-allowed" title="{% trans 'Backend supports no channel splicing.' %}">{% trans "Splice" %}</span>
+        {% endif %}
         {% if user_mode == 'advanced' or user_mode == 'expert' %}
         <a href="/maintenance/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'maintenance' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Maintenance" %}</a>
+        {% endif %}
+        {% if user_mode == 'expert' %}
+          {% if capabilities.supports_plugins %}
+          <a href="/cln-plugins/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'cln-plugins' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "CLN Plugins" %}</a>
+          {% else %}
+          <span class="w3-bar-item w3-button w3-opacity" style="min-height:44px;cursor:not-allowed" title="{% trans 'Plugin panel is only available for backends with plugin support.' %}">{% trans "CLN Plugins" %}</span>
+          {% endif %}
         {% endif %}
         {% if user_mode == 'expert' %}
         <a href="/backup/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'backup-restore' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Backup" %}</a>
