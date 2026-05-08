@@ -16,6 +16,7 @@ environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
 from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, ChangeLog, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings  # noqa: E402
 import gui.jobs.auto_fees as af  # noqa: E402
+from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees  # noqa: E402
 from gui.jobs.executor import execute_due_policies  # noqa: E402
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
@@ -32,6 +33,8 @@ _AGGREGATOR_DEFAULT_ITERS = 180  # ≈ 60 min
 _CLEANER_DEFAULT_ITERS = 4320  # ≈ 24 h
 _RECOMMENDER_DEFAULT_ITERS = 180  # ≈ 60 min
 _POLICY_EXECUTOR_DEFAULT_ITERS = 180  # ≈ 60 min
+_MEMPOOL_NOTIFY_DEFAULT_ITERS = 180  # ≈ 60 min
+_last_mempool_light = None
 
 
 def _safe_notify(message: str) -> None:
@@ -41,6 +44,25 @@ def _safe_notify(message: str) -> None:
         notify_module.send_notification(message)
     except Exception as exc:
         print(f"{datetime.now().strftime('%c')} : [Notify] : Error sending notification: {exc}")
+
+
+def _run_mempool_fee_notification() -> None:
+    global _last_mempool_light
+    cfg = NotificationSettings.load()
+    if not cfg.notify_mempool_low_fee:
+        _last_mempool_light = None
+        return
+    payload = get_mempool_recommended_fees(enabled=cfg.mempool_enabled)
+    signal = classify_fee_signal(payload)
+    if signal is None:
+        return
+    if signal.light == "🟢" and _last_mempool_light != "🟢":
+        hour_fee = payload.get("hourFee")
+        _safe_notify(
+            f"🟢 Mempool fee window is favorable ({hour_fee} sat/vB). "
+            "Good timing for open/close/splice actions."
+        )
+    _last_mempool_light = signal.light
 
 def update_payments(stub):
     self_pubkey = stub.GetInfo(ln.GetInfoRequest()).identity_pubkey
@@ -926,6 +948,7 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     clean_iters = _get_interval_setting("CLEANER-Interval", _CLEANER_DEFAULT_ITERS)
     rec_iters = _get_interval_setting("RECOMMENDER-Interval", _RECOMMENDER_DEFAULT_ITERS)
     policy_iters = _get_interval_setting("POLICY-Interval", _POLICY_EXECUTOR_DEFAULT_ITERS)
+    mempool_notify_iters = _get_interval_setting("MEMPOOL-NotifyInterval", _MEMPOOL_NOTIFY_DEFAULT_ITERS)
 
     # Channel snapshots (every ~15 min by default)
     if loop_counter % snap_iters == 0:
@@ -968,6 +991,13 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
             print(f"{datetime.now().strftime('%c')} : [PolicyEngine] : Executed {len(runs)} due policies.")
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [PolicyEngine] : Error executing policies: {exc}")
+
+    # Mempool low-fee notification (opt-in, ~60 min by default)
+    if loop_counter % mempool_notify_iters == 0:
+        try:
+            _run_mempool_fee_notification()
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [Notify] : Error in mempool fee notifier: {exc}")
 
 
 async def _run_all_cleaners() -> dict:

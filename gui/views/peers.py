@@ -14,18 +14,46 @@ from gui.lnd_deps import wtclient_pb2_grpc as wtstub
 from gui.lnd_deps import walletkit_pb2 as walletrpc
 from gui.lnd_deps import walletkit_pb2_grpc as walletstub
 from gui.lnd_deps.lnd_connect import lnd_connect
+from gui.jobs.external_integrations import get_amboss_peer_context
 from lndg import settings
 from .utils import graph_links, grpc_error_message, is_login_required, network_links
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def peers(request):
     if request.method == 'GET':
+        from ..models import NotificationSettings
+
         peers = Peers.objects.filter(connected=True)
+        cfg = NotificationSettings.load()
+        peer_pubkeys = [peer.pubkey for peer in peers]
+        amboss_context = get_amboss_peer_context(
+            enabled=cfg.amboss_enabled,
+            api_key=cfg.amboss_api_key,
+            pubkeys=peer_pubkeys,
+        )
+        peer_rows = []
+        for peer in peers:
+            amboss = amboss_context.get(peer.pubkey, {})
+            peer_rows.append(
+                {
+                    "pubkey": peer.pubkey,
+                    "alias": peer.alias,
+                    "address": peer.address,
+                    "ping_time": peer.ping_time,
+                    "inbound": peer.inbound,
+                    "sat_sent": peer.sat_sent,
+                    "sat_recv": peer.sat_recv,
+                    "amboss_rank": amboss.get("rank"),
+                    "amboss_capacity": amboss.get("capacity"),
+                    "amboss_channels": amboss.get("channels"),
+                }
+            )
         context = {
-            'peers': peers,
-            'num_peers': len(peers),
+            'peers': peer_rows,
+            'num_peers': len(peer_rows),
             'network': 'testnet/' if settings.LND_NETWORK == 'testnet' else '',
-            'graph_links': graph_links()
+            'graph_links': graph_links(),
+            'amboss_enabled': cfg.amboss_enabled,
         }
         return render(request, 'peers.html', context)
     else:

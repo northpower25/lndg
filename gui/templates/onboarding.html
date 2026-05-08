@@ -1,12 +1,9 @@
 {% extends "base.html" %}
-{% load static %}
 {% load i18n %}
 {% block title %}{{ block.super }} - {% trans "Onboarding" %}{% endblock %}
 {% block content %}
-<div class="w3-container w3-padding" style="max-width:700px;margin:0 auto">
-
-  <!-- Step indicator -->
-  <div class="w3-center w3-padding" id="step-indicator" aria-label="{% trans 'Wizard progress' %}">
+<div class="w3-container w3-padding" style="max-width:760px;margin:0 auto">
+  <div class="w3-center w3-padding" aria-label="{% trans 'Wizard progress' %}">
     {% for i in "12345" %}
     <span id="dot-{{ i }}" class="w3-badge{% if forloop.first %} w3-theme{% else %} w3-light-grey{% endif %}"
           style="margin:0 4px;width:28px;height:28px;line-height:28px;display:inline-block;font-size:13px"
@@ -14,142 +11,67 @@
     {% endfor %}
   </div>
 
-  <!-- ─── Step 1: Welcome ──────────────────────────────────────────────── -->
   <div id="step-1" class="wizard-step w3-card w3-padding w3-margin-top">
-    <h2>⚡ {% trans "Welcome to LNDg" %}</h2>
-    {% if capabilities.supports_plugins %}
-    <p>{% trans "This wizard will guide you through setting up LNDg with your Core Lightning (CLN) node." %}</p>
-    <div class="w3-panel w3-pale-blue w3-border w3-round w3-padding-small">
-      <strong>{% trans "Detected backend: Core Lightning (CLN)" %}</strong><br>
-      <span class="w3-small">{% trans "CLN uses a Rune / API-Token and the clnrest endpoint for communication." %}</span>
+    <h2>🌍 {% trans "Language Selection" %}</h2>
+    <p>{% trans "Choose your preferred language for the UI." %}</p>
+    <div class="w3-row-padding">
+      <div class="w3-half"><button class="w3-button w3-border w3-round" style="min-height:44px;width:100%" onclick="setLanguage('en')">{% trans "English" %}</button></div>
+      <div class="w3-half"><button class="w3-button w3-border w3-round" style="min-height:44px;width:100%" onclick="setLanguage('de')">{% trans "German" %}</button></div>
     </div>
-    {% else %}
-    <p>{% trans "This wizard will guide you through setting up LNDg with your Lightning Network Daemon (LND) node." %}</p>
-    <div class="w3-panel w3-pale-blue w3-border w3-round w3-padding-small">
-      <strong>{% trans "Detected backend: LND" %}</strong><br>
-      <span class="w3-small">{% trans "LND uses a Macaroon and TLS certificate for authentication." %}</span>
-    </div>
-    {% endif %}
-    <p class="w3-small w3-text-grey">{% trans "You can re-run this wizard at any time from the navigation menu." %}</p>
     <div class="w3-bar w3-margin-top">
       <button class="w3-button w3-theme w3-right" style="min-height:44px" onclick="goStep(2)">{% trans "Next" %} →</button>
+      <button class="w3-button w3-light-grey w3-left" style="min-height:44px" onclick="skipWizard()">{% trans "Skip wizard" %}</button>
     </div>
   </div>
 
-  <!-- ─── Step 2: Connection check ────────────────────────────────────── -->
   <div id="step-2" class="wizard-step w3-card w3-padding w3-margin-top" style="display:none">
-    <h2>🔌 {% trans "Connection Verification" %}</h2>
+    <h2>🧭 {% trans "Choose Node Profile" %}</h2>
     {% if capabilities.supports_plugins %}
-    <p>{% trans "For CLN, LNDg connects via the clnrest plugin. Please ensure the following are configured:" %}</p>
-    <table class="w3-table w3-bordered w3-small">
-      <tr>
-        <td style="min-width:160px"><strong>{% trans "Rune / API-Token" %}</strong></td>
-        <td>{% trans "A CLN Rune with read and write permissions" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "clnrest Endpoint" %}</strong></td>
-        <td>{% trans "The HTTPS address of the clnrest plugin (e.g. https://localhost:3010)" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Plugin Status" %}</strong></td>
-        <td id="plugin-status">
-          <span class="w3-badge w3-green">{% trans "Active" %}</span>
-          <span class="w3-small w3-text-grey w3-margin-left">{% trans "clnrest plugin detected via supports_plugins capability" %}</span>
-        </td>
-      </tr>
-    </table>
+    <p>{% trans "Detected backend: Core Lightning (CLN)" %}</p>
+    <ul class="w3-small">
+      <li>{% trans "Rune / API-Token with required permissions" %}</li>
+      <li>{% trans "clnrest endpoint URL" %}</li>
+      <li>{% trans "Plugin status should be active" %}</li>
+    </ul>
     {% else %}
-    <p>{% trans "For LND, LNDg connects via gRPC. Please ensure the following are configured:" %}</p>
-    <table class="w3-table w3-bordered w3-small">
-      <tr>
-        <td style="min-width:160px"><strong>{% trans "Macaroon" %}</strong></td>
-        <td>{% trans "Path to the admin.macaroon file (or base64-encoded value)" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "TLS Certificate" %}</strong></td>
-        <td>{% trans "Path to the tls.cert file used by LND" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "gRPC Host" %}</strong></td>
-        <td>{% trans "LND gRPC address (e.g. localhost:10009)" %}</td>
-      </tr>
-    </table>
+    <p>{% trans "Detected backend: LND" %}</p>
+    <ul class="w3-small">
+      <li>{% trans "Macaroon path or base64 value" %}</li>
+      <li>{% trans "TLS certificate path" %}</li>
+      <li>{% trans "gRPC host and port" %}</li>
+    </ul>
     {% endif %}
-    <div id="conn-result" class="w3-margin-top"></div>
     <div class="w3-bar w3-margin-top">
       <button class="w3-button w3-light-grey w3-left" style="min-height:44px" onclick="goStep(1)">← {% trans "Back" %}</button>
-      <button class="w3-button w3-theme w3-right" style="min-height:44px" onclick="loadNodeInfo(); goStep(3)">{% trans "Next" %} →</button>
+      <button class="w3-button w3-theme w3-right" style="min-height:44px" onclick="goStep(3)">{% trans "Next" %} →</button>
     </div>
   </div>
 
-  <!-- ─── Step 3: Node info ────────────────────────────────────────────── -->
   <div id="step-3" class="wizard-step w3-card w3-padding w3-margin-top" style="display:none">
-    <h2>🖧 {% trans "Node Verification" %}</h2>
-    <p>{% trans "Fetching node information…" %}</p>
-    <table class="w3-table w3-bordered w3-small" id="node-info-table">
-      <tr>
-        <td style="min-width:140px"><strong>{% trans "Public Key" %}</strong></td>
-        <td id="ni-pubkey"><span class="w3-text-grey">—</span></td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Alias" %}</strong></td>
-        <td id="ni-alias"><span class="w3-text-grey">—</span></td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Version" %}</strong></td>
-        <td id="ni-version"><span class="w3-text-grey">—</span></td>
-      </tr>
+    <h2>📡 {% trans "Understand Channels" %}</h2>
+    <p>{% trans "Channels define routing capacity between your node and peers." %}</p>
+    <table class="w3-table w3-bordered w3-small">
+      <tr><td><strong>{% trans "Open Channels" %}</strong></td><td id="ch-open">{{ node_info.open_channel_count }}</td></tr>
+      <tr><td><strong>{% trans "Outbound Capacity" %}</strong></td><td id="ch-out">—</td></tr>
+      <tr><td><strong>{% trans "Inbound Capacity" %}</strong></td><td id="ch-in">—</td></tr>
     </table>
-    <h4 class="w3-margin-top">{% trans "Capabilities" %}</h4>
-    <div class="w3-small" style="display:flex;flex-wrap:wrap;gap:8px">
-      <span class="w3-tag {% if capabilities.can_auto_fee %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Automatic fee adjustment via API' %}">
-        {% trans "Auto-Fee" %} {% if capabilities.can_auto_fee %}✓{% else %}✗{% endif %}
-      </span>
-      <span class="w3-tag {% if capabilities.can_rebalance %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Circular payment rebalancing' %}">
-        {% trans "Rebalance" %} {% if capabilities.can_rebalance %}✓{% else %}✗{% endif %}
-      </span>
-      <span class="w3-tag {% if capabilities.can_keysend %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Keysend (spontaneous payments)' %}">
-        {% trans "Keysend" %} {% if capabilities.can_keysend %}✓{% else %}✗{% endif %}
-      </span>
-      <span class="w3-tag {% if capabilities.can_splice %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Channel splice (resize without close)' %}">
-        {% trans "Splice" %} {% if capabilities.can_splice %}✓{% else %}✗{% endif %}
-      </span>
-      <span class="w3-tag {% if capabilities.can_inbound_fees %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Inbound fee parameters' %}">
-        {% trans "Inbound Fees" %} {% if capabilities.can_inbound_fees %}✓{% else %}✗{% endif %}
-      </span>
-      <span class="w3-tag {% if capabilities.supports_plugins %}w3-green{% else %}w3-grey{% endif %} w3-round" title="{% trans 'Plugin extension mechanism (CLN)' %}">
-        {% trans "Plugins (CLN)" %} {% if capabilities.supports_plugins %}✓{% else %}✗{% endif %}
-      </span>
-    </div>
+    <p class="w3-small w3-text-grey">{% trans "Tip: Balanced channels usually improve routing opportunity." %}</p>
     <div class="w3-bar w3-margin-top">
       <button class="w3-button w3-light-grey w3-left" style="min-height:44px" onclick="goStep(2)">← {% trans "Back" %}</button>
       <button class="w3-button w3-theme w3-right" style="min-height:44px" onclick="loadCockpit(); goStep(4)">{% trans "Next" %} →</button>
     </div>
   </div>
 
-  <!-- ─── Step 4: Channels overview ───────────────────────────────────── -->
   <div id="step-4" class="wizard-step w3-card w3-padding w3-margin-top" style="display:none">
-    <h2>📡 {% trans "Channels Overview" %}</h2>
-    <table class="w3-table w3-bordered w3-small">
-      <tr>
-        <td style="min-width:180px"><strong>{% trans "Open Channels" %}</strong></td>
-        <td id="ch-open">{{ node_info.open_channel_count }}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Average Fee Rate" %}</strong></td>
-        <td id="ch-fee-avg" data-unit="{% trans 'ppm' %}"><span class="w3-text-grey">—</span> {% trans "ppm" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Total Local Balance" %}</strong></td>
-        <td id="ch-local" data-unit="{% trans 'sats' %}"><span class="w3-text-grey">—</span> {% trans "sats" %}</td>
-      </tr>
-      <tr>
-        <td><strong>{% trans "Total Remote Balance" %}</strong></td>
-        <td id="ch-remote" data-unit="{% trans 'sats' %}"><span class="w3-text-grey">—</span> {% trans "sats" %}</td>
-      </tr>
-    </table>
-    <div id="cockpit-error" class="w3-panel w3-pale-yellow w3-round w3-padding-small w3-margin-top" style="display:none">
-      <span class="w3-small">{% trans "Could not load live channel data. The values above reflect the database state." %}</span>
+    <h2>💸 {% trans "Understand Fees & Rebalancing" %}</h2>
+    <p>{% trans "Fees influence routing demand. Rebalancing helps recover outbound liquidity." %}</p>
+    <div class="w3-panel w3-pale-green w3-round w3-padding-small">
+      <strong>{% trans "Fees" %}</strong>
+      <div class="w3-small">{% trans "Start conservative and adjust gradually." %}</div>
+    </div>
+    <div class="w3-panel w3-pale-blue w3-round w3-padding-small">
+      <strong>{% trans "Rebalancing" %}</strong>
+      <div class="w3-small">{% trans "Keep automation in dry-run mode first." %}</div>
     </div>
     <div class="w3-bar w3-margin-top">
       <button class="w3-button w3-light-grey w3-left" style="min-height:44px" onclick="goStep(3)">← {% trans "Back" %}</button>
@@ -157,113 +79,98 @@
     </div>
   </div>
 
-  <!-- ─── Step 5: Recommended settings ────────────────────────────────── -->
   <div id="step-5" class="wizard-step w3-card w3-padding w3-margin-top" style="display:none">
-    <h2>⚙️ {% trans "Recommended Settings" %}</h2>
-    <p>{% trans "Based on your node capabilities, here are the recommended starting points:" %}</p>
-
-    <div class="w3-panel w3-pale-green w3-border w3-round w3-padding-small">
-      <strong>{% trans "Fee Strategy" %}</strong>
-      <ul class="w3-small" style="margin:4px 0 0 16px;padding:0">
-        {% if capabilities.can_auto_fee %}
-        <li>{% trans "Enable Autopilot fee management in" %} <a href="/actions/">{% trans "Automations" %}</a></li>
-        <li>{% trans "Review initial fee rates in" %} <a href="/fees/">{% trans "Fee Rates" %}</a></li>
-        {% else %}
-        <li>{% trans "Set fee rates manually in" %} <a href="/fees/">{% trans "Fee Rates" %}</a></li>
-        {% endif %}
-        {% if capabilities.can_inbound_fees %}
-        <li>{% trans "Configure inbound fees for advanced routing control" %}</li>
-        {% endif %}
-      </ul>
+    <h2>✅ {% trans "First Safe Optimization" %}</h2>
+    <p>{% trans "Apply your first safe optimization with dry-run enabled." %}</p>
+    <ol class="w3-small">
+      <li>{% trans "Open Automations and keep dry_run enabled." %}</li>
+      <li>{% trans "Run one recommendation dry-run and inspect impact + risk label." %}</li>
+      <li>{% trans "Only then enable live execution if results look safe." %}</li>
+    </ol>
+    <div class="w3-panel w3-pale-yellow w3-round">
+      <span class="w3-small">{% trans "You can re-open this wizard anytime from Setup Wizard." %}</span>
     </div>
-
-    {% if capabilities.can_rebalance %}
-    <div class="w3-panel w3-pale-blue w3-border w3-round w3-padding-small w3-margin-top">
-      <strong>{% trans "Auto-Rebalance" %}</strong>
-      <ul class="w3-small" style="margin:4px 0 0 16px;padding:0">
-        <li>{% trans "Configure rebalancing rules in" %} <a href="/rebalancing/">{% trans "Rebalancing" %}</a></li>
-        <li>{% trans "Auto-rebalance is disabled by default (dry_run mode). Enable only when ready." %}</li>
-      </ul>
-    </div>
-    {% endif %}
-
-    <div class="w3-panel w3-pale-yellow w3-border w3-round w3-padding-small w3-margin-top">
-      <strong>{% trans "Advanced Settings" %}</strong>
-      <p class="w3-small" style="margin:4px 0">
-        {% trans "All node parameters are accessible in" %} <a href="/advanced/">{% trans "Advanced" %}</a>.
-        {% trans "You can also review connection and credential settings there." %}
-      </p>
-    </div>
-
     <div class="w3-bar w3-margin-top">
       <button class="w3-button w3-light-grey w3-left" style="min-height:44px" onclick="goStep(4)">← {% trans "Back" %}</button>
       <a href="/" class="w3-button w3-green w3-right" style="min-height:44px;display:inline-flex;align-items:center">{% trans "Finish" %} ✓</a>
     </div>
   </div>
 
+  {% if onboarding_completed %}
+  <div class="w3-panel w3-pale-green w3-small w3-margin-top">
+    {% trans "Onboarding already completed." %}
+    <button class="w3-button w3-small w3-border w3-round" onclick="restartWizard()">{% trans "Restart wizard" %}</button>
+  </div>
+  {% endif %}
 </div>
 
 <script>
-var currentStep = 1;
+let currentStep = {{ onboarding_step|default:1 }};
+for (let i = 1; i <= 5; i++) {
+  const stepEl = document.getElementById(`step-${i}`);
+  const dotEl = document.getElementById(`dot-${i}`);
+  if (i === currentStep) {
+    stepEl.style.display = 'block';
+    dotEl.className = 'w3-badge w3-theme';
+  } else {
+    stepEl.style.display = 'none';
+    dotEl.className = 'w3-badge w3-light-grey';
+  }
+}
 
-function goStep(n) {
-  document.getElementById('step-' + currentStep).style.display = 'none';
-  document.getElementById('dot-' + currentStep).className = 'w3-badge w3-light-grey';
-  currentStep = n;
-  document.getElementById('step-' + n).style.display = 'block';
-  document.getElementById('dot-' + n).className = 'w3-badge w3-theme';
+async function persistOnboarding(step, completed) {
+  try {
+    const token = document.getElementById('api').dataset.token;
+    await fetch('/api/v2/user/settings/', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+      body: JSON.stringify({onboarding_step: step, onboarding_completed: completed}),
+    });
+  } catch (e) {}
+}
+
+function goStep(next) {
+  document.getElementById(`step-${currentStep}`).style.display = 'none';
+  document.getElementById(`dot-${currentStep}`).className = 'w3-badge w3-light-grey';
+  currentStep = next;
+  document.getElementById(`step-${currentStep}`).style.display = 'block';
+  document.getElementById(`dot-${currentStep}`).className = 'w3-badge w3-theme';
+  persistOnboarding(Math.max(0, currentStep - 1), false);
   window.scrollTo(0, 0);
 }
 
-function loadNodeInfo() {
-  fetch('/api/node_info/')
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var pub = d.identity_pubkey || d.pubkey || d.node_id || '—';
-      var alias = d.alias || '—';
-      var ver = d.version || '—';
-      document.getElementById('ni-pubkey').textContent = pub;
-      document.getElementById('ni-alias').textContent = alias;
-      document.getElementById('ni-version').textContent = ver;
-    })
-    .catch(function() {
-      fetch('/api/getinfo/')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          document.getElementById('ni-pubkey').textContent = d.identity_pubkey || d.pubkey || '—';
-          document.getElementById('ni-alias').textContent = d.alias || '—';
-          document.getElementById('ni-version').textContent = d.version || '—';
-        })
-        .catch(function() {});
+async function setLanguage(language) {
+  try {
+    const token = document.getElementById('api').dataset.token;
+    await fetch('/api/v2/user/settings/', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+      body: JSON.stringify({language}),
     });
+  } catch (e) {}
 }
 
-function loadCockpit() {
-  var feeEl = document.getElementById('ch-fee-avg');
-  var localEl = document.getElementById('ch-local');
-  var remoteEl = document.getElementById('ch-remote');
-  var unitPpm = feeEl.dataset.unit;
-  var unitSats = localEl.dataset.unit;
-
-  fetch('/api/v2/cockpit/')
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.channels) {
-        var ch = d.channels;
-        if (ch.avg_fee_rate !== undefined) {
-          feeEl.textContent = ch.avg_fee_rate + ' ' + unitPpm;
-        }
-        if (ch.local_balance !== undefined) {
-          localEl.textContent = Number(ch.local_balance).toLocaleString() + ' ' + unitSats;
-        }
-        if (ch.remote_balance !== undefined) {
-          remoteEl.textContent = Number(ch.remote_balance).toLocaleString() + ' ' + unitSats;
-        }
-      }
-    })
-    .catch(function() {
-      document.getElementById('cockpit-error').style.display = 'block';
-    });
+async function loadCockpit() {
+  try {
+    const r = await fetch('/api/v2/cockpit/');
+    const d = await r.json();
+    document.getElementById('ch-out').textContent = (d.liquidity?.total_outbound_sat || 0).toLocaleString();
+    document.getElementById('ch-in').textContent = (d.liquidity?.total_inbound_sat || 0).toLocaleString();
+  } catch (e) {}
 }
+
+async function skipWizard() {
+  await persistOnboarding(5, true);
+  window.location.href = '/';
+}
+
+async function restartWizard() {
+  await persistOnboarding(0, false);
+  window.location.reload();
+}
+
+document.querySelector('a.w3-button.w3-green')?.addEventListener('click', function () {
+  persistOnboarding(5, true);
+});
 </script>
 {% endblock %}

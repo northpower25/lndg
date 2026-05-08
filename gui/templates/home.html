@@ -119,15 +119,21 @@
       byId('ct-actions-body').innerHTML = acts.map(a =>
         {
           const reasons = (a.rationale && a.rationale.reasons) ? a.rationale.reasons.slice(0, 3) : [];
+          const feeCtx = (a.rationale && a.rationale.onchain_fee_context) ? a.rationale.onchain_fee_context : null;
           const whyText = reasons.map(r => `#${r.rank}: ${r.value}`).join(' | ');
+          const feeBadge = feeCtx && ['open', 'close', 'splice_in', 'splice_out'].includes(a.type)
+            ? `<div class="w3-tiny">${feeCtx.fee_light || ''} {% trans "On-chain fee window" %}: ${(feeCtx.fee_label || '-')}</div>
+               <div class="w3-tiny w3-text-grey">{% trans "Wait-window hint" %}: ${(feeCtx.wait_window || '-')}</div>`
+            : '';
           const whyPanel = reasons.length
             ? `<details ${mode === 'guided' ? 'open' : ''} style="${mode === 'expert' ? 'display:none' : ''}">
                  <summary>{% trans "Why?" %}</summary>
                  <div class="w3-tiny w3-text-grey">
-                   ${whyText}<br/>
-                   {% trans "Source" %}: ${(a.rationale.data_source || 'internal')} ·
-                   {% trans "Confidence" %}: ${a.confidence} (${a.confidence_label})
-                 </div>
+                    ${whyText}<br/>
+                    {% trans "Source" %}: ${(a.rationale.data_source || 'internal')} ·
+                    {% trans "Confidence" %}: ${a.confidence} (${a.confidence_label})
+                    ${feeBadge}
+                  </div>
                </details>`
             : '';
           return (

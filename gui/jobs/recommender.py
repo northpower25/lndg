@@ -6,7 +6,8 @@ from datetime import timedelta
 from django.db.models import Count, Sum
 from django.utils import timezone
 
-from gui.models import Channels, FailedHTLCs, Forwards, Recommendation
+from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
+from gui.models import Channels, FailedHTLCs, Forwards, NotificationSettings, Recommendation
 
 
 @dataclass
@@ -77,6 +78,23 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
     cutoff_30d = now - timedelta(days=30)
     cutoff_24h = now - timedelta(hours=24)
     drafts: list[RecommendationDraft] = []
+    notify_cfg = NotificationSettings.load()
+    mempool_payload = get_mempool_recommended_fees(enabled=notify_cfg.mempool_enabled)
+    fee_signal = classify_fee_signal(mempool_payload)
+
+    def _onchain_context() -> dict:
+        if not mempool_payload or not fee_signal:
+            return {}
+        return {
+            "source": "mempool.space",
+            "fee_light": fee_signal.light,
+            "fee_label": fee_signal.label,
+            "wait_window": fee_signal.wait_window,
+            "fastest_fee": mempool_payload.get("fastestFee"),
+            "half_hour_fee": mempool_payload.get("halfHourFee"),
+            "hour_fee": mempool_payload.get("hourFee"),
+            "minimum_fee": mempool_payload.get("minimumFee"),
+        }
 
     open_channels = Channels.objects.filter(is_open=True, is_active=True)
     fwd_out_7d = (
@@ -257,6 +275,13 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
 
     created: list[Recommendation] = []
     for draft in sorted(drafts, key=lambda d: d.confidence, reverse=True)[:limit]:
+        if draft.rec_type in {
+            Recommendation.TYPE_OPEN,
+            Recommendation.TYPE_CLOSE,
+            Recommendation.TYPE_SPLICE_IN,
+            Recommendation.TYPE_SPLICE_OUT,
+        }:
+            draft.rationale["onchain_fee_context"] = _onchain_context()
         created.append(
             Recommendation.objects.create(
                 rec_type=draft.rec_type,

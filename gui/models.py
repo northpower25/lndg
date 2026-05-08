@@ -377,11 +377,16 @@ class NotificationSettings(models.Model):
     tg_enabled = models.BooleanField(default=False)
     tg_bot_token = models.CharField(max_length=100, blank=True, default='')
     tg_chat_id = models.CharField(max_length=50, blank=True, default='')
+    # External integrations (opt-in only; R-SEC-4)
+    mempool_enabled = models.BooleanField(default=False)
+    amboss_enabled = models.BooleanField(default=False)
+    amboss_api_key = models.CharField(max_length=255, blank=True, default='')
     # Event triggers
     notify_rebalance_success = models.BooleanField(default=True)
     notify_rebalance_fail = models.BooleanField(default=False)
     notify_channel_inactive = models.BooleanField(default=True)
     notify_autofee = models.BooleanField(default=False)
+    notify_mempool_low_fee = models.BooleanField(default=False)
 
     class Meta:
         app_label = 'gui'
