@@ -13,12 +13,18 @@ from .views import (
     cleaner_settings,
     cockpit_stats,
     health,
+    ml_autofee_history,
+    ml_autofee_suggestions,
+    ml_escalation_config,
+    ml_rebalance_train,
+    ml_status,
     policy_run,
     recommendation_dry_run,
     splice_in,
     splice_out,
     splice_preview,
     splice_status,
+    sse_live_events,
     user_settings,
 )
 
@@ -42,4 +48,12 @@ urlpatterns = [
     path("backup/create/", backup_create, name="api-v2-backup-create"),
     path("backup/restore/", backup_restore, name="api-v2-backup-restore"),
     path("backup/", backup_list, name="api-v2-backup-list"),
+    # Phase-6 ML endpoints
+    path("ml/status/", ml_status, name="api-v2-ml-status"),
+    path("ml/rebalance/train/", ml_rebalance_train, name="api-v2-ml-rebalance-train"),
+    path("ml/autofee/suggestions/", ml_autofee_suggestions, name="api-v2-ml-autofee-suggestions"),
+    path("ml/autofee/history/", ml_autofee_history, name="api-v2-ml-autofee-history"),
+    path("ml/escalation/config/", ml_escalation_config, name="api-v2-ml-escalation-config"),
+    # Phase-6-F SSE endpoint
+    path("events/", sse_live_events, name="api-v2-sse-events"),
 ]

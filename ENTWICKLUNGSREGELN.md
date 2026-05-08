@@ -433,7 +433,23 @@ Jeder neue schreibende API-Endpunkt (`POST`, `PUT`, `DELETE`) bekommt:
 
 ## Phase-Tracking Update (Stand: 2026-05-08)
 
-### ✅ Neu umgesetzt in Phase 5 (dieser Stand)
+### ✅ Neu umgesetzt in Phase 6 (dieser Stand)
+
+| Item | Details |
+|---|---|
+| **6-A: ML-Infrastruktur** | `gui/jobs/ml_trainer.py`: Feature-Engineering aus `ChannelSnapshot`/`RebalanceMLRecord`/`AutoFeeMLRecord`, scikit-learn RandomForestClassifier, Rolling-Window-Features (24h/7d), Modell-Persistenz als `.joblib` unter `models/`, tägliches Batch-Retraining (konfigurierbar, deaktivierbar via `ML-TrainingEnabled=false`) |
+| **6-A API** | `POST /api/v2/ml/rebalance/train` (manuelles Retraining), `GET /api/v2/ml/status` (Konfidenz, Datenmenge, letztes Training, data_gate_ok) |
+| **6-A deps** | `scikit-learn>=1.4,<2` und `joblib>=1.3,<2` in `requirements.in` und `requirements.txt` |
+| **6-B: ML Shadow Recommendations** | `generate_ml_shadow_recommendations()` in `recommender.py`: shadow_rebalance_predict-Integration, `confidence_label='ml_shadow'`, Mindestdatenprüfung R-AI-3 (≥30 Tage, ≥50 Events), nur aktiv wenn `ai_mode` in `shadow`/`policy_bound` |
+| **6-C: Auto-Fee ML Suggestions** | `get_autofee_suggestions()` und `get_autofee_history()` in `ml_trainer.py`; Eskalations-/Deeskalations-Faktoren, API `GET /api/v2/ml/autofee/suggestions`, `GET /api/v2/ml/autofee/history` |
+| **6-D: ML Vollautomation** | `UserMode.AI_MODE_POLICY_BOUND = 'policy_bound'` + Migration `0009_phase6_usermode_policy_bound.py`; `ai_policy_bound_confirm` Feld (default `True`); `execute_ml_action()` in `executor.py` mit Expert-Mode-Gate, Human-Confirmation-Layer, ChangeLog-Actor `ml:<model>:<version>` (R-AI-4) |
+| **6-E: Eskalations-Tuning API** | `GET/PUT /api/v2/ml/escalation/config/` – konfigurierbare Faktoren (`ML-EscalationCooldown`, `ML-EscalationMaxLevels`, `ML-EscalationFeeRateUp/Down`, `ML-TrainingEnabled`, `ML-TrainingIntervalHours`) via `LocalSettings` |
+| **6-F SSE** | `GET /api/v2/events/` SSE-Endpunkt in `gui/api/v2/views.py`: heartbeat (15s), `rebalance_status` (neue PolicyRun-Zeilen), `htlc_summary` (30s) |
+| **6-F PWA** | `gui/static/manifest.json` (Web App Manifest), `gui/static/service-worker.js` (cache-first für static, network-first für Navigation, network-only für API, offline-fallback); `<link rel="manifest">` + Service-Worker-Registrierung in `base.html` |
+| **Phase 4-E/4-F Re-Check** | ML-Shadow-Joblogik jetzt umgesetzt: `generate_ml_shadow_recommendations()` + periodischer Aufruf in `jobs.py` |
+| **Phase 4-G Re-Check** | Rebalance-Budget-Queue bleibt offen (hoher Rebalancer-Umbau, separates Paket) |
+
+### ✅ Neu umgesetzt in Phase 5 (vorheriger Stand)
 
 | Item | Details |
 |---|---|
@@ -446,20 +462,38 @@ Jeder neue schreibende API-Endpunkt (`POST`, `PUT`, `DELETE`) bekommt:
 | Missions & Glossar | Neues Learning-Center unter `/learning/` (`gui/views/learning.py`, `gui/templates/learning_center.html`) |
 | i18n DE+EN für neue UI-Texte | Erweiterung `locale/de/LC_MESSAGES/django.po` und `locale/en/LC_MESSAGES/django.po` |
 
-### 🔁 Re-Check offene Punkte aus Phase 1–4
+### 🔁 Re-Check offene Punkte aus Phase 1–5
 
-Nach erneuter Prüfung wurden die folgenden verbleibenden Punkte weiterhin als **offen** bewertet:
+Nach erneuter Prüfung in Phase 6:
 
 1. **Vollständige Migration aller Legacy-LND-Direct-Calls auf Adapter/Executor-Fluss**
    - **Warum offen:** Hohe Querschnittsänderung über viele Legacy-Views/Jobs mit signifikantem Regression-Risiko.
 2. **Komplette CLN-End-to-End-Abdeckung über alle Legacy-Ansichten**
    - **Warum offen:** Hängt direkt von Punkt 1 (Legacy-Migration) ab.
 3. **Vollständige Auto-Fee-Template-UI (Phase 4-B)**
-   - **Warum offen:** In dieser Iteration lag Fokus auf Phase-5-Integrationen; eigenes UI-Refactoring-Paket weiterhin nötig.
-4. **ML-Shadow-Joblogik (Phase 4-E/4-F) und Rebalance-Budget-Queue (4-G)**
-   - **Warum offen:** Benötigt zusätzliche Feature-Engineering-/Scheduler- und Rebalancer-Integration mit höherem Umfang.
-5. **Audit-Timeline + Rollback-Endpunkte (4-H)**
+   - **Warum offen:** Eigenes UI-Refactoring-Paket weiterhin nötig; Eskalations-Tuning-API ist jetzt umgesetzt.
+4. **Rebalance-Budget-Queue + dynamische Zielquoten (Phase 4-G)**
+   - **Warum offen:** Erfordert tiefe Integration mit Legacy-Rebalancer-Flows; separates Entwicklungspaket.
+5. **Audit-Timeline + Rollback-Endpunkte (Phase 4-H)**
    - **Warum offen:** Erfordert gesonderte API/UI-Arbeit inklusive sicherer Backup-Orchestrierung vor Rollback.
+6. **ML-Shadow-Joblogik (Phase 4-E/4-F)** ✅ **In Phase 6 umgesetzt** – `generate_ml_shadow_recommendations()` + periodische Ausführung in `jobs.py`.
+
+### ❌ Weiterhin offen in Phase 6
+
+1. **6-B UI-Toggle pro Kanal für ML-Nutzung**
+   - **Warum offen:** Benötigt eigenen Channel-Detail-UI-Durchlauf; Backend-Logik (shadow-mode-Flag pro Channel) noch nicht im Datenmodell.
+2. **6-C Dynamische Zielanpassung aus Netzwerk-Umfeld**
+   - **Warum offen:** Erfordert externe Netzwerkdaten (z.B. Gossip-basierte Peer-Analyse); zu komplex für einen einzelnen Phase-6-Sprint.
+3. **6-D UI-Bestätigungsdialog für policy_bound-Aktionen**
+   - **Warum offen:** Backend-Gate (`ai_policy_bound_confirm`) ist implementiert; Frontend-Bestätigungsdialog fehlt noch.
+4. **6-E Eskalationsstufe im Channel-Detail anzeigen**
+   - **Warum offen:** API-Endpunkt vorhanden; UI-Einbettung in Channel-Detailseite fehlt.
+5. **6-F SPA-Phase-2-Rollout (Startseite → SPA)**
+   - **Warum offen:** Die bestehende Django-Template-Architektur ist noch primär; vollständige SPA-Migration (React/HTMX) erfordert separates Frontend-Refactoring-Paket mit hohem Umfang.
+6. **Pinned `requirements.txt` via `pip-compile`**
+   - **Warum offen:** `requirements.in` hat Versionsgrenzen (inkl. scikit-learn, joblib); `pip-compile` muss in der Ziel-Python-Umgebung ausgeführt werden.
+7. **Vollständige i18n-Abdeckung der Legacy-Templates**
+   - **Warum offen:** Neue Phase-6-Texte haben keine eigenständigen `.po`-Einträge (API-only, kein neues Template-HTML); Legacy-Template-i18n bleibt technische Schuld.
 
 ### ❌ Weiterhin offen in Phase 5
 

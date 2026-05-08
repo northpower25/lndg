@@ -10,3 +10,5 @@ asyncio
 bech32
 cryptography
 paramiko
+scikit-learn>=1.4,<2
+joblib>=1.3,<2

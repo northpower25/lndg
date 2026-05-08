@@ -35,6 +35,7 @@ _CLEANER_DEFAULT_ITERS = 4320  # ≈ 24 h
 _RECOMMENDER_DEFAULT_ITERS = 180  # ≈ 60 min
 _POLICY_EXECUTOR_DEFAULT_ITERS = 180  # ≈ 60 min
 _MEMPOOL_NOTIFY_DEFAULT_ITERS = 180  # ≈ 60 min
+_ML_TRAINER_DEFAULT_ITERS = 4320  # ≈ 24 h (daily batch retraining)
 _last_mempool_light = None
 
 
@@ -984,6 +985,14 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
             print(f"{datetime.now().strftime('%c')} : [Recommender] : Prepared {len(recs)} recommendations.")
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [Recommender] : Error generating recommendations: {exc}")
+        # Phase-6B: ML shadow recommendations (only when ai_mode=shadow/policy_bound)
+        try:
+            from gui.jobs.recommender import generate_ml_shadow_recommendations
+            shadow_recs = generate_ml_shadow_recommendations(limit=3)
+            if shadow_recs:
+                print(f"{datetime.now().strftime('%c')} : [ML-Shadow] : Generated {len(shadow_recs)} ML shadow recommendations.")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [ML-Shadow] : Error generating ML shadow recommendations: {exc}")
 
     # Policy executor (every ~60 min by default)
     if loop_counter % policy_iters == 0:
@@ -999,6 +1008,26 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
             _run_mempool_fee_notification()
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [Notify] : Error in mempool fee notifier: {exc}")
+
+    # Phase-6 ML batch retraining (daily, configurable, can be disabled via ML-TrainingEnabled=false)
+    ml_trainer_iters = _get_interval_setting("ML-TrainingInterval", _ML_TRAINER_DEFAULT_ITERS)
+    if loop_counter % ml_trainer_iters == 0:
+        try:
+            from gui.models import LocalSettings as _LS
+            ml_enabled_row = _LS.objects.filter(key="ML-TrainingEnabled").first()
+            ml_enabled = (ml_enabled_row.value.lower() not in ("false", "0", "no")) if ml_enabled_row else True
+            if ml_enabled:
+                from gui.jobs.ml_trainer import train_rebalance_model
+                result = train_rebalance_model()
+                if result.get("ok"):
+                    print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Rebalance model trained. "
+                          f"AUC={result.get('cv_auc')}, samples={result.get('event_count')}")
+                else:
+                    print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Training skipped: {result.get('reason')}")
+            else:
+                print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Training disabled via ML-TrainingEnabled setting.")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Error during ML training: {exc}")
 
 
 async def _run_all_cleaners() -> dict:
