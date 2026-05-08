@@ -413,10 +413,12 @@ class UserMode(models.Model):
     AI_MODE_OFF = 'off'
     AI_MODE_ADVISORY = 'advisory'
     AI_MODE_SHADOW = 'shadow'
+    AI_MODE_POLICY_BOUND = 'policy_bound'
     AI_MODE_CHOICES = [
         (AI_MODE_OFF, 'Off'),
         (AI_MODE_ADVISORY, 'Advisory'),
         (AI_MODE_SHADOW, 'Shadow'),
+        (AI_MODE_POLICY_BOUND, 'Policy-Bound (Expert)'),
     ]
 
     mode = models.CharField(max_length=16, choices=MODE_CHOICES, default=MODE_ADVANCED)
@@ -427,6 +429,8 @@ class UserMode(models.Model):
 
     # AI feature flags – all default off (R-AI-2)
     ai_mode = models.CharField(max_length=16, choices=AI_MODE_CHOICES, default=AI_MODE_OFF)
+    # policy_bound: Human confirmation required before each ML-triggered action (6-D)
+    ai_policy_bound_confirm = models.BooleanField(default=True)
     ai_explain_always = models.BooleanField(default=False)
     ai_min_data_days = models.IntegerField(default=30)
     ai_max_auto_actions_day = models.IntegerField(default=0)

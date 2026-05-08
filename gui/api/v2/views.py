@@ -1,9 +1,12 @@
 import datetime
 import dataclasses
 import json
+import time as _time
+from datetime import timedelta
 from statistics import median as _median
 
 from django.db.models import Count, Sum
+from django.http import StreamingHttpResponse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -16,6 +19,21 @@ from gui.jobs.external_integrations import classify_fee_signal, get_mempool_reco
 
 # msats per sat – used when converting amt_out_msat → sat
 _MSAT_PER_SAT = 1000
+_SSE_MAX_CONNECTION_SECONDS = 3600  # 1 hour max SSE connection duration
+
+
+def _safe_int_param(value: str | None, default: int, min_val: int = 1, max_val: int = 1000) -> int:
+    """Parse a query parameter as int, clamped to [min_val, max_val].
+
+    Clamping applies only to successfully parsed values. The ``default`` is
+    returned as-is when ``value`` is None or non-numeric.
+    """
+    if value is None:
+        return default
+    try:
+        return max(min_val, min(max_val, int(value)))
+    except (TypeError, ValueError):
+        return default
 
 
 @api_view(["GET"])
@@ -48,6 +66,7 @@ def user_settings(request):
         "ai_max_auto_actions_day",
         "ai_cooldown_minutes",
         "ai_shadow_log_enabled",
+        "ai_policy_bound_confirm",
     ]
 
     if request.method == "GET":
@@ -630,7 +649,7 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
     if recommendation is None:
         return Response({"error": _("Recommendation not found.")}, status=404)
     now = timezone.now().isoformat()
-    recommendation.dry_run_result = {
+    dry_run_result = {
         "simulate": True,
         "executed_at": now,
         "estimate": {
@@ -639,8 +658,9 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
             "confidence": recommendation.confidence,
         },
     }
+    recommendation.dry_run_result = dry_run_result
     recommendation.save(update_fields=["dry_run_result"])
-    return Response({"status": "ok", "recommendation_id": recommendation.id, "dry_run_result": recommendation.dry_run_result})
+    return Response({"status": "ok", "recommendation_id": recommendation.id, "dry_run_result": dry_run_result})
 
 
 @api_view(["POST"])
@@ -1096,3 +1116,181 @@ def backup_restore(request) -> Response:
             "tables_affected": applied,
         }
     )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Phase-6 – ML API endpoints
+# ────────────────────────────────────────────────────────────────────────────
+
+class _MLThrottle(UserRateThrottle):
+    rate = "10/minute"
+
+
+class _MLReadThrottle(UserRateThrottle):
+    rate = "60/minute"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
+def ml_status(request):
+    """GET /api/v2/ml/status – current ML infrastructure status."""
+    from gui.jobs.ml_trainer import get_ml_status
+
+    return Response(get_ml_status())
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLThrottle])
+def ml_rebalance_train(request):
+    """POST /api/v2/ml/rebalance/train – trigger (re-)training of the rebalance model.
+
+    Body (optional JSON): { "force": true }
+    """
+    from gui.jobs.ml_trainer import train_rebalance_model
+
+    force = bool(request.data.get("force", False))
+    result = train_rebalance_model(force=force)
+    status_code = 200 if result.get("ok") else 400
+    return Response(result, status=status_code)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
+def ml_autofee_suggestions(request):
+    """GET /api/v2/ml/autofee/suggestions – ML-driven fee adjustment suggestions."""
+    from gui.jobs.ml_trainer import get_autofee_suggestions
+
+    limit = _safe_int_param(request.query_params.get("limit"), 10, 1, 50)
+    return Response({"suggestions": get_autofee_suggestions(limit=limit)})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
+def ml_autofee_history(request):
+    """GET /api/v2/ml/autofee/history – recent AutoFeeMLRecord history."""
+    from gui.jobs.ml_trainer import get_autofee_history
+
+    chan_id = request.query_params.get("chan_id")
+    limit = _safe_int_param(request.query_params.get("limit"), 50, 1, 200)
+    return Response({"history": get_autofee_history(chan_id=chan_id, limit=limit)})
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def ml_escalation_config(request):
+    """GET/PUT /api/v2/ml/escalation/config – escalation tuning parameters (6-E)."""
+    from gui.models import LocalSettings
+
+    _keys = [
+        ("ML-EscalationCooldown", "60"),
+        ("ML-EscalationMaxLevels", "5"),
+        ("ML-EscalationFeeRateUp", "1.15"),
+        ("ML-EscalationFeeRateDown", "0.90"),
+        ("ML-TrainingEnabled", "true"),
+        ("ML-TrainingIntervalHours", "24"),
+    ]
+
+    if request.method == "GET":
+        config: dict = {}
+        for key, default in _keys:
+            row = LocalSettings.objects.filter(key=key).first()
+            config[key] = row.value if row else default
+        return Response(config)
+
+    # PUT – update provided keys
+    allowed = {k for k, _ in _keys}
+    updated: dict = {}
+    errors: dict = {}
+    for key, value in request.data.items():
+        if key not in allowed:
+            errors[key] = "Unknown escalation config key"
+            continue
+        LocalSettings.objects.update_or_create(key=key, defaults={"value": str(value)})
+        updated[key] = str(value)
+    if errors:
+        return Response({"errors": errors, "updated": updated}, status=400)
+    return Response({"status": "ok", "updated": updated})
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Phase-6-F – Server-Sent Events (SSE) for live updates
+# ────────────────────────────────────────────────────────────────────────────
+
+
+def _sse_event(event_type: str, data: dict) -> str:
+    """Format a SSE message frame."""
+    import json as _json
+
+    payload = _json.dumps(data)
+    return f"event: {event_type}\ndata: {payload}\n\n"
+
+
+def sse_live_events(request):
+    """GET /api/v2/events/ – SSE stream for rebalance / HTLC live updates.
+
+    Requires authentication via session (CSRF-exempt for EventSource).
+    Streams:
+      - heartbeat every 15 s
+      - rebalance_status when new PolicyRun rows appear
+      - htlc_summary every 30 s
+    """
+    if not request.user.is_authenticated:
+        from django.http import HttpResponse
+
+        return HttpResponse(status=401)
+
+    def _event_stream():
+        from gui.models import FailedHTLCs, PolicyRun
+
+        last_run_id = PolicyRun.objects.order_by("-id").values_list("id", flat=True).first() or 0
+        tick = 0
+        start_time = _time.monotonic()
+        try:
+            while True:
+                # Enforce maximum connection duration to avoid resource exhaustion
+                if _time.monotonic() - start_time > _SSE_MAX_CONNECTION_SECONDS:
+                    yield ": max_duration_reached\n\n"
+                    return
+
+                # Heartbeat every ~15 s
+                yield _sse_event("heartbeat", {"ts": _time.time(), "tick": tick})
+
+                # Check for new PolicyRun rows
+                new_runs = list(
+                    PolicyRun.objects.filter(id__gt=last_run_id)
+                    .order_by("id")
+                    .values("id", "was_dry_run", "outcome")[:5]
+                )
+                for run in new_runs:
+                    yield _sse_event(
+                        "rebalance_status",
+                        {
+                            "policy_run_id": run["id"],
+                            "was_dry_run": run["was_dry_run"],
+                            "outcome": run["outcome"],
+                        },
+                    )
+                    last_run_id = run["id"]
+
+                # HTLC summary every ~30 s (every 2nd tick)
+                if tick % 2 == 0:
+                    cutoff = timezone.now() - timedelta(hours=1)
+                    failed_1h = FailedHTLCs.objects.filter(timestamp__gte=cutoff).count()
+                    yield _sse_event("htlc_summary", {"failed_1h": failed_1h, "ts": _time.time()})
+
+                tick += 1
+                _time.sleep(15)
+        except GeneratorExit:
+            return
+
+    response = StreamingHttpResponse(
+        _event_stream(),
+        content_type="text/event-stream",
+    )
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response

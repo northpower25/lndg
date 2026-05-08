@@ -1,0 +1,31 @@
+{
+  "name": "LNDg – Lightning Node Management",
+  "short_name": "LNDg",
+  "description": "Lightning Network Node Management Dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Cockpit",
+      "url": "/",
+      "description": "Node dashboard overview"
+    },
+    {
+      "name": "Channels",
+      "url": "/channels",
+      "description": "Channel management"
+    }
+  ]
+}

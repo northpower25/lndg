@@ -310,3 +310,85 @@ def execute_splice_out(
 def execute_splice_status(splice_id: str) -> SpliceAction:
     backend = _get_write_backend()
     return backend.get_splice_status(splice_id=splice_id)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Phase-6D: ML-triggered action execution (policy_bound gate)
+# ────────────────────────────────────────────────────────────────────────────
+
+def execute_ml_action(
+    *,
+    policy_id: int,
+    model_name: str,
+    model_version: str,
+    ml_confidence: float,
+    pending_confirmation: bool = True,
+    trigger_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Execute a policy triggered by an ML recommendation (R-AI-4).
+
+    Guards:
+    - ai_mode must be 'policy_bound' (Expert-Mode only, R-AI-2)
+    - If ai_policy_bound_confirm=True (default), action is deferred for human
+      confirmation (pending_confirmation=True returns status='awaiting_confirmation')
+    - Hard caps and cooldown via execute_policy delegate
+    - ChangeLog actor = 'ml:<model_name>:<model_version>'
+
+    Returns a status dict.
+    """
+    from gui.models import ChangeLog, UserMode
+
+    user_mode = UserMode.load()
+    if user_mode.ai_mode != UserMode.AI_MODE_POLICY_BOUND:
+        return {
+            "ok": False,
+            "status": "blocked",
+            "reason": f"ai_mode is '{user_mode.ai_mode}'; policy_bound required for ML automation.",
+        }
+
+    # Enforce expert mode gate
+    if user_mode.mode != UserMode.MODE_EXPERT:
+        return {
+            "ok": False,
+            "status": "blocked",
+            "reason": "Policy-bound ML automation requires Expert mode.",
+        }
+
+    # Human confirmation gate (R-AI-2: Human-Confirmation-Layer)
+    if user_mode.ai_policy_bound_confirm and pending_confirmation:
+        return {
+            "ok": False,
+            "status": "awaiting_confirmation",
+            "reason": "Human confirmation required before ML-triggered execution.",
+            "model": model_name,
+            "model_version": model_version,
+            "ml_confidence": ml_confidence,
+            "policy_id": policy_id,
+        }
+
+    actor = f"ml:{model_name}:{model_version}"
+    tdata = dict(trigger_data or {})
+    tdata.update(
+        {
+            "ml_source": True,
+            "model": model_name,
+            "model_version": model_version,
+            "ml_confidence": ml_confidence,
+            "actor": actor,
+        }
+    )
+
+    result = execute_policy(
+        policy_id=policy_id,
+        simulate=False,
+        trigger_data=tdata,
+    )
+
+    # Update ChangeLog actor to ml:<model>:<version> (R-AI-4)
+    if result.get("ok") and result.get("policy_run_id"):
+        ChangeLog.objects.filter(
+            policy_run_ref=str(result["policy_run_id"])
+        ).update(actor=actor)
+
+    result["actor"] = actor
+    return result

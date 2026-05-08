@@ -93,6 +93,12 @@
     {% block meta %}{% endblock %}
     <title>{% block title %}LNDg{% endblock %}</title>
     <link href="{% static 'w3style.css' %}" rel="stylesheet" type="text/css">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="LNDg">
   </head>
   <body {% if request.COOKIES.darkmode == 'true' %}class="dark-mode"{% endif %}>
     <div id="content">
@@ -214,5 +220,15 @@
     }
     //END: BASE CONFIG
     //-------------------------------------------------------------------------------------------------------------------------
+  </script>
+  <script>
+    // Phase-6F: Register Service Worker for PWA offline support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/static/service-worker.js')
+          .then(function(reg) { console.log('[SW] Registered:', reg.scope); })
+          .catch(function(err) { console.warn('[SW] Registration failed:', err); });
+      });
+    }
   </script>
 </html>

@@ -9,6 +9,11 @@ from django.utils import timezone
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
 from gui.models import Channels, FailedHTLCs, Forwards, NotificationSettings, Recommendation
 
+try:
+    from gui.jobs.ml_trainer import shadow_rebalance_predict as _shadow_rebalance_predict
+except ImportError:  # scikit-learn not installed
+    _shadow_rebalance_predict = None  # type: ignore[assignment]
+
 
 @dataclass
 class RecommendationDraft:
@@ -292,6 +297,90 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                 confidence=draft.confidence,
                 confidence_label=Recommendation.CONFIDENCE_HEURISTIC,
                 risk_level=draft.risk_level,
+                status=Recommendation.STATUS_PENDING,
+            )
+        )
+    return [_to_next_action(item) for item in created]
+
+
+# ---------------------------------------------------------------------------
+# Phase-6B: ML Shadow Recommendations
+# ---------------------------------------------------------------------------
+
+# Channels with outbound liquidity below this threshold (%) are considered depleted
+_ML_SHADOW_DEPLETED_OUTBOUND_PCT = 30
+
+def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
+    """Generate ML shadow-mode recommendations alongside heuristic ones (R-AI-3).
+
+    Rules:
+    - Only runs when ai_mode in ('shadow', 'policy_bound')
+    - Minimum data gate: ≥ 30 days + ≥ 50 events (R-AI-3)
+    - Uses shadow_rebalance_predict from ml_trainer
+    - Results are stored with confidence_label='ml_shadow'
+    """
+    from gui.models import RebalanceMLRecord, UserMode
+
+    user_mode = UserMode.load()
+    if user_mode.ai_mode not in (UserMode.AI_MODE_SHADOW, UserMode.AI_MODE_POLICY_BOUND):
+        return []
+
+    # Data gate check (R-AI-3)
+    cutoff_30d = timezone.now() - timedelta(days=30)
+    event_count = RebalanceMLRecord.objects.filter(timestamp__gte=cutoff_30d).count()
+    if event_count < 50:
+        return []  # Not enough data yet
+
+    if _shadow_rebalance_predict is None:
+        return []
+
+    open_channels = list(
+        Channels.objects.filter(
+            is_open=True, is_active=True
+        )[:limit * 2]
+    )
+
+    created: list[Recommendation] = []
+    for ch in open_channels:
+        if len(created) >= limit:
+            break
+        capacity = ch.capacity or 1
+        outbound_pct = int((ch.local_balance * 100) / capacity)
+        if outbound_pct > _ML_SHADOW_DEPLETED_OUTBOUND_PCT:
+            continue  # Only suggest for depleted channels
+
+        prediction = _shadow_rebalance_predict(
+            source_chan_id="",
+            target_chan_id=ch.chan_id,
+            amount_sat=int(capacity * 0.2),
+            fee_ppm=int(ch.local_fee_rate or 50),
+        )
+        prob = prediction.get("predicted_success_prob", 0.5)
+        if prob < 0.55:
+            continue  # Below confidence threshold
+
+        model_version = prediction.get("model_version", "unknown")
+        rationale = _build_rationale(
+            title=f"ML Rebalance: {ch.alias or ch.chan_id[:8]}",
+            reasons=[
+                {"rank": 1, "signal": "ml_prediction", "value": f"ML success prob: {prob:.0%}", "weight": 0.6},
+                {"rank": 2, "signal": "balance_ratio", "value": f"{outbound_pct}% outbound", "weight": 0.3},
+                {"rank": 3, "signal": "model_version", "value": f"Model: {model_version}", "weight": 0.1},
+            ],
+            data_window_days=30,
+            confidence=prob,
+            confidence_label=Recommendation.CONFIDENCE_ML_SHADOW,
+        )
+
+        created.append(
+            Recommendation.objects.create(
+                rec_type=Recommendation.TYPE_REBALANCE,
+                target_chan_id=ch.chan_id,
+                target_pubkey=ch.remote_pubkey,
+                rationale=rationale,
+                confidence=prob,
+                confidence_label=Recommendation.CONFIDENCE_ML_SHADOW,
+                risk_level=Recommendation.RISK_LOW,
                 status=Recommendation.STATUS_PENDING,
             )
         )
