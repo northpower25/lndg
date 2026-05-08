@@ -465,6 +465,7 @@ def channel(request):
         db_channel = Channels.objects.filter(chan_id=chan_id).first()
         ml_last_record = AutoFeeMLRecord.objects.filter(chan_id=chan_id).order_by('-timestamp').first()
         ml_state = {
+            'can_toggle': db_channel is not None,
             'rebalance_enabled': bool(db_channel.ml_rebalance_enabled) if db_channel else True,
             'autofee_enabled': bool(db_channel.ml_autofee_enabled) if db_channel else True,
             'escalation_level': ml_last_record.escalation_level if ml_last_record else None,

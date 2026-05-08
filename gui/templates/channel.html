@@ -142,6 +142,7 @@
   <details class="w3-small w3-text-grey" style="margin-bottom:8px">
     <summary>{% trans "Why?" %}</summary>
     {% trans "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee." %}
+    {% trans "Shadow means recommendations are generated and logged, but not auto-executed." %}
     {% trans "Data source: local ML history (AutoFeeMLRecord) and channel snapshots." %}
     {% trans "The escalation level and confidence show the most recent ML shadow state for this channel." %}
   </details>
@@ -157,7 +158,11 @@
       <td>
         <form action="/update_channel/" method="post">
           {% csrf_token %}
-          <input type="submit" value="{% if ml_state.rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input
+            type="submit"
+            aria-label="{% trans 'Toggle ML Rebalancing' %}"
+            {% if not ml_state.can_toggle %}disabled title="{% trans 'Channel record unavailable for toggle' %}"{% endif %}
+            value="{% if ml_state.rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
           <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
           <input type="hidden" name="update_target" value="14">
           <input type="hidden" name="target" value="0">
@@ -166,7 +171,11 @@
       <td>
         <form action="/update_channel/" method="post">
           {% csrf_token %}
-          <input type="submit" value="{% if ml_state.autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input
+            type="submit"
+            aria-label="{% trans 'Toggle ML Auto-Fee' %}"
+            {% if not ml_state.can_toggle %}disabled title="{% trans 'Channel record unavailable for toggle' %}"{% endif %}
+            value="{% if ml_state.autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
           <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
           <input type="hidden" name="update_target" value="15">
           <input type="hidden" name="target" value="0">
