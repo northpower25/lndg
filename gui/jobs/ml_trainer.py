@@ -189,8 +189,8 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
     if len(features_raw) < _MIN_EVENTS and not force:
         return {"ok": False, "reason": f"Insufficient training samples: {len(features_raw)}", "event_count": len(features_raw)}
 
-    # Build numpy arrays from dicts
-    import numpy as np  # pandas already in requirements; numpy is a transitive dep
+    # Build numpy arrays from dicts (numpy is a transitive dependency of scikit-learn)
+    import numpy as np
 
     feature_keys = ["hour_of_day", "day_of_week", "fee_ppm", "amount_sat_log", "rev_delta_24h", "rev_delta_7d"]
     X = np.array([[r[k] for k in feature_keys] for r in features_raw], dtype=float)
@@ -204,9 +204,10 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
     )
 
     cv_score: float | None = None
-    if len(X) >= 10:
+    if len(X) >= 6:
         try:
-            scores = cross_val_score(pipeline, X, y, cv=min(3, len(X)), scoring="roc_auc")
+            n_splits = max(2, min(3, len(X) // 2))
+            scores = cross_val_score(pipeline, X, y, cv=n_splits, scoring="roc_auc")
             cv_score = float(scores.mean())
         except Exception as exc:  # pragma: no cover
             logger.warning("CV scoring failed: %s", exc)

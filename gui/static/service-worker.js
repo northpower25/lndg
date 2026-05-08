@@ -24,10 +24,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(STATIC_ASSETS.filter(function(url) {
-        // Only cache URLs that exist; ignore failures gracefully
-        return true;
-      })).catch(function(err) {
+      return cache.addAll(STATIC_ASSETS).catch(function(err) {
         console.warn('[SW] Pre-cache partial failure:', err);
       });
     })

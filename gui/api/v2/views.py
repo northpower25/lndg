@@ -19,6 +19,15 @@ from gui.jobs.external_integrations import classify_fee_signal, get_mempool_reco
 
 # msats per sat – used when converting amt_out_msat → sat
 _MSAT_PER_SAT = 1000
+_SSE_MAX_CONNECTION_SECONDS = 3600  # 1 hour max SSE connection duration
+
+
+def _safe_int_param(value: str | None, default: int, min_val: int = 1, max_val: int = 1000) -> int:
+    """Parse a query parameter as int, clamped to [min_val, max_val]."""
+    try:
+        return max(min_val, min(max_val, int(value)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
 
 
 @api_view(["GET"])
@@ -1141,7 +1150,7 @@ def ml_autofee_suggestions(request):
     """GET /api/v2/ml/autofee/suggestions – ML-driven fee adjustment suggestions."""
     from gui.jobs.ml_trainer import get_autofee_suggestions
 
-    limit = min(50, int(request.query_params.get("limit", 10)))
+    limit = min(50, _safe_int_param(request.query_params.get("limit"), 10, 1, 50))
     return Response({"suggestions": get_autofee_suggestions(limit=limit)})
 
 
@@ -1152,7 +1161,7 @@ def ml_autofee_history(request):
     from gui.jobs.ml_trainer import get_autofee_history
 
     chan_id = request.query_params.get("chan_id")
-    limit = min(200, int(request.query_params.get("limit", 50)))
+    limit = min(200, _safe_int_param(request.query_params.get("limit"), 50, 1, 200))
     return Response({"history": get_autofee_history(chan_id=chan_id, limit=limit)})
 
 
@@ -1225,8 +1234,14 @@ def sse_live_events(request):
 
         last_run_id = PolicyRun.objects.order_by("-id").values_list("id", flat=True).first() or 0
         tick = 0
+        start_time = _time.monotonic()
         try:
             while True:
+                # Enforce maximum connection duration to avoid resource exhaustion
+                if _time.monotonic() - start_time > _SSE_MAX_CONNECTION_SECONDS:
+                    yield _sse_event("close", {"reason": "max_duration_reached"})
+                    return
+
                 # Heartbeat every ~15 s
                 yield _sse_event("heartbeat", {"ts": _time.time(), "tick": tick})
 
