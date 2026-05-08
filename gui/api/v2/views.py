@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from gui.jobs.executor import execute_policy
+from gui.jobs.executor import execute_ml_action, execute_policy
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
 
 # msats per sat – used when converting amt_out_msat → sat
@@ -1214,6 +1214,36 @@ def ml_escalation_config(request):
     if errors:
         return Response({"errors": errors, "updated": updated}, status=400)
     return Response({"status": "ok", "updated": updated})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLThrottle])
+def ml_execute_action(request):
+    """POST /api/v2/ml/actions/execute – policy_bound ML action with UI confirmation support."""
+    policy_id = _safe_int_param(str(request.data.get("policy_id")), 0, 0, 10_000_000)
+    model_name = str(request.data.get("model_name", "manual_ui")).strip() or "manual_ui"
+    model_version = str(request.data.get("model_version", "v1")).strip() or "v1"
+    try:
+        ml_confidence = float(request.data.get("ml_confidence", 0.0))
+    except (TypeError, ValueError):
+        ml_confidence = 0.0
+    confirm = bool(request.data.get("confirm", False))
+
+    result = execute_ml_action(
+        policy_id=policy_id,
+        model_name=model_name,
+        model_version=model_version,
+        ml_confidence=ml_confidence,
+        pending_confirmation=not confirm,
+        trigger_data={"source": "ui_policy_bound_dialog"},
+    )
+    status_code = 200
+    if result.get("status") == "awaiting_confirmation":
+        status_code = 202
+    elif not result.get("ok", False):
+        status_code = 400
+    return Response(result, status=status_code)
 
 
 # ────────────────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ from .views import (
     cockpit_stats,
     health,
     ml_autofee_history,
+    ml_execute_action,
     ml_autofee_suggestions,
     ml_escalation_config,
     ml_rebalance_train,
@@ -54,6 +55,7 @@ urlpatterns = [
     path("ml/autofee/suggestions/", ml_autofee_suggestions, name="api-v2-ml-autofee-suggestions"),
     path("ml/autofee/history/", ml_autofee_history, name="api-v2-ml-autofee-history"),
     path("ml/escalation/config/", ml_escalation_config, name="api-v2-ml-escalation-config"),
+    path("ml/actions/execute/", ml_execute_action, name="api-v2-ml-execute-action"),
     # Phase-6-F SSE endpoint
     path("events/", sse_live_events, name="api-v2-sse-events"),
 ]

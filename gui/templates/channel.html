@@ -186,6 +186,52 @@
       <td>{% if ml_state.last_ml_update %}{{ ml_state.last_ml_update|naturaltime }}{% else %}—{% endif %}</td>
     </tr>
   </table>
+  <div class="w3-small w3-text-grey" style="margin-bottom:12px">
+    <strong>{% trans "Policy-Bound Confirmation" %}</strong>
+    <span title="{% trans 'ML-triggered policy execution is blocked until you confirm in this dialog.' %}">❓</span>
+    <div style="margin-top:4px">
+      <input id="ml-policy-id" type="number" min="1" placeholder="{% trans 'Policy ID' %}" style="max-width:140px">
+      <button type="button" onclick="runMlPolicyBoundAction(false)">{% trans "Run ML Action" %}</button>
+      <span id="ml-policy-result" class="w3-tiny"></span>
+    </div>
+  </div>
+  <script>
+    async function runMlPolicyBoundAction(confirmAction) {
+      const policyId = parseInt(document.getElementById('ml-policy-id').value || '0', 10);
+      const resultEl = document.getElementById('ml-policy-result');
+      if (!policyId) {
+        resultEl.textContent = "{% trans 'Please provide a valid Policy ID.' %}";
+        return;
+      }
+      const tokenEl = document.getElementById('api');
+      const csrfToken = tokenEl ? tokenEl.dataset.token : '';
+      const payload = {
+        policy_id: policyId,
+        model_name: "ui_policy_bound",
+        model_version: "v1",
+        ml_confidence: 0.75,
+        confirm: !!confirmAction,
+      };
+      const resp = await fetch('/api/v2/ml/actions/execute/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.status === 'awaiting_confirmation' && !confirmAction) {
+        const ok = window.confirm("{% trans 'This action requires manual confirmation. Execute now?' %}");
+        if (ok) {
+          return runMlPolicyBoundAction(true);
+        }
+      }
+      resultEl.textContent = (data.status || 'error') + (data.reason ? (': ' + data.reason) : '');
+    }
+  </script>
   <h2>Channel Settings</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>
