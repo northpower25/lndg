@@ -83,6 +83,20 @@
                      value="{{ retention.splice_log|default:365 }}"></td>
           <td class="w3-text-grey">365</td>
         </tr>
+        <tr>
+          <td>{% trans "Rebalance ML Records" %}</td>
+          <td><input id="ret-rebalance-ml-records" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.rebalance_ml_records|default:180 }}"></td>
+          <td class="w3-text-grey">180</td>
+        </tr>
+        <tr>
+          <td>{% trans "Auto Fee ML Records" %}</td>
+          <td><input id="ret-autofee-ml-records" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.autofee_ml_records|default:180 }}"></td>
+          <td class="w3-text-grey">180</td>
+        </tr>
       </tbody>
     </table>
     <p class="w3-small w3-text-grey w3-margin-top">
@@ -174,6 +188,8 @@ async function saveRetentionSettings() {
     retention_recommendations:       parseInt(document.getElementById('ret-recommendations').value, 10),
     retention_policy_runs:           parseInt(document.getElementById('ret-policy-runs').value, 10),
     retention_splice_log:            parseInt(document.getElementById('ret-splice-log').value, 10),
+    retention_rebalance_ml_records:  parseInt(document.getElementById('ret-rebalance-ml-records').value, 10),
+    retention_autofee_ml_records:    parseInt(document.getElementById('ret-autofee-ml-records').value, 10),
   };
   statusDiv.style.display = 'block';
   statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Saving..." %}</p>';
@@ -232,6 +248,8 @@ async function runCleaner() {
             <tr><td>{% trans "Recommendations" %}</td><td>${r.recommendations ?? '—'}</td></tr>
             <tr><td>{% trans "Policy Runs" %}</td><td>${r.policy_runs ?? '—'}</td></tr>
             <tr><td>{% trans "Splice Log" %}</td><td>${r.splice_log ?? '—'}</td></tr>
+            <tr><td>{% trans "Rebalance ML Records" %}</td><td>${r.rebalance_ml_records ?? '—'}</td></tr>
+            <tr><td>{% trans "Auto Fee ML Records" %}</td><td>${r.autofee_ml_records ?? '—'}</td></tr>
           </table>
         </div>`;
       loadRowCounts();
@@ -266,6 +284,8 @@ async function loadRowCounts() {
       ['{% trans "Recommendations" %}',          data.recommendations ?? '—'],
       ['{% trans "Policy Runs" %}',              data.policy_runs ?? '—'],
       ['{% trans "Splice Log" %}',               data.splice_log ?? '—'],
+      ['{% trans "Rebalance ML Records" %}',     data.rebalance_ml_records ?? '—'],
+      ['{% trans "Auto Fee ML Records" %}',      data.autofee_ml_records ?? '—'],
     ];
     let html = '<table class="w3-table w3-bordered w3-small" style="max-width:400px"><thead><tr><th>{% trans "Table" %}</th><th>{% trans "Rows" %}</th></tr></thead><tbody>';
     rows.forEach((r) => { html += `<tr><td>${r[0]}</td><td>${Number(r[1]).toLocaleString()}</td></tr>`; });

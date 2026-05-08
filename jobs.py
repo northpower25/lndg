@@ -30,6 +30,7 @@ _SNAPSHOT_DEFAULT_ITERS = 45   # ≈ 15 min  (45 × 20 s)
 _AGGREGATOR_DEFAULT_ITERS = 180  # ≈ 60 min
 _CLEANER_DEFAULT_ITERS = 4320  # ≈ 24 h
 _RECOMMENDER_DEFAULT_ITERS = 180  # ≈ 60 min
+_POLICY_EXECUTOR_DEFAULT_ITERS = 180  # ≈ 60 min
 
 
 def _safe_notify(message: str) -> None:
@@ -923,6 +924,7 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     agg_iters = _get_interval_setting("AGGREGATOR-Interval", _AGGREGATOR_DEFAULT_ITERS)
     clean_iters = _get_interval_setting("CLEANER-Interval", _CLEANER_DEFAULT_ITERS)
     rec_iters = _get_interval_setting("RECOMMENDER-Interval", _RECOMMENDER_DEFAULT_ITERS)
+    policy_iters = _get_interval_setting("POLICY-Interval", _POLICY_EXECUTOR_DEFAULT_ITERS)
 
     # Channel snapshots (every ~15 min by default)
     if loop_counter % snap_iters == 0:
@@ -958,6 +960,16 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [Recommender] : Error generating recommendations: {exc}")
 
+    # Policy executor (every ~60 min by default)
+    if loop_counter % policy_iters == 0:
+        try:
+            from gui.jobs.executor import execute_due_policies
+
+            runs = execute_due_policies(limit=20)
+            print(f"{datetime.now().strftime('%c')} : [PolicyEngine] : Executed {len(runs)} due policies.")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [PolicyEngine] : Error executing policies: {exc}")
+
 
 async def _run_all_cleaners() -> dict:
     """Run all cleaner tasks and return a summary dict."""
@@ -968,8 +980,10 @@ async def _run_all_cleaners() -> dict:
         clean_backup_log,
         clean_failed_payments as clean_failed_payments_job,
         clean_policy_runs,
+        clean_rebalance_ml_records,
         clean_recommendations,
         clean_splice_log,
+        clean_autofee_ml_records,
     )
     snap_del = await clean_channel_snapshots()
     agg_del = await clean_forwarding_aggregates()
@@ -979,6 +993,8 @@ async def _run_all_cleaners() -> dict:
     rec_del = await clean_recommendations()
     run_del = await clean_policy_runs()
     spl_del = await clean_splice_log()
+    rml_del = await clean_rebalance_ml_records()
+    aml_del = await clean_autofee_ml_records()
     return {
         "channel_snapshots": snap_del,
         "forwarding_aggregates": agg_del,
@@ -988,6 +1004,8 @@ async def _run_all_cleaners() -> dict:
         "recommendations": rec_del,
         "policy_runs": run_del,
         "splice_log": spl_del,
+        "rebalance_ml_records": rml_del,
+        "autofee_ml_records": aml_del,
     }
 
 

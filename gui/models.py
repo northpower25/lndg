@@ -663,3 +663,41 @@ class SpliceLog(models.Model):
     class Meta:
         app_label = 'gui'
         indexes = [models.Index(fields=['channel_id', 'initiated_at'])]
+
+
+class RebalanceMLRecord(models.Model):
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    source_chan_id = models.CharField(max_length=20, db_index=True)
+    target_chan_id = models.CharField(max_length=20, db_index=True)
+    amount_sat = models.BigIntegerField()
+    fee_ppm = models.IntegerField(default=0)
+    hour_of_day = models.IntegerField(default=0)
+    day_of_week = models.IntegerField(default=0)
+    success = models.BooleanField(default=False)
+    routing_revenue_delta_24h = models.BigIntegerField(default=0)
+    routing_revenue_delta_7d = models.BigIntegerField(default=0)
+    ml_predicted_success_prob = models.FloatField(default=0.0)
+    ml_confidence = models.FloatField(default=0.0)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [
+            models.Index(fields=['source_chan_id', 'target_chan_id', 'timestamp']),
+        ]
+
+
+class AutoFeeMLRecord(models.Model):
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    chan_id = models.CharField(max_length=20, db_index=True)
+    param_name = models.CharField(max_length=32)
+    old_value = models.BigIntegerField(default=0)
+    new_value = models.BigIntegerField(default=0)
+    trigger_reason = models.CharField(max_length=128, blank=True, default='')
+    ml_confidence = models.FloatField(default=0.0)
+    routing_volume_delta_24h = models.BigIntegerField(default=0)
+    routing_revenue_delta_24h = models.BigIntegerField(default=0)
+    escalation_level = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['chan_id', 'timestamp'])]
