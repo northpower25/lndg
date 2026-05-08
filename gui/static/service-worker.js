@@ -54,12 +54,13 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // API calls: network-only (never cache live data)
+  // API calls: network-only (never cache live data).
+  // Early return without event.respondWith() delegates to default browser fetch behavior.
   if (url.pathname.startsWith('/api/')) {
     return;
   }
 
-  // SSE events stream: network-only
+  // SSE events stream: network-only, never cache streaming connections
   if (url.pathname.startsWith('/api/v2/events/')) {
     return;
   }

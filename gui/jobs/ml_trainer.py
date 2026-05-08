@@ -60,6 +60,7 @@ def _versioned_model_path(prefix: str) -> Path:
 _MIN_DATA_DAYS = 30
 _MIN_EVENTS = 50
 _MIN_FEE_RATE_PPM = 1  # Minimum allowed fee rate in ppm to avoid zero/negative suggestions
+_MIN_TRAINING_SAMPLES = 2  # scikit-learn requires at least 2 samples to fit a model
 
 
 def _check_min_data(qs_count: int, oldest_days: float) -> tuple[bool, str]:
@@ -191,8 +192,8 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
         return {"ok": False, "reason": f"Insufficient training samples: {len(features_raw)}", "event_count": len(features_raw)}
 
     # Require at least 2 samples to fit a model (even with force=True)
-    if len(features_raw) < 2:
-        return {"ok": False, "reason": f"Cannot train with fewer than 2 samples (got {len(features_raw)})", "event_count": len(features_raw)}
+    if len(features_raw) < _MIN_TRAINING_SAMPLES:
+        return {"ok": False, "reason": f"Cannot train with fewer than {_MIN_TRAINING_SAMPLES} samples (got {len(features_raw)})", "event_count": len(features_raw)}
 
     # Build numpy arrays from dicts (numpy is a transitive dependency of scikit-learn)
     import numpy as np
@@ -221,6 +222,8 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
 
     model_path = _versioned_model_path("rebalance")
     joblib.dump({"pipeline": pipeline, "feature_keys": feature_keys, "cv_auc": cv_score}, model_path)
+    # Restrict model file access (R-SEC-2: sensitive business logic)
+    model_path.chmod(0o600)
     # prune older versions (keep last 5)
     all_models = sorted(_models_dir().glob("rebalance_v*.joblib"), reverse=True)
     for old in all_models[5:]:

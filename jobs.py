@@ -20,6 +20,11 @@ import gui.jobs.auto_fees as af  # noqa: E402
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees  # noqa: E402
 from gui.jobs.executor import execute_due_policies  # noqa: E402
 
+try:
+    from gui.jobs.ml_trainer import train_rebalance_model as _train_rebalance_model  # noqa: E402
+except ImportError:
+    _train_rebalance_model = None  # type: ignore[assignment]
+
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
 
@@ -1025,13 +1030,15 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     if loop_counter % ml_trainer_iters == 0:
         try:
             if _parse_bool_setting("ML-TrainingEnabled", default=True):
-                from gui.jobs.ml_trainer import train_rebalance_model
-                result = train_rebalance_model()
-                if result.get("ok"):
-                    print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Rebalance model trained. "
-                          f"AUC={result.get('cv_auc')}, samples={result.get('event_count')}")
+                if _train_rebalance_model is not None:
+                    result = _train_rebalance_model()
+                    if result.get("ok"):
+                        print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Rebalance model trained. "
+                              f"AUC={result.get('cv_auc')}, samples={result.get('event_count')}")
+                    else:
+                        print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Training skipped: {result.get('reason')}")
                 else:
-                    print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Training skipped: {result.get('reason')}")
+                    print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : scikit-learn not installed, training skipped.")
             else:
                 print(f"{datetime.now().strftime('%c')} : [ML-Trainer] : Training disabled via ML-TrainingEnabled setting.")
         except Exception as exc:

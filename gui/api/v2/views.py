@@ -24,8 +24,10 @@ _SSE_MAX_CONNECTION_SECONDS = 3600  # 1 hour max SSE connection duration
 
 def _safe_int_param(value: str | None, default: int, min_val: int = 1, max_val: int = 1000) -> int:
     """Parse a query parameter as int, clamped to [min_val, max_val]."""
+    if value is None:
+        return default
     try:
-        return max(min_val, min(max_val, int(value)))  # type: ignore[arg-type]
+        return max(min_val, min(max_val, int(value)))
     except (TypeError, ValueError):
         return default
 
@@ -1120,8 +1122,13 @@ class _MLThrottle(UserRateThrottle):
     rate = "10/minute"
 
 
+class _MLReadThrottle(UserRateThrottle):
+    rate = "60/minute"
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
 def ml_status(request):
     """GET /api/v2/ml/status – current ML infrastructure status."""
     from gui.jobs.ml_trainer import get_ml_status
@@ -1147,6 +1154,7 @@ def ml_rebalance_train(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
 def ml_autofee_suggestions(request):
     """GET /api/v2/ml/autofee/suggestions – ML-driven fee adjustment suggestions."""
     from gui.jobs.ml_trainer import get_autofee_suggestions
@@ -1157,6 +1165,7 @@ def ml_autofee_suggestions(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([_MLReadThrottle])
 def ml_autofee_history(request):
     """GET /api/v2/ml/autofee/history – recent AutoFeeMLRecord history."""
     from gui.jobs.ml_trainer import get_autofee_history
