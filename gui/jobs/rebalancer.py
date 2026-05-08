@@ -16,7 +16,7 @@ from typing import List
 
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency, NotificationSettings  # noqa: E402
+from gui.models import Rebalancer, Channels, LocalSettings, Forwards, Autopilot, RebalanceBudget, ChannelEfficiency, NotificationSettings, ChangeLog  # noqa: E402
 
 
 def _notify_rebalance(rebalance):
@@ -97,6 +97,29 @@ def record_rebalance_spend(fees_paid_sats):
         budget.save()
     except Exception as e:
         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error recording budget spend: {str(e)}")
+
+
+@sync_to_async
+def save_change_log(
+    *,
+    change_type: str,
+    target_channel_id: str,
+    actor: str,
+    old_value: dict,
+    new_value: dict,
+    rationale: dict | None = None,
+):
+    try:
+        ChangeLog.objects.create(
+            change_type=change_type,
+            target_channel_id=target_channel_id,
+            actor=actor,
+            old_value=old_value,
+            new_value=new_value,
+            rationale=rationale or {},
+        )
+    except Exception as e:
+        print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error writing ChangeLog: {str(e)}")
 
 @sync_to_async
 def check_budget():
@@ -233,10 +256,24 @@ async def run_rebalancer(rebalance, worker):
                 rebalance.status = 400
                 print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error while sending payment: {str(e)}")
         finally:
+            old_status = rebalance.status
             rebalance.stop = datetime.now()
             await save_record(rebalance)
             print(f"{datetime.now().strftime('%c')} : [Rebalancer] : {worker} completed payment attempts for: {rebalance.payment_hash}")
             _notify_rebalance(rebalance)
+            await save_change_log(
+                change_type='rebalance_attempt',
+                target_channel_id='',
+                actor='manual' if rebalance.manual else 'policy:rebalancer',
+                old_value={"status": old_status},
+                new_value={
+                    "status": rebalance.status,
+                    "value_sat": rebalance.value,
+                    "fee_paid_sat": rebalance.fees_paid or 0,
+                    "target_alias": rebalance.target_alias,
+                },
+                rationale={"payment_hash": rebalance.payment_hash or "", "worker": worker},
+            )
             original_alias = rebalance.target_alias
             inc=1.21
             dec=2
@@ -464,12 +501,28 @@ def auto_enable():
                         peer_channel.auto_rebalance = True
                         peer_channel.save()
                         Autopilot(chan_id=peer_channel.chan_id, peer_alias=peer_channel.alias, setting='Enabled', old_value=0, new_value=1).save()
+                        await save_change_log(
+                            change_type='autopilot_toggle',
+                            target_channel_id=peer_channel.chan_id,
+                            actor='policy:autopilot',
+                            old_value={"auto_rebalance": False},
+                            new_value={"auto_rebalance": True},
+                            rationale={"o7d": oapD, "i7d": iapD},
+                        )
                         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Auto Pilot Enabled for {peer_channel.alias} {peer_channel.chan_id}: {oapD} {iapD}")
                     elif oapD < (iapD*1.10) and outbound_percent > 75 and peer_channel.auto_rebalance:
                         #print('Case 3: Disable AR - o7D < i7D AND Outbound Liq > 75%')
                         peer_channel.auto_rebalance = False
                         peer_channel.save()
                         Autopilot(chan_id=peer_channel.chan_id, peer_alias=peer_channel.alias, setting='Enabled', old_value=1, new_value=0).save()
+                        await save_change_log(
+                            change_type='autopilot_toggle',
+                            target_channel_id=peer_channel.chan_id,
+                            actor='policy:autopilot',
+                            old_value={"auto_rebalance": True},
+                            new_value={"auto_rebalance": False},
+                            rationale={"o7d": oapD, "i7d": iapD},
+                        )
                         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Auto Pilot Disabled for {peer_channel.alias} {peer_channel.chan_id}: {oapD} {iapD}" )
                     elif oapD < (iapD*1.10) and inbound_percent > 75:
                         #print('Case 4: Pass')

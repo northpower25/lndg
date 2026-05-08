@@ -29,6 +29,7 @@ EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent divisio
 _SNAPSHOT_DEFAULT_ITERS = 45   # ≈ 15 min  (45 × 20 s)
 _AGGREGATOR_DEFAULT_ITERS = 180  # ≈ 60 min
 _CLEANER_DEFAULT_ITERS = 4320  # ≈ 24 h
+_RECOMMENDER_DEFAULT_ITERS = 180  # ≈ 60 min
 
 
 def _safe_notify(message: str) -> None:
@@ -916,10 +917,12 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     from gui.backends.registry import get_active_backend
     from gui.jobs.collector import collect_channel_snapshots
     from gui.jobs.aggregator import aggregate_forwarding_windows
+    from gui.jobs.recommender import generate_recommendations
 
     snap_iters = _get_interval_setting("SNAPSHOT-Interval", _SNAPSHOT_DEFAULT_ITERS)
     agg_iters = _get_interval_setting("AGGREGATOR-Interval", _AGGREGATOR_DEFAULT_ITERS)
     clean_iters = _get_interval_setting("CLEANER-Interval", _CLEANER_DEFAULT_ITERS)
+    rec_iters = _get_interval_setting("RECOMMENDER-Interval", _RECOMMENDER_DEFAULT_ITERS)
 
     # Channel snapshots (every ~15 min by default)
     if loop_counter % snap_iters == 0:
@@ -947,6 +950,14 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [Cleaner] : Error during retention run: {exc}")
 
+    # Recommendation generation (every ~60 min by default)
+    if loop_counter % rec_iters == 0:
+        try:
+            recs = generate_recommendations(limit=3)
+            print(f"{datetime.now().strftime('%c')} : [Recommender] : Prepared {len(recs)} recommendations.")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [Recommender] : Error generating recommendations: {exc}")
+
 
 async def _run_all_cleaners() -> dict:
     """Run all cleaner tasks and return a summary dict."""
@@ -956,18 +967,27 @@ async def _run_all_cleaners() -> dict:
         clean_change_log,
         clean_backup_log,
         clean_failed_payments as clean_failed_payments_job,
+        clean_policy_runs,
+        clean_recommendations,
+        clean_splice_log,
     )
     snap_del = await clean_channel_snapshots()
     agg_del = await clean_forwarding_aggregates()
     log_del = await clean_change_log()
     bkp_del = await clean_backup_log()
     pay_del = await clean_failed_payments_job()
+    rec_del = await clean_recommendations()
+    run_del = await clean_policy_runs()
+    spl_del = await clean_splice_log()
     return {
         "channel_snapshots": snap_del,
         "forwarding_aggregates": agg_del,
         "change_log": log_del,
         "backup_log": bkp_del,
         "failed_payments": pay_del,
+        "recommendations": rec_del,
+        "policy_runs": run_del,
+        "splice_log": spl_del,
     }
 
 

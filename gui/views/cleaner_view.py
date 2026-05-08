@@ -9,6 +9,9 @@ from gui.jobs.cleaner import (
     DEFAULT_CHANGELOG_RETENTION_DAYS,
     DEFAULT_BACKUP_LOG_RETENTION_DAYS,
     DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
+    DEFAULT_POLICYRUN_RETENTION_DAYS,
+    DEFAULT_RECOMMENDATION_RETENTION_DAYS,
+    DEFAULT_SPLICE_LOG_RETENTION_DAYS,
 )
 
 
@@ -40,6 +43,15 @@ def cleaner_view(request):
         "backup_log": _int_setting("RETAIN-BackupLog", DEFAULT_BACKUP_LOG_RETENTION_DAYS),
         "failed_payments": _int_setting(
             "RETAIN-Payments", DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS
+        ),
+        "recommendations": _int_setting(
+            "RETAIN-Recommendations", DEFAULT_RECOMMENDATION_RETENTION_DAYS
+        ),
+        "policy_runs": _int_setting(
+            "RETAIN-PolicyRuns", DEFAULT_POLICYRUN_RETENTION_DAYS
+        ),
+        "splice_log": _int_setting(
+            "RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS
         ),
     }
 

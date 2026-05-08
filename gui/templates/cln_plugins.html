@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ block.super }} - {% trans "CLN Plugin Panel" %}{% endblock %}
+{% block content %}
+<div class="w3-container w3-padding">
+  <h3>{% trans "CLN Plugin Status" %}</h3>
+  <p class="w3-small w3-text-grey">{% trans "Expert mode overview for backend plugin capabilities." %}</p>
+
+  <div class="w3-card w3-padding w3-small" style="margin-bottom:10px">
+    <div>{% trans "supports_plugins" %}: <strong>{{ supports_plugins }}</strong></div>
+    <div>{% trans "can_splice" %}: <strong>{{ can_splice }}</strong></div>
+    <div>{% trans "can_rebalance" %}: <strong>{{ can_rebalance }}</strong></div>
+    <div>{% trans "can_stream_htlcs" %}: <strong>{{ can_stream_htlcs }}</strong></div>
+  </div>
+
+  {% if not supports_plugins %}
+    <div class="w3-panel w3-pale-yellow">{% trans "Current backend does not expose plugin metadata." %}</div>
+  {% elif not plugins %}
+    <div class="w3-panel w3-pale-yellow">{% trans "No plugin data received. Verify CLN listplugins access and rune permissions." %}</div>
+  {% else %}
+    <table class="w3-table-all w3-small">
+      <thead>
+        <tr>
+          <th>{% trans "Plugin" %}</th>
+          <th>{% trans "Active" %}</th>
+          <th>{% trans "Dynamic" %}</th>
+          <th>{% trans "Version" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plugin in plugins %}
+        <tr>
+          <td>{{ plugin.name }}</td>
+          <td>
+            {% if plugin.active %}
+              <span class="w3-tag w3-green">{% trans "active" %}</span>
+            {% else %}
+              <span class="w3-tag w3-red">{% trans "missing/inactive" %}</span>
+            {% endif %}
+          </td>
+          <td>{{ plugin.dynamic }}</td>
+          <td>{{ plugin.version|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

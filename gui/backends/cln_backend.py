@@ -231,8 +231,22 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     def splice_in(
         self, channel_id: str, amount_sat: int, fee_rate: int
     ) -> SpliceAction:
-        # Phase 3: guided splice workflow
-        raise NotImplementedError("CLN splice_in will be implemented in Phase 3.")
+        params = {
+            "channel_id": channel_id,
+            "amount": f"{amount_sat}sat",
+            "feerate_perkw": fee_rate,
+        }
+        try:
+            self._post("splice_init", params)
+            return SpliceAction(
+                channel_id=channel_id,
+                direction="in",
+                amount_sat=amount_sat,
+                requested_at=datetime.now(tz=dt_timezone.utc),
+            )
+        except Exception as exc:
+            logger.error("CLN splice_in for %s failed: %s", channel_id, exc)
+            raise RuntimeError(f"CLN splice_in failed: {exc}") from exc
 
     def splice_out(
         self,
@@ -241,7 +255,38 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
         destination: str,
         fee_rate: int,
     ) -> SpliceAction:
-        raise NotImplementedError("CLN splice_out will be implemented in Phase 3.")
+        params = {
+            "channel_id": channel_id,
+            "amount": f"-{amount_sat}sat",
+            "destination": destination,
+            "feerate_perkw": fee_rate,
+        }
+        try:
+            self._post("splice_init", params)
+            return SpliceAction(
+                channel_id=channel_id,
+                direction="out",
+                amount_sat=amount_sat,
+                requested_at=datetime.now(tz=dt_timezone.utc),
+            )
+        except Exception as exc:
+            logger.error("CLN splice_out for %s failed: %s", channel_id, exc)
+            raise RuntimeError(f"CLN splice_out failed: {exc}") from exc
 
     def get_splice_status(self, splice_id: str) -> SpliceAction:
-        raise NotImplementedError("CLN splice status will be implemented in Phase 3.")
+        try:
+            data = self._post("splice_status", {"id": splice_id})
+            status = data.get("status", "")
+            direction = "out" if data.get("direction") == "out" else "in"
+            amount_sat = int(data.get("amount_sat", 0))
+            if status == "out":
+                direction = "out"
+            return SpliceAction(
+                channel_id=str(data.get("channel_id", "")),
+                direction=direction,
+                amount_sat=amount_sat,
+                requested_at=datetime.now(tz=dt_timezone.utc),
+            )
+        except Exception as exc:
+            logger.error("CLN splice_status for %s failed: %s", splice_id, exc)
+            raise RuntimeError(f"CLN splice_status failed: {exc}") from exc
