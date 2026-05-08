@@ -464,7 +464,7 @@ Jeder neue schreibende API-Endpunkt (`POST`, `PUT`, `DELETE`) bekommt:
 
 ### 🔁 Re-Check offene Punkte aus Phase 1–5
 
-Nach erneuter Prüfung in Phase 6:
+Nach erneuter Prüfung in Phase 6 (offene Punkte, die weiterhin nicht umsetzbar sind):
 
 1. **Vollständige Migration aller Legacy-LND-Direct-Calls auf Adapter/Executor-Fluss**
    - **Warum offen:** Hohe Querschnittsänderung über viele Legacy-Views/Jobs mit signifikantem Regression-Risiko.
@@ -476,7 +476,8 @@ Nach erneuter Prüfung in Phase 6:
    - **Warum offen:** Erfordert tiefe Integration mit Legacy-Rebalancer-Flows; separates Entwicklungspaket.
 5. **Audit-Timeline + Rollback-Endpunkte (Phase 4-H)**
    - **Warum offen:** Erfordert gesonderte API/UI-Arbeit inklusive sicherer Backup-Orchestrierung vor Rollback.
-6. **ML-Shadow-Joblogik (Phase 4-E/4-F)** ✅ **In Phase 6 umgesetzt** – `generate_ml_shadow_recommendations()` + periodische Ausführung in `jobs.py`.
+
+> ✅ **Gelöst in Phase 6:** ML-Shadow-Joblogik (Phase 4-E/4-F) – `generate_ml_shadow_recommendations()` + periodische Ausführung in `jobs.py`.
 
 ### ❌ Weiterhin offen in Phase 6
 

@@ -44,25 +44,34 @@ class TestMLRebalanceTrainAPI(TestCase):
 
         User.objects.create_superuser("testuser2", "test2@test.com", "password")
 
-    def test_train_without_data_returns_400(self):
-        self.client.login(username="testuser2", password="password")
-        resp = self.client.post("/api/v2/ml/rebalance/train/", content_type="application/json", data="{}")
-        # Rate-limited (429) or insufficient data (400)
-        self.assertIn(resp.status_code, (400, 429))
-        if resp.status_code == 400:
-            data = resp.json()
-            self.assertFalse(data["ok"])
-            self.assertIn("reason", data)
+    def test_train_without_data_returns_insufficient_data(self):
+        """Without any RebalanceMLRecord rows, training must be rejected with data-gate error."""
+        from unittest.mock import patch
 
-    def test_train_force_with_empty_data(self):
         self.client.login(username="testuser2", password="password")
-        resp = self.client.post(
-            "/api/v2/ml/rebalance/train/",
-            content_type="application/json",
-            data='{"force": true}',
-        )
-        # force=True bypasses data gate but still needs ≥1 sample; rate-limited (429) or 200/400
-        self.assertIn(resp.status_code, (200, 400, 429))
+        # Bypass DRF throttle to get a deterministic result
+        with patch("rest_framework.throttling.UserRateThrottle.allow_request", return_value=True):
+            resp = self.client.post("/api/v2/ml/rebalance/train/", content_type="application/json", data="{}")
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data["ok"])
+        self.assertIn("reason", data)
+
+    def test_train_force_with_empty_data_returns_400(self):
+        """force=True bypasses data gate but still fails when there are no training samples."""
+        from unittest.mock import patch
+
+        self.client.login(username="testuser2", password="password")
+        with patch("rest_framework.throttling.UserRateThrottle.allow_request", return_value=True):
+            resp = self.client.post(
+                "/api/v2/ml/rebalance/train/",
+                content_type="application/json",
+                data='{"force": true}',
+            )
+        # force=True skips data gate but still requires at least 1 sample to fit
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data["ok"])
 
 
 class TestMLAutofeeSuggestionsAPI(TestCase):

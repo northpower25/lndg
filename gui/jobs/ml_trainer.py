@@ -59,7 +59,7 @@ def _versioned_model_path(prefix: str) -> Path:
 
 _MIN_DATA_DAYS = 30
 _MIN_EVENTS = 50
-_MIN_FEE_RATE_PPM = 1  # Minimum allowed fee rate in ppm (node operators may override via LocalSettings)
+_MIN_FEE_RATE_PPM = 1  # Minimum allowed fee rate in ppm to avoid zero/negative suggestions
 
 
 def _check_min_data(qs_count: int, oldest_days: float) -> tuple[bool, str]:
@@ -190,6 +190,10 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
     if len(features_raw) < _MIN_EVENTS and not force:
         return {"ok": False, "reason": f"Insufficient training samples: {len(features_raw)}", "event_count": len(features_raw)}
 
+    # Require at least 2 samples to fit a model (even with force=True)
+    if len(features_raw) < 2:
+        return {"ok": False, "reason": f"Cannot train with fewer than 2 samples (got {len(features_raw)})", "event_count": len(features_raw)}
+
     # Build numpy arrays from dicts (numpy is a transitive dependency of scikit-learn)
     import numpy as np
 
@@ -207,7 +211,7 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
     cv_score: float | None = None
     if len(X) >= 6:
         try:
-            n_splits = max(2, min(3, len(X) // 2))
+            n_splits = min(3, max(2, len(X) // 3))
             scores = cross_val_score(pipeline, X, y, cv=n_splits, scoring="roc_auc")
             cv_score = float(scores.mean())
         except Exception as exc:  # pragma: no cover

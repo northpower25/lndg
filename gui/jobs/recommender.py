@@ -9,6 +9,11 @@ from django.utils import timezone
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
 from gui.models import Channels, FailedHTLCs, Forwards, NotificationSettings, Recommendation
 
+try:
+    from gui.jobs.ml_trainer import shadow_rebalance_predict as _shadow_rebalance_predict
+except ImportError:  # scikit-learn not installed
+    _shadow_rebalance_predict = None  # type: ignore[assignment]
+
 
 @dataclass
 class RecommendationDraft:
@@ -323,9 +328,7 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
     if event_count < 50:
         return []  # Not enough data yet
 
-    try:
-        from gui.jobs.ml_trainer import shadow_rebalance_predict
-    except ImportError:
+    if _shadow_rebalance_predict is None:
         return []
 
     open_channels = list(
@@ -343,7 +346,7 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
         if outbound_pct > 30:
             continue  # Only suggest for depleted channels
 
-        prediction = shadow_rebalance_predict(
+        prediction = _shadow_rebalance_predict(
             source_chan_id="",
             target_chan_id=ch.chan_id,
             amount_sat=int(capacity * 0.2),

@@ -643,7 +643,7 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
     if recommendation is None:
         return Response({"error": _("Recommendation not found.")}, status=404)
     now = timezone.now().isoformat()
-    recommendation.dry_run_result = {
+    dry_run_result = {
         "simulate": True,
         "executed_at": now,
         "estimate": {
@@ -652,8 +652,9 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
             "confidence": recommendation.confidence,
         },
     }
+    recommendation.dry_run_result = dry_run_result
     recommendation.save(update_fields=["dry_run_result"])
-    return Response({"status": "ok", "recommendation_id": recommendation.id, "dry_run_result": recommendation.dry_run_result})
+    return Response({"status": "ok", "recommendation_id": recommendation.id, "dry_run_result": dry_run_result})
 
 
 @api_view(["POST"])
@@ -1150,7 +1151,7 @@ def ml_autofee_suggestions(request):
     """GET /api/v2/ml/autofee/suggestions – ML-driven fee adjustment suggestions."""
     from gui.jobs.ml_trainer import get_autofee_suggestions
 
-    limit = min(50, _safe_int_param(request.query_params.get("limit"), 10, 1, 50))
+    limit = _safe_int_param(request.query_params.get("limit"), 10, 1, 50)
     return Response({"suggestions": get_autofee_suggestions(limit=limit)})
 
 
@@ -1161,7 +1162,7 @@ def ml_autofee_history(request):
     from gui.jobs.ml_trainer import get_autofee_history
 
     chan_id = request.query_params.get("chan_id")
-    limit = min(200, _safe_int_param(request.query_params.get("limit"), 50, 1, 200))
+    limit = _safe_int_param(request.query_params.get("limit"), 50, 1, 200)
     return Response({"history": get_autofee_history(chan_id=chan_id, limit=limit)})
 
 
@@ -1239,7 +1240,7 @@ def sse_live_events(request):
             while True:
                 # Enforce maximum connection duration to avoid resource exhaustion
                 if _time.monotonic() - start_time > _SSE_MAX_CONNECTION_SECONDS:
-                    yield _sse_event("close", {"reason": "max_duration_reached"})
+                    yield ": max_duration_reached\n\n"
                     return
 
                 # Heartbeat every ~15 s
