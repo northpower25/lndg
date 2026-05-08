@@ -389,29 +389,83 @@ class _CleanerThrottle(UserRateThrottle):
 @permission_classes([IsAuthenticated])
 @throttle_classes([_CleanerThrottle])
 def cleaner_run(request) -> Response:
-    """Manually trigger the DB retention cleaner for the given table.
+    """Manually trigger the DB retention cleaner.
 
-    Request body (JSON)::
+    Two modes:
+
+    **Single-table mode** (backward-compatible)::
 
         {
-            "table": "channel_snapshots" | "forwarding_aggregates" | "change_log" | "failed_payments",
-            "retention_days": int  (optional, uses defaults when omitted)
+            "table": "channel_snapshots" | "forwarding_aggregates" | "change_log"
+                     | "backup_log" | "failed_payments",
+            "retention_days": int  (optional – uses per-table LocalSettings/defaults)
         }
 
-    Returns the number of rows deleted.
+    **All-tables mode** (used by the Maintenance UI)::
+
+        {"dry_run": true | false}
+
+    When ``dry_run`` is ``true`` (the safe default) the endpoint returns a
+    *count* of rows that *would* be deleted without actually removing them.
     """
     from asgiref.sync import async_to_sync
     from gui.jobs.cleaner import (
+        clean_backup_log,
         clean_channel_snapshots,
         clean_change_log,
         clean_failed_payments,
         clean_forwarding_aggregates,
+        DEFAULT_BACKUP_LOG_RETENTION_DAYS,
         DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS,
         DEFAULT_CHANGELOG_RETENTION_DAYS,
         DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
         DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
     )
 
+    # ── All-tables mode ─────────────────────────────────────────────────────
+    if "table" not in request.data:
+        dry_run: bool = bool(request.data.get("dry_run", True))
+
+        def _retention(ls_key: str, default: int) -> int:
+            from gui.models import LocalSettings
+            qs = LocalSettings.objects.filter(key=ls_key)
+            if qs.exists():
+                try:
+                    return int(qs.first().value)
+                except (ValueError, TypeError):
+                    pass
+            return default
+
+        snap_days = _retention("RETAIN-Snapshots", DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS)
+        agg_days = _retention("RETAIN-FwdAgg", DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS)
+        log_days = _retention("RETAIN-ChangeLog", DEFAULT_CHANGELOG_RETENTION_DAYS)
+        bkp_days = _retention("RETAIN-BackupLog", DEFAULT_BACKUP_LOG_RETENTION_DAYS)
+        pay_days = _retention("RETAIN-Payments", DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS)
+
+        if dry_run:
+            # Count rows that would be deleted (read-only)
+            from datetime import timedelta
+            from django.utils import timezone
+            from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate, Payments
+            now = timezone.now()
+            results = {
+                "channel_snapshots": ChannelSnapshot.objects.filter(timestamp__lt=now - timedelta(days=snap_days)).count(),
+                "forwarding_aggregates": ForwardingAggregate.objects.filter(window_start__lt=now - timedelta(days=agg_days)).count(),
+                "change_log": ChangeLog.objects.filter(timestamp__lt=now - timedelta(days=log_days)).count(),
+                "backup_log": BackupLog.objects.filter(created_at__lt=now - timedelta(days=bkp_days)).count(),
+                "failed_payments": Payments.objects.filter(status__in=[1, 3], creation_date__lt=now - timedelta(days=pay_days)).count(),
+            }
+        else:
+            results = {
+                "channel_snapshots": async_to_sync(clean_channel_snapshots)(retention_days=snap_days),
+                "forwarding_aggregates": async_to_sync(clean_forwarding_aggregates)(retention_days=agg_days),
+                "change_log": async_to_sync(clean_change_log)(retention_days=log_days),
+                "backup_log": async_to_sync(clean_backup_log)(retention_days=bkp_days),
+                "failed_payments": async_to_sync(clean_failed_payments)(retention_days=pay_days),
+            }
+        return Response({"dry_run": dry_run, "results": results})
+
+    # ── Single-table mode (backward-compatible) ─────────────────────────────
     table = request.data.get("table", "")
     retention_days = request.data.get("retention_days")
 
@@ -419,6 +473,7 @@ def cleaner_run(request) -> Response:
         "channel_snapshots": (clean_channel_snapshots, DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS),
         "forwarding_aggregates": (clean_forwarding_aggregates, DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS),
         "change_log": (clean_change_log, DEFAULT_CHANGELOG_RETENTION_DAYS),
+        "backup_log": (clean_backup_log, DEFAULT_BACKUP_LOG_RETENTION_DAYS),
         "failed_payments": (clean_failed_payments, DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS),
     }
     if table not in dispatch:
@@ -438,6 +493,75 @@ def cleaner_run(request) -> Response:
         days = default_days
     deleted = async_to_sync(fn)(retention_days=days)
     return Response({"table": table, "retention_days": days, "deleted": deleted})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_CleanerThrottle])
+def cleaner_settings(request) -> Response:
+    """Save retention-period overrides to LocalSettings.
+
+    Request body (JSON)::
+
+        {
+            "retention_channel_snapshots":    int,
+            "retention_forwarding_aggregates": int,
+            "retention_change_log":            int,
+            "retention_backup_log":            int,
+            "retention_failed_payments":       int
+        }
+
+    All fields are optional; only provided fields are updated.
+    """
+    from gui.models import LocalSettings
+    from gui.jobs.cleaner import (
+        DEFAULT_BACKUP_LOG_RETENTION_DAYS,
+        DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS,
+        DEFAULT_CHANGELOG_RETENTION_DAYS,
+        DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
+        DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
+    )
+
+    key_map = {
+        "retention_channel_snapshots": ("RETAIN-Snapshots", DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS),
+        "retention_forwarding_aggregates": ("RETAIN-FwdAgg", DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS),
+        "retention_change_log": ("RETAIN-ChangeLog", DEFAULT_CHANGELOG_RETENTION_DAYS),
+        "retention_backup_log": ("RETAIN-BackupLog", DEFAULT_BACKUP_LOG_RETENTION_DAYS),
+        "retention_failed_payments": ("RETAIN-Payments", DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS),
+    }
+    saved = {}
+    errors = {}
+    for field, (ls_key, _default) in key_map.items():
+        if field not in request.data:
+            continue
+        try:
+            v = int(request.data[field])
+            if v < 1 or v > 3650:
+                errors[field] = "Must be between 1 and 3650."
+                continue
+        except (TypeError, ValueError):
+            errors[field] = "Must be a positive integer."
+            continue
+        obj, _ = LocalSettings.objects.update_or_create(key=ls_key, defaults={"value": str(v)})
+        saved[field] = v
+    if errors:
+        return Response({"errors": errors, "saved": saved}, status=400)
+    return Response({"saved": saved})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def cleaner_counts(request) -> Response:
+    """Return approximate row counts for all managed time-series tables."""
+    from gui.models import BackupLog, ChannelSnapshot, ChangeLog, ForwardingAggregate, Payments
+
+    return Response({
+        "channel_snapshots": ChannelSnapshot.objects.count(),
+        "forwarding_aggregates": ForwardingAggregate.objects.count(),
+        "change_log": ChangeLog.objects.count(),
+        "backup_log": BackupLog.objects.count(),
+        "failed_payments": Payments.objects.filter(status__in=[1, 3]).count(),
+    })
 
 
 # ── Backup ─────────────────────────────────────────────────────────────────────

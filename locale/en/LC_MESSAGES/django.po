@@ -616,3 +616,120 @@ msgstr "Fee rate (ppm)"
 
 msgid "Volume routed (sat)"
 msgstr "Volume routed (sat)"
+
+msgid "Maintenance"
+msgstr "Maintenance"
+
+msgid "Data Maintenance"
+msgstr "Data Maintenance"
+
+msgid "Configure data-retention periods and manually trigger cleanup of old records."
+msgstr "Configure data-retention periods and manually trigger cleanup of old records."
+
+msgid "All values are in days."
+msgstr "All values are in days."
+
+msgid "Retention Settings"
+msgstr "Retention Settings"
+
+msgid "Records older than the configured number of days are removed during the nightly cleanup run."
+msgstr "Records older than the configured number of days are removed during the nightly cleanup run."
+
+msgid "Data Type"
+msgstr "Data Type"
+
+msgid "Retention (days)"
+msgstr "Retention (days)"
+
+msgid "Default"
+msgstr "Default"
+
+msgid "Channel Snapshots"
+msgstr "Channel Snapshots"
+
+msgid "Forwarding Aggregates"
+msgstr "Forwarding Aggregates"
+
+msgid "Change Log"
+msgstr "Change Log"
+
+msgid "Backup Log"
+msgstr "Backup Log"
+
+msgid "Failed Payments"
+msgstr "Failed Payments"
+
+msgid "These values are saved as LocalSettings and are used by the nightly retention run."
+msgstr "These values are saved as LocalSettings and are used by the nightly retention run."
+
+msgid "Save Settings"
+msgstr "Save Settings"
+
+msgid "Saving..."
+msgstr "Saving..."
+
+msgid "Settings saved."
+msgstr "Settings saved."
+
+msgid "Manual Cleanup Run"
+msgstr "Manual Cleanup Run"
+
+msgid "medium"
+msgstr "medium"
+
+msgid "All data types older than the retention values above will be permanently deleted."
+msgstr "All data types older than the retention values above will be permanently deleted."
+
+msgid "This operation cannot be undone. Create a backup first if needed."
+msgstr "This operation cannot be undone. Create a backup first if needed."
+
+msgid "Check this to preview how many records would be deleted without actually removing them."
+msgstr "Check this to preview how many records would be deleted without actually removing them."
+
+msgid "Run Cleanup Now"
+msgstr "Run Cleanup Now"
+
+msgid "Running cleanup..."
+msgstr "Running cleanup..."
+
+msgid "Cleanup completed."
+msgstr "Cleanup completed."
+
+msgid "Dry Run"
+msgstr "Dry Run"
+
+msgid "Would delete"
+msgstr "Would delete"
+
+msgid "Deleted"
+msgstr "Deleted"
+
+msgid "WARNING: This will permanently delete records older than the configured retention periods. Continue?"
+msgstr "WARNING: This will permanently delete records older than the configured retention periods. Continue?"
+
+msgid "Manual cleanup is available in Expert mode only."
+msgstr "Manual cleanup is available in Expert mode only."
+
+msgid "Current Row Counts"
+msgstr "Current Row Counts"
+
+msgid "Approximate number of records in each managed table."
+msgstr "Approximate number of records in each managed table."
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Table"
+msgstr "Table"
+
+msgid "Rows"
+msgstr "Rows"
+
+msgid "Error loading row counts."
+msgstr "Error loading row counts."
+
+msgid "Failed Payments (failed/inflight)"
+msgstr "Failed Payments (failed/inflight)"
+
+msgid "Data Maintenance is available in Advanced or Expert mode only."
+msgstr "Data Maintenance is available in Advanced or Expert mode only."
