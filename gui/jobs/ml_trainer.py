@@ -384,6 +384,8 @@ def get_autofee_suggestions(*, limit: int = 10) -> list[dict[str, Any]]:
         channel = Channels.objects.filter(chan_id=cid, is_open=True).first()
         if channel is None:
             continue
+        if not channel.ml_autofee_enabled:
+            continue
         current_fee = int(channel.local_fee_rate or 0)
         rev_delta = feat["rev_delta_24h"]
         current_level = min(feat.get("escalation_level", 0), _ESCALATION_MAX_LEVELS)

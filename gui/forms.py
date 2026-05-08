@@ -95,6 +95,8 @@ updates_channel_codes = [
     (11, 'max_htlc'),
     (12, 'inbound_base_fee'),
     (13, 'inbound_fee_rate'),
+    (14, 'ml_rebalance_enabled'),
+    (15, 'ml_autofee_enabled'),
 ]
 
 class UpdateChannel(forms.Form):

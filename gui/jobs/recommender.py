@@ -336,7 +336,7 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
 
     open_channels = list(
         Channels.objects.filter(
-            is_open=True, is_active=True
+            is_open=True, is_active=True, ml_rebalance_enabled=True
         )[:limit * 2]
     )
 

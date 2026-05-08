@@ -3,6 +3,7 @@
 {% block content %}
 {% load euformat %}
 {% load humanize %}
+{% load i18n %}
 {% if channel %}
 <div class="w3-container w3-padding-small">
   <h3><a href="{{ graph_links }}/{{ network }}node/{{ channel.remote_pubkey }}" target="_blank">{% if channel.alias != "" %}{{ channel.alias }}</a> | {{ channel.remote_pubkey }}{% else %}{{ channel.remote_pubkey }}</a>{% endif %}
@@ -19,6 +20,13 @@
     Opened In: <a href="{{ network_links }}/{{ network }}block/{{ channel.open_block }}" target="_blank">{{ channel.open_block|eucomma }}</a> | 
     Opener: {% if channel.initiator == True %}Local{% else %}Remote{% endif %}
   </span>
+  {% if amboss_peer %}
+  <div style="padding-top:5px" class="w3-small w3-text-grey">
+    {% trans "Amboss context" %}: {% trans "Rank" %} {{ amboss_peer.rank|default:"—" }},
+    {% trans "Capacity" %} {{ amboss_peer.capacity|default:"—" }},
+    {% trans "Channels" %} {{ amboss_peer.channels|default:"—" }}
+  </div>
+  {% endif %}
 </div>
 <br/>
 <div class="w3-row" style="text-align:center;max-width:1500px;">
@@ -130,6 +138,39 @@
   </table>
 </div>
 <div class="w3-container w3-padding-small" style="overflow-x: scroll">
+  <h2>{% trans "ML Controls" %}</h2>
+  <table class="w3-table-all w3-centered w3-hoverable" style="margin-bottom:12px">
+    <tr>
+      <th>{% trans "ML Rebalancing" %}</th>
+      <th>{% trans "ML Auto-Fee" %}</th>
+      <th>{% trans "Escalation Level" %}</th>
+      <th>{% trans "Last ML Confidence" %}</th>
+      <th>{% trans "Last ML Update" %}</th>
+    </tr>
+    <tr>
+      <td>
+        <form action="/update_channel/" method="post">
+          {% csrf_token %}
+          <input type="submit" value="{% if ml_state.rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
+          <input type="hidden" name="update_target" value="14">
+          <input type="hidden" name="target" value="0">
+        </form>
+      </td>
+      <td>
+        <form action="/update_channel/" method="post">
+          {% csrf_token %}
+          <input type="submit" value="{% if ml_state.autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
+          <input type="hidden" name="update_target" value="15">
+          <input type="hidden" name="target" value="0">
+        </form>
+      </td>
+      <td>{{ ml_state.escalation_level|default:"—" }}</td>
+      <td>{% if ml_state.last_ml_confidence is not None %}{{ ml_state.last_ml_confidence }}{% else %}—{% endif %}</td>
+      <td>{% if ml_state.last_ml_update %}{{ ml_state.last_ml_update|naturaltime }}{% else %}—{% endif %}</td>
+    </tr>
+  </table>
   <h2>Channel Settings</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>

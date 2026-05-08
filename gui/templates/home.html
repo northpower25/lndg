@@ -579,6 +579,12 @@
 </div>
 <div class="w3-container w3-padding-small">
   <h2>Open a Channel</h2>
+  {% if mempool_signal %}
+  <div class="w3-small w3-text-grey">
+    {% trans "On-chain fee window" %}: {{ mempool_signal.light }} {{ mempool_signal.label }}
+    · {% trans "Wait-window hint" %}: {{ mempool_signal.wait_window }}
+  </div>
+  {% endif %}
   <div class="w3-container w3-padding-small">
     <form action="/openchannel/" method="post">
       {% csrf_token %}
@@ -597,6 +603,12 @@
 </div>
 <div class="w3-container w3-padding-small">
   <h2>Close a Channel</h2>
+  {% if mempool_signal %}
+  <div class="w3-small w3-text-grey">
+    {% trans "On-chain fee window" %}: {{ mempool_signal.light }} {{ mempool_signal.label }}
+    · {% trans "Wait-window hint" %}: {{ mempool_signal.wait_window }}
+  </div>
+  {% endif %}
   <div class="w3-container w3-padding-small">
     <form action="/closechannel/" method="post">
       {% csrf_token %}

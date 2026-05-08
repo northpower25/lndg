@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ..forms import UpdateChannel, UpdateClosing, UpdatePending, UpdateSetting
 from ..serializers import UpdateChanPolicy
-from ..models import Autofees, AvoidNodes, ChangeLog, Channels, Closures, FailedHTLCs, Forwards, Invoices, LocalSettings, PaymentHops, Payments, PendingChannels, PendingHTLCs, Peers, Rebalancer, Resolutions
+from ..models import AutoFeeMLRecord, Autofees, AvoidNodes, ChangeLog, Channels, Closures, FailedHTLCs, Forwards, Invoices, LocalSettings, NotificationSettings, PaymentHops, Payments, PendingChannels, PendingHTLCs, Peers, Rebalancer, Resolutions
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
@@ -19,6 +19,7 @@ from lndg import settings
 from pandas import DataFrame
 from .utils import get_local_settings, get_tx_fees, graph_links, grpc_error_message, is_login_required, network_links, point
 import gui.jobs.auto_fees as af
+from gui.jobs.external_integrations import get_amboss_peer_context
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channels(request):
@@ -458,12 +459,40 @@ def channel(request):
             invoices_df = DataFrame()
             peer_info_df = DataFrame()
             autofees_df = DataFrame()
+        db_channel = Channels.objects.filter(chan_id=chan_id).first()
+        ml_last_record = AutoFeeMLRecord.objects.filter(chan_id=chan_id).order_by('-timestamp').first()
+        ml_state = {
+            'rebalance_enabled': bool(db_channel.ml_rebalance_enabled) if db_channel else True,
+            'autofee_enabled': bool(db_channel.ml_autofee_enabled) if db_channel else True,
+            'escalation_level': ml_last_record.escalation_level if ml_last_record else None,
+            'last_ml_confidence': ml_last_record.ml_confidence if ml_last_record else None,
+            'last_ml_update': ml_last_record.timestamp if ml_last_record else None,
+        }
+        amboss_peer = {}
+        try:
+            cfg = NotificationSettings.load()
+            channel_pubkey = (
+                channels_df.to_dict(orient='records')[0].get('remote_pubkey')
+                if not channels_df.empty
+                else None
+            )
+            if channel_pubkey:
+                amboss_peer = get_amboss_peer_context(
+                    enabled=cfg.amboss_enabled,
+                    api_key=cfg.amboss_api_key,
+                    pubkeys=[channel_pubkey],
+                ).get(channel_pubkey, {})
+        except Exception:
+            amboss_peer = {}
+
         context = {
             'chan_id': chan_id,
             'channel': [] if channels_df.empty else channels_df.to_dict(orient='records')[0],
             'incoming_htlcs': PendingHTLCs.objects.filter(chan_id=chan_id).filter(incoming=True).order_by('hash_lock'),
             'outgoing_htlcs': PendingHTLCs.objects.filter(chan_id=chan_id).filter(incoming=False).order_by('hash_lock'),
             'peer_info': [] if peer_info_df.empty else peer_info_df.to_dict(orient='records')[0],
+            'amboss_peer': amboss_peer,
+            'ml_state': ml_state,
             'network': 'testnet/' if settings.LND_NETWORK == 'testnet' else '',
             'graph_links': graph_links(),
             'network_links': network_links(),
@@ -1008,6 +1037,30 @@ def update_channel(request):
                 db_channel.local_max_htlc_msat = int(target*1000)
                 db_channel.save()
                 messages.success(request, 'Max HTLC for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
+            elif update_target == 14:
+                db_channel.ml_rebalance_enabled = not bool(db_channel.ml_rebalance_enabled)
+                db_channel.save(update_fields=['ml_rebalance_enabled'])
+                messages.success(
+                    request,
+                    'ML Rebalancing for channel '
+                    + str(db_channel.alias)
+                    + ' ('
+                    + str(db_channel.chan_id)
+                    + ') updated to: '
+                    + str(db_channel.ml_rebalance_enabled),
+                )
+            elif update_target == 15:
+                db_channel.ml_autofee_enabled = not bool(db_channel.ml_autofee_enabled)
+                db_channel.save(update_fields=['ml_autofee_enabled'])
+                messages.success(
+                    request,
+                    'ML Auto-Fee for channel '
+                    + str(db_channel.alias)
+                    + ' ('
+                    + str(db_channel.chan_id)
+                    + ') updated to: '
+                    + str(db_channel.ml_autofee_enabled),
+                )
             else:
                 messages.error(request, 'Invalid target code. Please try again.')
         else:
