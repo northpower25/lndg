@@ -190,3 +190,429 @@ msgstr "All good"
 msgid "Risk"
 msgstr "Risk"
 
+
+msgid "Setup Wizard"
+msgstr "Setup Wizard"
+
+msgid "Onboarding"
+msgstr "Onboarding"
+
+msgid "Welcome to LNDg"
+msgstr "Welcome to LNDg"
+
+msgid "This wizard will guide you through setting up LNDg with your Core Lightning (CLN) node."
+msgstr "This wizard will guide you through setting up LNDg with your Core Lightning (CLN) node."
+
+msgid "Detected backend: Core Lightning (CLN)"
+msgstr "Detected backend: Core Lightning (CLN)"
+
+msgid "CLN uses a Rune / API-Token and the clnrest endpoint for communication."
+msgstr "CLN uses a Rune / API-Token and the clnrest endpoint for communication."
+
+msgid "This wizard will guide you through setting up LNDg with your Lightning Network Daemon (LND) node."
+msgstr "This wizard will guide you through setting up LNDg with your Lightning Network Daemon (LND) node."
+
+msgid "Detected backend: LND"
+msgstr "Detected backend: LND"
+
+msgid "LND uses a Macaroon and TLS certificate for authentication."
+msgstr "LND uses a Macaroon and TLS certificate for authentication."
+
+msgid "You can re-run this wizard at any time from the navigation menu."
+msgstr "You can re-run this wizard at any time from the navigation menu."
+
+msgid "Connection Verification"
+msgstr "Connection Verification"
+
+msgid "For CLN, LNDg connects via the clnrest plugin. Please ensure the following are configured:"
+msgstr "For CLN, LNDg connects via the clnrest plugin. Please ensure the following are configured:"
+
+msgid "Rune / API-Token"
+msgstr "Rune / API-Token"
+
+msgid "A CLN Rune with read and write permissions"
+msgstr "A CLN Rune with read and write permissions"
+
+msgid "clnrest Endpoint"
+msgstr "clnrest Endpoint"
+
+msgid "The HTTPS address of the clnrest plugin (e.g. https://localhost:3010)"
+msgstr "The HTTPS address of the clnrest plugin (e.g. https://localhost:3010)"
+
+msgid "Plugin Status"
+msgstr "Plugin Status"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "clnrest plugin detected via supports_plugins capability"
+msgstr "clnrest plugin detected via supports_plugins capability"
+
+msgid "For LND, LNDg connects via gRPC. Please ensure the following are configured:"
+msgstr "For LND, LNDg connects via gRPC. Please ensure the following are configured:"
+
+msgid "Macaroon"
+msgstr "Macaroon"
+
+msgid "Path to the admin.macaroon file (or base64-encoded value)"
+msgstr "Path to the admin.macaroon file (or base64-encoded value)"
+
+msgid "TLS Certificate"
+msgstr "TLS Certificate"
+
+msgid "Path to the tls.cert file used by LND"
+msgstr "Path to the tls.cert file used by LND"
+
+msgid "gRPC Host"
+msgstr "gRPC Host"
+
+msgid "LND gRPC address (e.g. localhost:10009)"
+msgstr "LND gRPC address (e.g. localhost:10009)"
+
+msgid "Node Verification"
+msgstr "Node Verification"
+
+msgid "Fetching node information…"
+msgstr "Fetching node information…"
+
+msgid "Public Key"
+msgstr "Public Key"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Capabilities"
+msgstr "Capabilities"
+
+msgid "Automatic fee adjustment via API"
+msgstr "Automatic fee adjustment via API"
+
+msgid "Auto-Fee"
+msgstr "Auto-Fee"
+
+msgid "Circular payment rebalancing"
+msgstr "Circular payment rebalancing"
+
+msgid "Rebalance"
+msgstr "Rebalance"
+
+msgid "Keysend (spontaneous payments)"
+msgstr "Keysend (spontaneous payments)"
+
+msgid "Keysend"
+msgstr "Keysend"
+
+msgid "Channel splice (resize without close)"
+msgstr "Channel splice (resize without close)"
+
+msgid "Splice"
+msgstr "Splice"
+
+msgid "Inbound fee parameters"
+msgstr "Inbound fee parameters"
+
+msgid "Inbound Fees"
+msgstr "Inbound Fees"
+
+msgid "Plugin extension mechanism (CLN)"
+msgstr "Plugin extension mechanism (CLN)"
+
+msgid "Plugins (CLN)"
+msgstr "Plugins (CLN)"
+
+msgid "Channels Overview"
+msgstr "Channels Overview"
+
+msgid "Open Channels"
+msgstr "Open Channels"
+
+msgid "Average Fee Rate"
+msgstr "Average Fee Rate"
+
+msgid "Total Local Balance"
+msgstr "Total Local Balance"
+
+msgid "Total Remote Balance"
+msgstr "Total Remote Balance"
+
+msgid "Could not load live channel data. The values above reflect the database state."
+msgstr "Could not load live channel data. The values above reflect the database state."
+
+msgid "Recommended Settings"
+msgstr "Recommended Settings"
+
+msgid "Based on your node capabilities, here are the recommended starting points:"
+msgstr "Based on your node capabilities, here are the recommended starting points:"
+
+msgid "Fee Strategy"
+msgstr "Fee Strategy"
+
+msgid "Enable Autopilot fee management in"
+msgstr "Enable Autopilot fee management in"
+
+msgid "Review initial fee rates in"
+msgstr "Review initial fee rates in"
+
+msgid "Set fee rates manually in"
+msgstr "Set fee rates manually in"
+
+msgid "Configure inbound fees for advanced routing control"
+msgstr "Configure inbound fees for advanced routing control"
+
+msgid "Auto-Rebalance"
+msgstr "Auto-Rebalance"
+
+msgid "Configure rebalancing rules in"
+msgstr "Configure rebalancing rules in"
+
+msgid "Auto-rebalance is disabled by default (dry_run mode). Enable only when ready."
+msgstr "Auto-rebalance is disabled by default (dry_run mode). Enable only when ready."
+
+msgid "Advanced Settings"
+msgstr "Advanced Settings"
+
+msgid "All node parameters are accessible in"
+msgstr "All node parameters are accessible in"
+
+msgid "You can also review connection and credential settings there."
+msgstr "You can also review connection and credential settings there."
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Next"
+msgstr "Next"
+
+msgid "Finish"
+msgstr "Finish"
+
+msgid "Step"
+msgstr "Step"
+
+msgid "Wizard progress"
+msgstr "Wizard progress"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Backup & Restore"
+msgstr "Backup & Restore"
+
+msgid "Create Backup"
+msgstr "Create Backup"
+
+msgid "Backup Type"
+msgstr "Backup Type"
+
+msgid "Settings (JSON)"
+msgstr "Settings (JSON)"
+
+msgid "Database (dump)"
+msgstr "Database (dump)"
+
+msgid "Creating backup..."
+msgstr "Creating backup..."
+
+msgid "Backup created successfully."
+msgstr "Backup created successfully."
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Size (KB)"
+msgstr "Size (KB)"
+
+msgid "Created At"
+msgstr "Created At"
+
+msgid "Actor"
+msgstr "Actor"
+
+msgid "Checksum"
+msgstr "Checksum"
+
+msgid "Recent Backups"
+msgstr "Recent Backups"
+
+msgid "Refresh List"
+msgstr "Refresh List"
+
+msgid "No backups found."
+msgstr "No backups found."
+
+msgid "Error loading backups."
+msgstr "Error loading backups."
+
+msgid "Restore from Backup"
+msgstr "Restore from Backup"
+
+msgid "HIGH RISK"
+msgstr "HIGH RISK"
+
+msgid "This action overwrites all current data"
+msgstr "This action overwrites all current data"
+
+msgid "Impact Preview"
+msgstr "Impact Preview"
+
+msgid "Restore will overwrite ALL current settings or database data."
+msgstr "Restore will overwrite ALL current settings or database data."
+
+msgid "An automatic backup is created before the restore (safety net)."
+msgstr "An automatic backup is created before the restore (safety net)."
+
+msgid "Use Dry Run to preview which tables would be affected without making changes."
+msgstr "Use Dry Run to preview which tables would be affected without making changes."
+
+msgid "Risk Level"
+msgstr "Risk Level"
+
+msgid "high"
+msgstr "high"
+
+msgid "Dry Run (preview only)"
+msgstr "Dry Run (preview only)"
+
+msgid "Check this to preview the restore without applying any changes."
+msgstr "Check this to preview the restore without applying any changes."
+
+msgid "Select Backup File"
+msgstr "Select Backup File"
+
+msgid "File Checksum (SHA-256)"
+msgstr "File Checksum (SHA-256)"
+
+msgid "This checksum is verified server-side before the restore is applied."
+msgstr "This checksum is verified server-side before the restore is applied."
+
+msgid "Computing..."
+msgstr "Computing..."
+
+msgid "Checksum computation failed"
+msgstr "Checksum computation failed"
+
+msgid "Restore Backup"
+msgstr "Restore Backup"
+
+msgid "Processing restore..."
+msgstr "Processing restore..."
+
+msgid "Dry Run Preview"
+msgstr "Dry Run Preview"
+
+msgid "Tables that would be affected"
+msgstr "Tables that would be affected"
+
+msgid "No changes were made. Uncheck Dry Run to apply the restore."
+msgstr "No changes were made. Uncheck Dry Run to apply the restore."
+
+msgid "Restore completed."
+msgstr "Restore completed."
+
+msgid "Auto-backup ID"
+msgstr "Auto-backup ID"
+
+msgid "Tables affected"
+msgstr "Tables affected"
+
+msgid "Please select a backup file first."
+msgstr "Please select a backup file first."
+
+msgid "Please wait for the checksum to be computed before restoring."
+msgstr "Please wait for the checksum to be computed before restoring."
+
+msgid "Run a dry-run preview? No data will be changed."
+msgstr "Run a dry-run preview? No data will be changed."
+
+msgid "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?"
+msgstr "WARNING: Restore will overwrite all current data. This cannot be undone. Continue?"
+
+msgid "Restore is available in Expert mode only."
+msgstr "Restore is available in Expert mode only."
+
+msgid "Switch to Expert mode using the mode selector in the navigation bar."
+msgstr "Switch to Expert mode using the mode selector in the navigation bar."
+
+msgid "Backup & Restore is available in Advanced or Expert mode only."
+msgstr "Backup & Restore is available in Advanced or Expert mode only."
+
+msgid "Switch mode using the selector in the navigation bar."
+msgstr "Switch mode using the selector in the navigation bar."
+
+msgid "Network error"
+msgstr "Network error"
+
+msgid "Create, download, or restore node backups. Restore is an expert-only operation."
+msgstr "Create, download, or restore node backups. Restore is an expert-only operation."
+
+msgid "Charts"
+msgstr "Charts"
+
+msgid "Liquidity Distribution"
+msgstr "Liquidity Distribution"
+
+msgid "Outbound vs. inbound liquidity balance. Green = outbound (your funds), Blue = inbound (routing capacity)."
+msgstr "Outbound vs. inbound liquidity balance. Green = outbound (your funds), Blue = inbound (routing capacity)."
+
+msgid "Channel"
+msgstr "Channel"
+
+msgid "All Channels"
+msgstr "All Channels"
+
+msgid "Outbound (local)"
+msgstr "Outbound (local)"
+
+msgid "Inbound (remote)"
+msgstr "Inbound (remote)"
+
+msgid "Channel Health over Time"
+msgstr "Channel Health over Time"
+
+msgid "Balance ratio per channel over the selected time period. Green = high outbound liquidity."
+msgstr "Balance ratio per channel over the selected time period. Green = high outbound liquidity."
+
+msgid "Days"
+msgstr "Days"
+
+msgid "Outbound ratio % per channel"
+msgstr "Outbound ratio % per channel"
+
+msgid "outbound"
+msgstr "outbound"
+
+msgid "Outbound %"
+msgstr "Outbound %"
+
+msgid "Fee Rate vs. Routed Volume"
+msgstr "Fee Rate vs. Routed Volume"
+
+msgid "Fee elasticity: each dot is a channel. X = fee rate (ppm), Y = volume routed (sat). Larger dots = more fees earned."
+msgstr "Fee elasticity: each dot is a channel. X = fee rate (ppm), Y = volume routed (sat). Larger dots = more fees earned."
+
+msgid "Channels"
+msgstr "Channels"
+
+msgid "Fee rate"
+msgstr "Fee rate"
+
+msgid "Volume"
+msgstr "Volume"
+
+msgid "Fees earned"
+msgstr "Fees earned"
+
+msgid "Forwards"
+msgstr "Forwards"
+
+msgid "Fee rate (ppm)"
+msgstr "Fee rate (ppm)"
+
+msgid "Volume routed (sat)"
+msgstr "Volume routed (sat)"

@@ -108,6 +108,7 @@ TEMPLATES = [
                     'django.contrib.messages.context_processors.messages',
                     'django.template.context_processors.i18n',
                     'gui.context_processors.user_mode',
+                    'gui.context_processors.backend_capabilities',
                 ],
         },
     },

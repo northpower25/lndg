@@ -10,3 +10,14 @@ def user_mode(request):
     except Exception:
         mode = UserMode.MODE_ADVANCED
     return {"user_mode": mode}
+
+
+def backend_capabilities(request):
+    """Inject the active backend's ``BackendCapabilities`` into every template context.
+
+    Templates can use ``{{ capabilities.can_rebalance }}`` etc. to conditionally
+    enable or disable feature buttons (R-GUI-7, R-ARCH-2).
+    """
+    from gui.backends.registry import get_capabilities
+
+    return {"capabilities": get_capabilities()}

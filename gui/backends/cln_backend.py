@@ -1,13 +1,13 @@
-"""CLN (Core Lightning) backend skeleton – connects via clnrest HTTP REST API.
+"""CLN (Core Lightning) backend – connects via clnrest HTTP REST API.
 
-Only basic read methods are implemented in Phase 1 (skeleton).
-Full implementation follows in Phase 2.
+Phase 1 implements basic read methods; Phase 2 adds ``get_forwarding_events``,
+``update_fee_policy``, and runtime plugin detection in ``get_capabilities``.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 
 import requests
 
@@ -33,8 +33,10 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     from CLN v23.08+ (default enabled from v24.05).
 
     Phase 1 implements: ``get_node_info``, ``list_channels``, ``list_peers``,
-    ``get_capabilities``.  All other methods raise ``NotImplementedError`` and
-    will be filled in Phase 2.
+    ``get_capabilities``.
+
+    Phase 2 adds: ``get_forwarding_events``, ``update_fee_policy``, runtime
+    plugin detection (``rebalance``, htlc-stream).
     """
 
     def __init__(
@@ -134,8 +136,27 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     def get_forwarding_events(
         self, start: datetime, end: datetime
     ) -> list[ForwardingEvent]:
-        # Phase 2: use listforwards with start/end filtering
-        raise NotImplementedError("CLN forwarding events will be implemented in Phase 2.")
+        """Return forwarding events in the given time range via CLN ``listforwards``."""
+        params: dict = {"status": "settled"}
+        data = self._post("listforwards", params)
+        events: list[ForwardingEvent] = []
+        start_ts = start.timestamp()
+        end_ts = end.timestamp()
+        for fwd in data.get("forwards", []):
+            received_ts = fwd.get("received_time", 0)
+            if not (start_ts <= received_ts < end_ts):
+                continue
+            events.append(
+                ForwardingEvent(
+                    channel_id_in=str(fwd.get("in_channel", "")),
+                    channel_id_out=str(fwd.get("out_channel", "")),
+                    amount_in_msat=fwd.get("in_msat", 0),
+                    amount_out_msat=fwd.get("out_msat", 0),
+                    fee_msat=fwd.get("fee_msat", 0),
+                    forwarded_at=datetime.fromtimestamp(received_ts, tz=dt_timezone.utc),
+                )
+            )
+        return events
 
     def get_liquidity_state(self, channel_id: str) -> LiquidityState:
         channels = self.list_channels()
@@ -152,13 +173,33 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     def get_capabilities(self) -> BackendCapabilities:
         """Return CLN-specific capability flags.
 
+        Plugin availability is detected at runtime by querying ``listplugins``.
         ``can_splice`` is True for CLN >= v24.02.
         ``supports_plugins`` is always True for CLN.
         """
+        can_rebalance = False
+        can_stream_htlcs = False
+        try:
+            plugins_data = self._post("listplugins")
+            active_plugin_names = {
+                p.get("name", "")
+                for p in plugins_data.get("plugins", [])
+                if p.get("active", False)
+            }
+            can_rebalance = any(
+                "rebalance" in name for name in active_plugin_names
+            )
+            can_stream_htlcs = any(
+                "htlcstream" in name or "htlc_stream" in name or "htlc-stream" in name
+                for name in active_plugin_names
+            )
+        except Exception:
+            logger.debug("CLN listplugins failed; defaulting to no plugin capabilities")
+
         return BackendCapabilities(
             can_auto_fee=True,
-            can_rebalance=False,   # requires the 'rebalance' plugin – detected at runtime in Phase 2
-            can_stream_htlcs=False,
+            can_rebalance=can_rebalance,
+            can_stream_htlcs=can_stream_htlcs,
             can_splice=True,       # CLN supports splicing from v24.02
             can_inbound_fees=False,
             can_keysend=True,
@@ -170,8 +211,22 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
     # ── LightningWriteAdapter ─────────────────────────────────────────────────
 
     def update_fee_policy(self, channel_id: str, policy: FeePolicy) -> bool:
-        # Phase 2: implement via setchannel
-        raise NotImplementedError("CLN fee update will be implemented in Phase 2.")
+        """Apply fee policy to the given channel via CLN ``setchannel``."""
+        params: dict = {
+            "id": channel_id,
+            "feebase": policy.base_fee_msat,
+            "feeppm": policy.fee_rate_ppm,
+        }
+        if policy.min_htlc_msat > 0:
+            params["htlcmin"] = f"{policy.min_htlc_msat}msat"
+        if policy.max_htlc_msat > 0:
+            params["htlcmax"] = f"{policy.max_htlc_msat}msat"
+        try:
+            self._post("setchannel", params)
+            return True
+        except Exception as exc:
+            logger.error("CLN setchannel for %s failed: %s", channel_id, exc)
+            return False
 
     def splice_in(
         self, channel_id: str, amount_sat: int, fee_rate: int

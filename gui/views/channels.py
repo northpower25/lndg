@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ..forms import UpdateChannel, UpdateClosing, UpdatePending, UpdateSetting
 from ..serializers import UpdateChanPolicy
-from ..models import Autofees, AvoidNodes, Channels, Closures, FailedHTLCs, Forwards, Invoices, LocalSettings, PaymentHops, Payments, PendingChannels, PendingHTLCs, Peers, Rebalancer, Resolutions
+from ..models import Autofees, AvoidNodes, ChangeLog, Channels, Closures, FailedHTLCs, Forwards, Invoices, LocalSettings, PaymentHops, Payments, PendingChannels, PendingHTLCs, Peers, Rebalancer, Resolutions
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
 from gui.lnd_deps import router_pb2 as lnr
@@ -885,9 +885,17 @@ def update_channel(request):
             if update_target == 0:
                 stub = lnrpc.LightningStub(lnd_connect())
                 channel_point = point(db_channel)
+                old_base_fee = db_channel.local_base_fee
                 stub.UpdateChannelPolicy(ln.PolicyUpdateRequest(chan_point=channel_point, base_fee_msat=target, fee_rate=(db_channel.local_fee_rate/1000000), time_lock_delta=db_channel.local_cltv))
                 db_channel.local_base_fee = target
                 db_channel.save()
+                ChangeLog.objects.create(
+                    change_type='base_fee_update',
+                    target_channel_id=chan_id,
+                    actor='manual',
+                    old_value={'local_base_fee': old_base_fee},
+                    new_value={'local_base_fee': target},
+                )
                 messages.success(request, 'Base fee for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
             elif update_target == 1:
                 stub = lnrpc.LightningStub(lnd_connect())
@@ -898,6 +906,13 @@ def update_channel(request):
                 db_channel.fees_updated = datetime.now()
                 db_channel.save()
                 Autofees(chan_id=db_channel.chan_id, peer_alias=db_channel.alias, setting=("Manual"), old_value=old_fee_rate, new_value=db_channel.local_fee_rate).save()
+                ChangeLog.objects.create(
+                    change_type='fee_rate_update',
+                    target_channel_id=chan_id,
+                    actor='manual',
+                    old_value={'local_fee_rate': old_fee_rate},
+                    new_value={'local_fee_rate': target},
+                )
                 messages.success(request, 'Fee rate for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
             elif update_target == 12:
                 stub = lnrpc.LightningStub(lnd_connect())
@@ -906,8 +921,16 @@ def update_channel(request):
                     channel_point = point(db_channel)
                     inbound_fee_rate = db_channel.local_inbound_fee_rate if db_channel.local_inbound_fee_rate else 0
                     stub.UpdateChannelPolicy(ln.PolicyUpdateRequest(chan_point=channel_point, base_fee_msat=db_channel.local_base_fee, fee_rate=(db_channel.local_fee_rate/1000000), time_lock_delta=db_channel.local_cltv, inbound_fee=ln.InboundFee(base_fee_msat=target, fee_rate_ppm=inbound_fee_rate)))
+                    old_inbound_base_fee = db_channel.local_inbound_base_fee
                     db_channel.local_inbound_base_fee = target
                     db_channel.save()
+                    ChangeLog.objects.create(
+                        change_type='inbound_base_fee_update',
+                        target_channel_id=chan_id,
+                        actor='manual',
+                        old_value={'local_inbound_base_fee': old_inbound_base_fee},
+                        new_value={'local_inbound_base_fee': target},
+                    )
                     messages.success(request, 'Inbound base fee for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
                 else:
                     messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')
@@ -918,8 +941,16 @@ def update_channel(request):
                     channel_point = point(db_channel)
                     inbound_base_fee = db_channel.local_inbound_base_fee if db_channel.local_inbound_base_fee else 0
                     stub.UpdateChannelPolicy(ln.PolicyUpdateRequest(chan_point=channel_point, base_fee_msat=db_channel.local_base_fee, fee_rate=(db_channel.local_fee_rate/1000000), time_lock_delta=db_channel.local_cltv, inbound_fee=ln.InboundFee(base_fee_msat=inbound_base_fee, fee_rate_ppm=target)))
+                    old_inbound_fee_rate = db_channel.local_inbound_fee_rate
                     db_channel.local_inbound_fee_rate = target
                     db_channel.save()
+                    ChangeLog.objects.create(
+                        change_type='inbound_fee_rate_update',
+                        target_channel_id=chan_id,
+                        actor='manual',
+                        old_value={'local_inbound_fee_rate': old_inbound_fee_rate},
+                        new_value={'local_inbound_fee_rate': target},
+                    )
                     messages.success(request, 'Inbound fee rate for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
                 else:
                     messages.error(request, 'LND version too low to set inbound fees, update to v0.18+')

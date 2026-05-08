@@ -113,6 +113,11 @@
         <a href="/peers" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'peers' %} w3-theme{% endif %}">{% trans "Peers" %}</a>
         <a href="/actions/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'actions' %} w3-theme{% endif %}">{% trans "Automations" %}</a>
         <a href="/forwards" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'forwards' %} w3-theme{% endif %}">{% trans "Learn & History" %}</a>
+        <a href="/charts/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'charts' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Charts" %}</a>
+        {% if user_mode == 'expert' %}
+        <a href="/backup/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'backup-restore' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Backup" %}</a>
+        {% endif %}
+        <a href="/onboarding/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'onboarding' %} w3-theme{% endif %}">{% trans "Setup Wizard" %}</a>
         <span class="w3-bar-item w3-right w3-padding-small" style="display:flex;align-items:center;gap:6px;">
           <label for="mode-switcher" class="w3-small">{% trans "Mode" %}:</label>
           <select id="mode-switcher" class="w3-select w3-small" style="width:auto;padding:2px 4px;" onchange="lndgSetMode(this.value)" title="{% trans 'Switch UI complexity mode' %}">

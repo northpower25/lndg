@@ -13,7 +13,7 @@ from os import environ
 from requests import get
 environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
-from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings  # noqa: E402
+from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, ChangeLog, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings  # noqa: E402
 import gui.jobs.auto_fees as af  # noqa: E402
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
@@ -660,8 +660,17 @@ def auto_fees(stub):
                         stub.UpdateChannelPolicy(ln.PolicyUpdateRequest(chan_point=channel_point, base_fee_msat=channel.local_base_fee, fee_rate=(target_channel['new_rate']/1000000), time_lock_delta=channel.local_cltv))
                     if target_channel['adjustment'] != 0:
                         print(f"{datetime.now().strftime('%c')} : [Data] : Updating outbound fees for channel {str(target_channel['chan_id'])} to a value of: {str(target_channel['new_rate'])}")
+                        old_fee_rate = channel.local_fee_rate
                         channel.local_fee_rate = target_channel['new_rate']
                         Autofees(chan_id=channel.chan_id, peer_alias=channel.alias, setting=(f"AF [ {target_channel['net_routed_7day']}:{target_channel['in_percent']}:{target_channel['out_percent']} ]"), old_value=target_channel['local_fee_rate'], new_value=target_channel['new_rate']).save()
+                        ChangeLog.objects.create(
+                            change_type='fee_rate_update',
+                            target_channel_id=str(channel.chan_id),
+                            actor='policy:auto_fees',
+                            old_value={'local_fee_rate': old_fee_rate},
+                            new_value={'local_fee_rate': target_channel['new_rate']},
+                            rationale={'setting': f"AF [ {target_channel['net_routed_7day']}:{target_channel['in_percent']}:{target_channel['out_percent']} ]"},
+                        )
                         try:
                             if notify_cfg.notify_autofee:
                                 _safe_notify(
