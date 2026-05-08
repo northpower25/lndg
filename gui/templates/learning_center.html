@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ block.super }} - {% trans "Learning Center" %}{% endblock %}
+{% block content %}
+<div class="w3-container w3-padding-small">
+  <h2>{% trans "Missions & Glossary" %}</h2>
+  <p class="w3-small w3-text-grey">{% trans "Short guided missions and glossary entries to build Lightning operation confidence." %}</p>
+
+  <h3>{% trans "Missions" %}</h3>
+  <div class="w3-row-padding">
+    <div class="w3-third w3-margin-bottom">
+      <div class="w3-card w3-padding">
+        <strong>{% trans "Mission: Balance Recovery" %}</strong>
+        <p class="w3-small">{% trans "Identify one outbound-starved channel and run a dry-run rebalance recommendation." %}</p>
+      </div>
+    </div>
+    <div class="w3-third w3-margin-bottom">
+      <div class="w3-card w3-padding">
+        <strong>{% trans "Mission: Fee Strategy Basics" %}</strong>
+        <p class="w3-small">{% trans "Compare median fee level vs your channel and test one conservative adjustment in simulation." %}</p>
+      </div>
+    </div>
+    <div class="w3-third w3-margin-bottom">
+      <div class="w3-card w3-padding">
+        <strong>{% trans "Mission: Safe Automation Start" %}</strong>
+        <p class="w3-small">{% trans "Enable one policy in dry-run mode and review policy snapshots before live execution." %}</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>{% trans "Glossary" %}</h3>
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <details>
+      <summary><strong>{% trans "Splice" %}</strong></summary>
+      <p class="w3-small">{% trans "Resize an existing channel without fully closing it. Availability depends on backend capability." %}</p>
+    </details>
+    <details>
+      <summary><strong>{% trans "Inbound Fee" %}</strong></summary>
+      <p class="w3-small">{% trans "Fee component influencing incoming routing attractiveness. Supported only if backend capability is enabled." %}</p>
+    </details>
+    <details>
+      <summary><strong>{% trans "Shadow Mode" %}</strong></summary>
+      <p class="w3-small">{% trans "Recommendations are logged and evaluated but not executed automatically." %}</p>
+    </details>
+  </div>
+
+  <h3>{% trans "CLN Capability Notes" %}</h3>
+  <div class="w3-card w3-padding">
+    <ul class="w3-small">
+      <li>{% trans "Plugin-dependent features are available only when required CLN plugins are active." %}</li>
+      <li>{% trans "Rebalance support requires a rebalance plugin and can be disabled by capability checks." %}</li>
+      <li>{% trans "All unsupported actions stay visible but disabled with explanatory tooltips." %}</li>
+    </ul>
+    <p class="w3-small"><a href="/cln-plugins/">{% trans "Open CLN plugin status panel" %}</a></p>
+  </div>
+</div>
+{% endblock %}

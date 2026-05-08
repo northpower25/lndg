@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from gui.jobs.executor import execute_policy
+from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
 
 # msats per sat – used when converting amt_out_msat → sat
 _MSAT_PER_SAT = 1000
@@ -675,6 +676,7 @@ def policy_run(request, policy_id: int) -> Response:
 @throttle_classes([_SpliceThrottle])
 def splice_preview(request, channel_id: str) -> Response:
     from gui.models import Channels
+    from gui.models import NotificationSettings
 
     channel = Channels.objects.filter(chan_id=channel_id, is_open=True).first()
     if channel is None:
@@ -689,6 +691,9 @@ def splice_preview(request, channel_id: str) -> Response:
 
     estimated_fee_sat = max(1, int(parsed_fee_rate * 120))
     projected_capacity = (channel.capacity or 0) + parsed_amount
+    cfg = NotificationSettings.load()
+    fee_payload = get_mempool_recommended_fees(enabled=cfg.mempool_enabled)
+    fee_signal = classify_fee_signal(fee_payload)
     return Response(
         {
             "channel_id": channel_id,
@@ -697,6 +702,12 @@ def splice_preview(request, channel_id: str) -> Response:
             "projected_capacity_sat": projected_capacity,
             "routing_impact": _("Temporary routing degradation while splice confirms."),
             "risk_label": "medium",
+            "mempool_fee_signal": None if fee_signal is None else {
+                "light": fee_signal.light,
+                "label": fee_signal.label,
+                "wait_window": fee_signal.wait_window,
+                "hour_fee": fee_payload.get("hourFee"),
+            },
         }
     )
 

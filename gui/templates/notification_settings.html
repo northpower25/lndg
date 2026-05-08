@@ -1,3 +1,4 @@
+{% load i18n %}
 <div class="w3-container w3-padding-small">
   <form action="/notification_settings/" method="post" id="notifyForm">
     {% csrf_token %}
@@ -24,6 +25,47 @@
           <label class="w3-col" title="Telegram Chat ID or @channel username where messages are sent">Chat ID</label>
           <input class="w3-col" type="text" name="tg_chat_id" maxlength="50"
                  placeholder="-100xxxxxxxxx" value="{{ notification_cfg.tg_chat_id }}"/>
+        </div>
+
+        {# ── External integrations (opt-in) ───────────────────────────── #}
+        <div style="margin-top:12px" class="w3-full w3-container w3-row">
+          <label class="w3-col" style="margin-bottom:6px"><strong>{% trans "External Integrations (Opt-in)" %}</strong></label>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="{% trans 'Enable mempool.space API for fee-window guidance and recommendation traffic lights.' %}">{% trans "mempool.space" %}</label>
+          <select style="height:27px" class="w3-col" name="mempool_enabled">
+            <option value="false" {% if not notification_cfg.mempool_enabled %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.mempool_enabled %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="{% trans 'Enable optional Amboss peer enrichment for existing/evaluated peers only.' %}">{% trans "Amboss" %}</label>
+          <select style="height:27px" class="w3-col" name="amboss_enabled">
+            <option value="false" {% if not notification_cfg.amboss_enabled %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.amboss_enabled %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="{% trans 'Amboss API key (used only when Amboss integration is enabled).' %}">{% trans "Amboss API Key" %}</label>
+          <input class="w3-col" type="password" name="amboss_api_key" maxlength="255"
+                 placeholder="amboss_api_key" value="{{ notification_cfg.amboss_api_key }}"/>
+        </div>
+
+        <div class="w3-quarter w3-container w3-row">
+          <label class="w3-col" title="{% trans 'Notify when on-chain fees are low (good window for open/close/splice).' %}">{% trans "Low Fee Window Alert" %}</label>
+          <select style="height:27px" class="w3-col" name="notify_mempool_low_fee">
+            <option value="false" {% if not notification_cfg.notify_mempool_low_fee %}selected{% endif %}>Off</option>
+            <option value="true"  {% if notification_cfg.notify_mempool_low_fee %}selected{% endif %}>On</option>
+          </select>
+        </div>
+
+        <div style="margin-top:4px" class="w3-full w3-container w3-row">
+          <span class="w3-small w3-text-grey">
+            {% trans "External calls are disabled by default and executed only after explicit opt-in." %}
+          </span>
         </div>
 
         {# ── Event triggers ───────────────────────────────────────────── #}

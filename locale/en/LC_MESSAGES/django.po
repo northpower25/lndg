@@ -194,6 +194,216 @@ msgstr "Risk"
 msgid "Setup Wizard"
 msgstr "Setup Wizard"
 
+msgid "External Integrations (Opt-in)"
+msgstr "External Integrations (Opt-in)"
+
+msgid "Enable mempool.space API for fee-window guidance and recommendation traffic lights."
+msgstr "Enable mempool.space API for fee-window guidance and recommendation traffic lights."
+
+msgid "mempool.space"
+msgstr "mempool.space"
+
+msgid "Enable optional Amboss peer enrichment for existing/evaluated peers only."
+msgstr "Enable optional Amboss peer enrichment for existing/evaluated peers only."
+
+msgid "Amboss"
+msgstr "Amboss"
+
+msgid "Amboss API key (used only when Amboss integration is enabled)."
+msgstr "Amboss API key (used only when Amboss integration is enabled)."
+
+msgid "Amboss API Key"
+msgstr "Amboss API Key"
+
+msgid "Notify when on-chain fees are low (good window for open/close/splice)."
+msgstr "Notify when on-chain fees are low (good window for open/close/splice)."
+
+msgid "Low Fee Window Alert"
+msgstr "Low Fee Window Alert"
+
+msgid "External calls are disabled by default and executed only after explicit opt-in."
+msgstr "External calls are disabled by default and executed only after explicit opt-in."
+
+msgid "Amboss enrichment is active for currently connected peers."
+msgstr "Amboss enrichment is active for currently connected peers."
+
+msgid "Please respect Amboss non-commercial usage terms."
+msgstr "Please respect Amboss non-commercial usage terms."
+
+msgid "Amboss Rank"
+msgstr "Amboss Rank"
+
+msgid "Amboss Capacity"
+msgstr "Amboss Capacity"
+
+msgid "Amboss Channels"
+msgstr "Amboss Channels"
+
+msgid "On-chain fee window"
+msgstr "On-chain fee window"
+
+msgid "Wait-window hint"
+msgstr "Wait-window hint"
+
+msgid "Language Selection"
+msgstr "Language Selection"
+
+msgid "Choose your preferred language for the UI."
+msgstr "Choose your preferred language for the UI."
+
+msgid "English"
+msgstr "English"
+
+msgid "German"
+msgstr "German"
+
+msgid "Skip wizard"
+msgstr "Skip wizard"
+
+msgid "Choose Node Profile"
+msgstr "Choose Node Profile"
+
+msgid "Rune / API-Token with required permissions"
+msgstr "Rune / API-Token with required permissions"
+
+msgid "clnrest endpoint URL"
+msgstr "clnrest endpoint URL"
+
+msgid "Plugin status should be active"
+msgstr "Plugin status should be active"
+
+msgid "Macaroon path or base64 value"
+msgstr "Macaroon path or base64 value"
+
+msgid "TLS certificate path"
+msgstr "TLS certificate path"
+
+msgid "gRPC host and port"
+msgstr "gRPC host and port"
+
+msgid "Understand Channels"
+msgstr "Understand Channels"
+
+msgid "Channels define routing capacity between your node and peers."
+msgstr "Channels define routing capacity between your node and peers."
+
+msgid "Outbound Capacity"
+msgstr "Outbound Capacity"
+
+msgid "Inbound Capacity"
+msgstr "Inbound Capacity"
+
+msgid "Tip: Balanced channels usually improve routing opportunity."
+msgstr "Tip: Balanced channels usually improve routing opportunity."
+
+msgid "Understand Fees & Rebalancing"
+msgstr "Understand Fees & Rebalancing"
+
+msgid "Fees influence routing demand. Rebalancing helps recover outbound liquidity."
+msgstr "Fees influence routing demand. Rebalancing helps recover outbound liquidity."
+
+msgid "Fees"
+msgstr "Fees"
+
+msgid "Start conservative and adjust gradually."
+msgstr "Start conservative and adjust gradually."
+
+msgid "Rebalancing"
+msgstr "Rebalancing"
+
+msgid "Keep automation in dry-run mode first."
+msgstr "Keep automation in dry-run mode first."
+
+msgid "First Safe Optimization"
+msgstr "First Safe Optimization"
+
+msgid "Apply your first safe optimization with dry-run enabled."
+msgstr "Apply your first safe optimization with dry-run enabled."
+
+msgid "Open Automations and keep dry_run enabled."
+msgstr "Open Automations and keep dry_run enabled."
+
+msgid "Run one recommendation dry-run and inspect impact + risk label."
+msgstr "Run one recommendation dry-run and inspect impact + risk label."
+
+msgid "Only then enable live execution if results look safe."
+msgstr "Only then enable live execution if results look safe."
+
+msgid "You can re-open this wizard anytime from Setup Wizard."
+msgstr "You can re-open this wizard anytime from Setup Wizard."
+
+msgid "Onboarding already completed."
+msgstr "Onboarding already completed."
+
+msgid "Restart wizard"
+msgstr "Restart wizard"
+
+msgid "Learning Center"
+msgstr "Learning Center"
+
+msgid "Missions & Glossary"
+msgstr "Missions & Glossary"
+
+msgid "Short guided missions and glossary entries to build Lightning operation confidence."
+msgstr "Short guided missions and glossary entries to build Lightning operation confidence."
+
+msgid "Missions"
+msgstr "Missions"
+
+msgid "Mission: Balance Recovery"
+msgstr "Mission: Balance Recovery"
+
+msgid "Identify one outbound-starved channel and run a dry-run rebalance recommendation."
+msgstr "Identify one outbound-starved channel and run a dry-run rebalance recommendation."
+
+msgid "Mission: Fee Strategy Basics"
+msgstr "Mission: Fee Strategy Basics"
+
+msgid "Compare median fee level vs your channel and test one conservative adjustment in simulation."
+msgstr "Compare median fee level vs your channel and test one conservative adjustment in simulation."
+
+msgid "Mission: Safe Automation Start"
+msgstr "Mission: Safe Automation Start"
+
+msgid "Enable one policy in dry-run mode and review policy snapshots before live execution."
+msgstr "Enable one policy in dry-run mode and review policy snapshots before live execution."
+
+msgid "Glossary"
+msgstr "Glossary"
+
+msgid "Resize an existing channel without fully closing it. Availability depends on backend capability."
+msgstr "Resize an existing channel without fully closing it. Availability depends on backend capability."
+
+msgid "Inbound Fee"
+msgstr "Inbound Fee"
+
+msgid "Fee component influencing incoming routing attractiveness. Supported only if backend capability is enabled."
+msgstr "Fee component influencing incoming routing attractiveness. Supported only if backend capability is enabled."
+
+msgid "Shadow Mode"
+msgstr "Shadow Mode"
+
+msgid "Recommendations are logged and evaluated but not executed automatically."
+msgstr "Recommendations are logged and evaluated but not executed automatically."
+
+msgid "CLN Capability Notes"
+msgstr "CLN Capability Notes"
+
+msgid "Plugin-dependent features are available only when required CLN plugins are active."
+msgstr "Plugin-dependent features are available only when required CLN plugins are active."
+
+msgid "Rebalance support requires a rebalance plugin and can be disabled by capability checks."
+msgstr "Rebalance support requires a rebalance plugin and can be disabled by capability checks."
+
+msgid "All unsupported actions stay visible but disabled with explanatory tooltips."
+msgstr "All unsupported actions stay visible but disabled with explanatory tooltips."
+
+msgid "Open CLN plugin status panel"
+msgstr "Open CLN plugin status panel"
+
+msgid "🟢 Mempool fee window is favorable (%(hour_fee)s sat/vB). Good timing for open/close/splice actions."
+msgstr "🟢 Mempool fee window is favorable (%(hour_fee)s sat/vB). Good timing for open/close/splice actions."
+
 msgid "Onboarding"
 msgstr "Onboarding"
 

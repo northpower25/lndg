@@ -429,6 +429,45 @@ Jeder neue schreibende API-Endpunkt (`POST`, `PUT`, `DELETE`) bekommt:
 - CSRF-Schutz (Django-Standard, nicht deaktivieren)
 - Authentifizierung (keine anonymen Write-Operationen)
 
+---
+
+## Phase-Tracking Update (Stand: 2026-05-08)
+
+### ✅ Neu umgesetzt in Phase 5 (dieser Stand)
+
+| Item | Details |
+|---|---|
+| mempool.space Integration (opt-in) | `gui/jobs/external_integrations.py` mit asynchronem Fetch, TTL-Cache, 429-Backoff; Einbindung in Empfehlungen und Splice-Preview |
+| Fee-Ampel + Wait-Window-Hinweis | On-chain-Kontext (`🟢/🟡/🔴`) für Open/Close/Splice-Empfehlungen in `gui/jobs/recommender.py` + Anzeige in `gui/templates/home.html` |
+| Low-fee Notifier | Periodischer opt-in Benachrichtigungs-Flow in `jobs.py` (`MEMPOOL-NotifyInterval`) |
+| Amboss Integration (opt-in) | Optionaler API-Key + explizites Opt-in in `NotificationSettings`; Peer-Kontext nur für bereits verbundene Peers in `gui/views/peers.py` |
+| Peer-Kontextdarstellung | Amboss-Rank/Kapazität/Kanäle in `gui/templates/peers.html` inkl. Hinweis auf Nutzungsbedingungen |
+| Onboarding-Wizard (5 Schritte) | Neuer 5-Step-Flow inkl. Sprachschritt, LND/CLN-Profilinhalte, Persistenz von `onboarding_step`/`onboarding_completed` in `gui/templates/onboarding.html` |
+| Missions & Glossar | Neues Learning-Center unter `/learning/` (`gui/views/learning.py`, `gui/templates/learning_center.html`) |
+| i18n DE+EN für neue UI-Texte | Erweiterung `locale/de/LC_MESSAGES/django.po` und `locale/en/LC_MESSAGES/django.po` |
+
+### 🔁 Re-Check offene Punkte aus Phase 1–4
+
+Nach erneuter Prüfung wurden die folgenden verbleibenden Punkte weiterhin als **offen** bewertet:
+
+1. **Vollständige Migration aller Legacy-LND-Direct-Calls auf Adapter/Executor-Fluss**
+   - **Warum offen:** Hohe Querschnittsänderung über viele Legacy-Views/Jobs mit signifikantem Regression-Risiko.
+2. **Komplette CLN-End-to-End-Abdeckung über alle Legacy-Ansichten**
+   - **Warum offen:** Hängt direkt von Punkt 1 (Legacy-Migration) ab.
+3. **Vollständige Auto-Fee-Template-UI (Phase 4-B)**
+   - **Warum offen:** In dieser Iteration lag Fokus auf Phase-5-Integrationen; eigenes UI-Refactoring-Paket weiterhin nötig.
+4. **ML-Shadow-Joblogik (Phase 4-E/4-F) und Rebalance-Budget-Queue (4-G)**
+   - **Warum offen:** Benötigt zusätzliche Feature-Engineering-/Scheduler- und Rebalancer-Integration mit höherem Umfang.
+5. **Audit-Timeline + Rollback-Endpunkte (4-H)**
+   - **Warum offen:** Erfordert gesonderte API/UI-Arbeit inklusive sicherer Backup-Orchestrierung vor Rollback.
+
+### ❌ Weiterhin offen in Phase 5
+
+1. **Amboss-Daten in allen möglichen Peer-Detailoberflächen**
+   - **Warum offen:** Aktuell in der zentralen Peers-Liste integriert; tiefergehende Detailansichten folgen separat.
+2. **Mempool-Integration in sämtlichen Legacy-Open/Close-Formularen**
+   - **Warum offen:** Ampel/Hinweise sind in Empfehlungspfad + Splice-Preview umgesetzt; Legacy-Formseiten benötigen eigenen UI-Durchlauf.
+
 ### R-SEC-6 – Backup vor Restore und vor Bulk-Operationen
 
 Automatisches Mini-Backup wird ausgelöst vor:

@@ -2,9 +2,16 @@
 {% block title %} {{ block.super }} - Peers{% endblock %}
 {% block content %}
 {% load euformat %}
+{% load i18n %}
 {% if peers %}
 <div class="w3-container w3-padding-small">
   <h2>Peers List <small id="peer_count" class="w3-round w3-border-small w3-border-grey">{{ num_peers }}</small></h2>
+  {% if amboss_enabled %}
+  <div class="w3-panel w3-pale-blue w3-small">
+    {% trans "Amboss enrichment is active for currently connected peers." %}
+    {% trans "Please respect Amboss non-commercial usage terms." %}
+  </div>
+  {% endif %}
   <table id="peersTable" class="w3-table-all w3-centered w3-hoverable">
     <tr>
       <th onclick="sortTable(event.target, 0, 'String')" width=40%>Peer PubKey</th>
@@ -14,6 +21,9 @@
       <th onclick="sortTable(event.target, 4, 'String')">Inbound</th>
       <th onclick="sortTable(event.target, 5, 'int')">Sats Sent</th>
       <th onclick="sortTable(event.target, 6, 'int')">Sats Received</th>
+      <th onclick="sortTable(event.target, 7, 'int')">{% trans "Amboss Rank" %}</th>
+      <th onclick="sortTable(event.target, 8, 'int')">{% trans "Amboss Capacity" %}</th>
+      <th onclick="sortTable(event.target, 9, 'int')">{% trans "Amboss Channels" %}</th>
       <th>Action</th>
     </tr>
     {% for peer in peers %}
@@ -25,6 +35,9 @@
       <td>{{ peer.inbound }}</td>
       <td>{{ peer.sat_sent|eucomma }}</td>
       <td>{{ peer.sat_recv|eucomma }}</td>
+      <td>{% if peer.amboss_rank is not None %}{{ peer.amboss_rank }}{% else %}—{% endif %}</td>
+      <td>{% if peer.amboss_capacity is not None %}{{ peer.amboss_capacity|eucomma }}{% else %}—{% endif %}</td>
+      <td>{% if peer.amboss_channels is not None %}{{ peer.amboss_channels|eucomma }}{% else %}—{% endif %}</td>
       <td><button onclick="disconnectPeer(this.parentElement.parentElement)" title="Disconnect from this peer">❌</button></td>
     </tr>
     {% endfor %}
