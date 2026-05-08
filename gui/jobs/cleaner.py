@@ -6,11 +6,13 @@ from asgiref.sync import sync_to_async
 from django.utils import timezone
 
 from gui.models import (
+    AutoFeeMLRecord,
     BackupLog,
     ChannelSnapshot,
     ChangeLog,
     ForwardingAggregate,
     PolicyRun,
+    RebalanceMLRecord,
     Recommendation,
     SpliceLog,
 )
@@ -23,6 +25,8 @@ DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS = 90
 DEFAULT_RECOMMENDATION_RETENTION_DAYS = 90
 DEFAULT_POLICYRUN_RETENTION_DAYS = 90
 DEFAULT_SPLICE_LOG_RETENTION_DAYS = 365
+DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS = 180
+DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS = 180
 
 
 async def _delete_older_than(
@@ -107,3 +111,17 @@ async def clean_policy_runs(retention_days: int = DEFAULT_POLICYRUN_RETENTION_DA
 async def clean_splice_log(retention_days: int = DEFAULT_SPLICE_LOG_RETENTION_DAYS) -> int:
     cutoff = timezone.now() - timedelta(days=retention_days)
     return await _delete_older_than(SpliceLog.objects, cutoff, time_field="initiated_at")
+
+
+async def clean_rebalance_ml_records(
+    retention_days: int = DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS,
+) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(RebalanceMLRecord.objects, cutoff, time_field="timestamp")
+
+
+async def clean_autofee_ml_records(
+    retention_days: int = DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS,
+) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(AutoFeeMLRecord.objects, cutoff, time_field="timestamp")

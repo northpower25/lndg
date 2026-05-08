@@ -1,5 +1,6 @@
 import datetime
 import dataclasses
+import json
 from statistics import median as _median
 
 from django.db.models import Count, Sum
@@ -9,6 +10,8 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
+
+from gui.jobs.executor import execute_policy
 
 # msats per sat – used when converting amt_out_msat → sat
 _MSAT_PER_SAT = 1000
@@ -343,7 +346,8 @@ def cleaner_run(request) -> Response:
         {
             "table": "channel_snapshots" | "forwarding_aggregates" | "change_log"
                      | "backup_log" | "failed_payments" | "recommendations"
-                     | "policy_runs" | "splice_log",
+                     | "policy_runs" | "splice_log"
+                     | "rebalance_ml_records" | "autofee_ml_records",
             "retention_days": int  (optional – uses per-table LocalSettings/defaults)
         }
 
@@ -362,14 +366,18 @@ def cleaner_run(request) -> Response:
         clean_failed_payments,
         clean_forwarding_aggregates,
         clean_policy_runs,
+        clean_rebalance_ml_records,
         clean_recommendations,
         clean_splice_log,
+        clean_autofee_ml_records,
         DEFAULT_BACKUP_LOG_RETENTION_DAYS,
+        DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS,
         DEFAULT_CHANNEL_SNAPSHOT_RETENTION_DAYS,
         DEFAULT_CHANGELOG_RETENTION_DAYS,
         DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
         DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
         DEFAULT_POLICYRUN_RETENTION_DAYS,
+        DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS,
         DEFAULT_RECOMMENDATION_RETENTION_DAYS,
         DEFAULT_SPLICE_LOG_RETENTION_DAYS,
     )
@@ -396,6 +404,8 @@ def cleaner_run(request) -> Response:
         rec_days = _retention("RETAIN-Recommendations", DEFAULT_RECOMMENDATION_RETENTION_DAYS)
         run_days = _retention("RETAIN-PolicyRuns", DEFAULT_POLICYRUN_RETENTION_DAYS)
         spl_days = _retention("RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS)
+        rml_days = _retention("RETAIN-RebalanceMLRecords", DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS)
+        aml_days = _retention("RETAIN-AutoFeeMLRecords", DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS)
 
         if dry_run:
             # Count rows that would be deleted (read-only)
@@ -408,8 +418,10 @@ def cleaner_run(request) -> Response:
                 ForwardingAggregate,
                 Payments,
                 PolicyRun,
+                RebalanceMLRecord,
                 Recommendation,
                 SpliceLog,
+                AutoFeeMLRecord,
             )
             now = timezone.now()
             results = {
@@ -421,6 +433,8 @@ def cleaner_run(request) -> Response:
                 "recommendations": Recommendation.objects.filter(created_at__lt=now - timedelta(days=rec_days)).count(),
                 "policy_runs": PolicyRun.objects.filter(executed_at__lt=now - timedelta(days=run_days)).count(),
                 "splice_log": SpliceLog.objects.filter(initiated_at__lt=now - timedelta(days=spl_days)).count(),
+                "rebalance_ml_records": RebalanceMLRecord.objects.filter(timestamp__lt=now - timedelta(days=rml_days)).count(),
+                "autofee_ml_records": AutoFeeMLRecord.objects.filter(timestamp__lt=now - timedelta(days=aml_days)).count(),
             }
         else:
             results = {
@@ -432,6 +446,8 @@ def cleaner_run(request) -> Response:
                 "recommendations": async_to_sync(clean_recommendations)(retention_days=rec_days),
                 "policy_runs": async_to_sync(clean_policy_runs)(retention_days=run_days),
                 "splice_log": async_to_sync(clean_splice_log)(retention_days=spl_days),
+                "rebalance_ml_records": async_to_sync(clean_rebalance_ml_records)(retention_days=rml_days),
+                "autofee_ml_records": async_to_sync(clean_autofee_ml_records)(retention_days=aml_days),
             }
         return Response({"dry_run": dry_run, "results": results})
 
@@ -448,6 +464,8 @@ def cleaner_run(request) -> Response:
         "recommendations": (clean_recommendations, DEFAULT_RECOMMENDATION_RETENTION_DAYS),
         "policy_runs": (clean_policy_runs, DEFAULT_POLICYRUN_RETENTION_DAYS),
         "splice_log": (clean_splice_log, DEFAULT_SPLICE_LOG_RETENTION_DAYS),
+        "rebalance_ml_records": (clean_rebalance_ml_records, DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS),
+        "autofee_ml_records": (clean_autofee_ml_records, DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS),
     }
     if table not in dispatch:
         return Response(
@@ -484,7 +502,9 @@ def cleaner_settings(request) -> Response:
             "retention_failed_payments":       int,
             "retention_recommendations":       int,
             "retention_policy_runs":           int,
-            "retention_splice_log":            int
+            "retention_splice_log":            int,
+            "retention_rebalance_ml_records":  int,
+            "retention_autofee_ml_records":    int
         }
 
     All fields are optional; only provided fields are updated.
@@ -497,8 +517,10 @@ def cleaner_settings(request) -> Response:
         DEFAULT_FAILED_PAYMENTS_RETENTION_DAYS,
         DEFAULT_FORWARDING_AGGREGATE_RETENTION_DAYS,
         DEFAULT_POLICYRUN_RETENTION_DAYS,
+        DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS,
         DEFAULT_RECOMMENDATION_RETENTION_DAYS,
         DEFAULT_SPLICE_LOG_RETENTION_DAYS,
+        DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS,
     )
 
     key_map = {
@@ -510,6 +532,8 @@ def cleaner_settings(request) -> Response:
         "retention_recommendations": ("RETAIN-Recommendations", DEFAULT_RECOMMENDATION_RETENTION_DAYS),
         "retention_policy_runs": ("RETAIN-PolicyRuns", DEFAULT_POLICYRUN_RETENTION_DAYS),
         "retention_splice_log": ("RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS),
+        "retention_rebalance_ml_records": ("RETAIN-RebalanceMLRecords", DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS),
+        "retention_autofee_ml_records": ("RETAIN-AutoFeeMLRecords", DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS),
     }
     saved = {}
     errors = {}
@@ -542,8 +566,10 @@ def cleaner_counts(request) -> Response:
         ForwardingAggregate,
         Payments,
         PolicyRun,
+        RebalanceMLRecord,
         Recommendation,
         SpliceLog,
+        AutoFeeMLRecord,
     )
 
     return Response({
@@ -555,6 +581,8 @@ def cleaner_counts(request) -> Response:
         "recommendations": Recommendation.objects.count(),
         "policy_runs": PolicyRun.objects.count(),
         "splice_log": SpliceLog.objects.count(),
+        "rebalance_ml_records": RebalanceMLRecord.objects.count(),
+        "autofee_ml_records": AutoFeeMLRecord.objects.count(),
     })
 
 
@@ -579,6 +607,16 @@ def _to_int(value, *, minimum: int | None = None, maximum: int | None = None) ->
     if maximum is not None and parsed > maximum:
         raise ValueError("above_maximum")
     return parsed
+
+
+def _validate_trigger_data_shape(trigger_data: dict) -> bool:
+    if len(trigger_data) > 50:
+        return False
+    try:
+        encoded = json.dumps(trigger_data)
+    except (TypeError, ValueError):
+        return False
+    return len(encoded) <= 4096
 
 
 @api_view(["POST"])
@@ -608,35 +646,26 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
 @permission_classes([IsAuthenticated])
 @throttle_classes([_PolicyRunThrottle])
 def policy_run(request, policy_id: int) -> Response:
-    from gui.models import Policy, PolicyRun
-
-    policy = Policy.objects.filter(pk=policy_id).first()
-    if policy is None:
-        return Response({"error": _("Policy not found.")}, status=404)
-
     simulate = bool(request.data.get("simulate", True))
     trigger_data = request.data.get("trigger_data") or {}
     if not isinstance(trigger_data, dict):
         return Response({"error": _("trigger_data must be an object.")}, status=400)
-
-    run = PolicyRun.objects.create(
-        policy=policy,
-        was_dry_run=simulate,
+    if not _validate_trigger_data_shape(trigger_data):
+        return Response({"error": _("trigger_data is too large or invalid.")}, status=400)
+    result = execute_policy(
+        policy_id=policy_id,
+        simulate=simulate,
         trigger_data=trigger_data,
-        actions_taken={"policy_type": policy.policy_type, "executed": not simulate},
-        outcome={
-            "status": "simulated" if simulate else "scheduled",
-            "message": _("Policy execution recorded."),
-        },
     )
-    policy.last_run = timezone.now()
-    policy.save(update_fields=["last_run"])
+    if not result["ok"]:
+        return Response({"error": _("Policy not found.")}, status=404)
     return Response(
         {
-            "status": "ok",
-            "policy_run_id": run.id,
-            "was_dry_run": run.was_dry_run,
-            "outcome": run.outcome,
+            "status": result["status"],
+            "policy_run_id": result["policy_run_id"],
+            "was_dry_run": result["was_dry_run"],
+            "outcome": result["outcome"],
+            "actions_taken": result["actions_taken"],
         }
     )
 

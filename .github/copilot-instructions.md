@@ -198,5 +198,42 @@ This is **Phase 3+ migration work** and carries high regression risk. The legacy
 ## Phase 3 – Remaining Gaps (Open Work)
 
 - **End-to-end CLN splice execution lifecycle** is only partially implemented: preview and API flow exist, but confirmation progression and backend-specific finalize steps still need robust production handling.
-- **Simulation layer coverage** is partial: recommendation dry-run and policy-run recording exist, but no full historical “Was wäre passiert” learning widget yet.
+- **Simulation layer coverage** is partial: recommendation dry-run and policy execution now run through `executor.py` with snapshots/audit logging, but no full historical “Was wäre passiert” learning widget yet.
 - **Legacy view migration to adapter-based writes** remains incomplete; phase-3 additions follow the executor path, but older write endpoints still require incremental migration.
+
+---
+
+## Phase 4 – Remaining Gaps (Open Work)
+
+### ✅ Completed in this iteration (Phase 4 continuation)
+
+| Item | Details |
+|------|---------|
+| Policy executor with validation/cooldown/hard caps | `gui/jobs/executor.py` now executes policies with validation and backend delegation |
+| PolicyRun + ChangeLog flow in policy API | `/api/v2/policies/{id}/run` now uses executor and writes `actor=policy:<name>` |
+| Auto-Fee policy templates as DB defaults | Migration `gui/migrations/0006_phase4_policy_ml_records.py` creates Conservative/Balanced/Revenue-Seeking templates (`dry_run=True`) |
+| Phase-4 ML shadow storage models | `RebalanceMLRecord` and `AutoFeeMLRecord` models + migration |
+| Retention for Phase-4 ML models | `gui/jobs/cleaner.py`, `cleaner_view.py`, `cleaner.html`, `/api/v2/cleaner/*`, `jobs.py` |
+| Periodic policy-engine execution | `jobs.py` runs due active policies on configurable `POLICY-Interval` |
+
+### ❌ Still open / not yet fully implementable in this iteration
+
+1. **Full Auto-Fee Templates UI (4-B)**
+   - **Status:** ⚠️ Partial.
+   - **Why:** Default template policies now exist in DB, but a dedicated guided/expert template selection UI with parameter expansion is not yet implemented; current UI remains legacy-oriented.
+
+2. **CLN Rebalance plugin execution path (4-C)**
+   - **Status:** ⚠️ Partial.
+   - **Why:** Capability detection exists, but no production-grade policy execution adapter path for CLN rebalance plugin calls has been wired in executor yet.
+
+3. **ML Shadow recommendation jobs (4-E / 4-F)**
+   - **Status:** ⚠️ Data model complete, job logic pending.
+   - **Why:** Storage models and retention are implemented, but `ml_predictor.py` and Auto-Fee/Rebalance shadow recommendation generation still need dedicated feature engineering and scheduling.
+
+4. **Rebalance budget queue + dynamic target quotas (4-G)**
+   - **Status:** ❌ Not implemented.
+   - **Why:** Requires deeper integration with legacy rebalancer flows and additional scoring logic; high coupling with existing `rebalancer.py` behavior warrants an incremental follow-up change.
+
+5. **Audit timeline UI + rollback endpoints (4-H)**
+   - **Status:** ❌ Not implemented.
+   - **Why:** Policy audit entries are now written, but timeline rendering and safe rollback execution (including automatic backup orchestration) need dedicated API + UI work and strict expert-mode gating.

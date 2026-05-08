@@ -79,6 +79,21 @@ class Phase3ApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(PolicyRun.objects.filter(policy=policy).count(), 1)
+        self.assertEqual(
+            ChangeLog.objects.filter(change_type=f"policy_{Policy.TYPE_NOTIFY}", actor="policy:test").count(),
+            1,
+        )
+
+    def test_policy_run_auto_fee_missing_channel_is_blocked(self):
+        policy = Policy.objects.create(name="auto-fee", policy_type=Policy.TYPE_AUTO_FEE, definition={})
+        response = self.client.post(
+            f"/api/v2/policies/{policy.id}/run/",
+            {"simulate": False, "trigger_data": {"source": "test"}},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "blocked")
+        self.assertEqual(ChangeLog.objects.filter(change_type="policy_auto_fee", actor="policy:auto-fee").count(), 1)
 
     def test_splice_endpoints_require_capability(self):
         set_active_backend(_SpliceBackendStub(can_splice=False))

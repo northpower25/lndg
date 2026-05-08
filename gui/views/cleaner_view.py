@@ -12,6 +12,8 @@ from gui.jobs.cleaner import (
     DEFAULT_POLICYRUN_RETENTION_DAYS,
     DEFAULT_RECOMMENDATION_RETENTION_DAYS,
     DEFAULT_SPLICE_LOG_RETENTION_DAYS,
+    DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS,
+    DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS,
 )
 
 
@@ -52,6 +54,12 @@ def cleaner_view(request):
         ),
         "splice_log": _int_setting(
             "RETAIN-SpliceLog", DEFAULT_SPLICE_LOG_RETENTION_DAYS
+        ),
+        "rebalance_ml_records": _int_setting(
+            "RETAIN-RebalanceMLRecords", DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS
+        ),
+        "autofee_ml_records": _int_setting(
+            "RETAIN-AutoFeeMLRecords", DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS
         ),
     }
 
