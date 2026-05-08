@@ -3,6 +3,7 @@ import django
 from time import sleep
 from django.db.models import Max, Sum, Avg, Count
 from django.db.models.functions import TruncDay, TruncHour
+from django.utils.translation import gettext as _
 from datetime import datetime, timedelta
 from gui.lnd_deps import lightning_pb2 as ln
 from gui.lnd_deps import lightning_pb2_grpc as lnrpc
@@ -59,8 +60,8 @@ def _run_mempool_fee_notification() -> None:
     if signal.light == "🟢" and _last_mempool_light != "🟢":
         hour_fee = payload.get("hourFee")
         _safe_notify(
-            f"🟢 Mempool fee window is favorable ({hour_fee} sat/vB). "
-            "Good timing for open/close/splice actions."
+            _("🟢 Mempool fee window is favorable (%(hour_fee)s sat/vB). Good timing for open/close/splice actions.")
+            % {"hour_fee": hour_fee}
         )
     _last_mempool_light = signal.light
 

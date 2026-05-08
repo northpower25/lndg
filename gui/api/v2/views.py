@@ -706,7 +706,7 @@ def splice_preview(request, channel_id: str) -> Response:
                 "light": fee_signal.light,
                 "label": fee_signal.label,
                 "wait_window": fee_signal.wait_window,
-                "hour_fee": fee_payload.get("hourFee") if fee_payload else None,
+                "hour_fee": fee_payload.get("hourFee"),
             },
         }
     )

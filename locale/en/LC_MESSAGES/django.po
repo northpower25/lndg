@@ -401,6 +401,9 @@ msgstr "All unsupported actions stay visible but disabled with explanatory toolt
 msgid "Open CLN plugin status panel"
 msgstr "Open CLN plugin status panel"
 
+msgid "🟢 Mempool fee window is favorable (%(hour_fee)s sat/vB). Good timing for open/close/splice actions."
+msgstr "🟢 Mempool fee window is favorable (%(hour_fee)s sat/vB). Good timing for open/close/splice actions."
+
 msgid "Onboarding"
 msgstr "Onboarding"
 

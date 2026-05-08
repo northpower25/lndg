@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.forms.models import model_to_dict
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -34,20 +35,14 @@ def peers(request):
         peer_rows = []
         for peer in peers:
             amboss = amboss_context.get(peer.pubkey, {})
-            peer_rows.append(
-                {
-                    "pubkey": peer.pubkey,
-                    "alias": peer.alias,
-                    "address": peer.address,
-                    "ping_time": peer.ping_time,
-                    "inbound": peer.inbound,
-                    "sat_sent": peer.sat_sent,
-                    "sat_recv": peer.sat_recv,
-                    "amboss_rank": amboss.get("rank"),
-                    "amboss_capacity": amboss.get("capacity"),
-                    "amboss_channels": amboss.get("channels"),
-                }
+            row = model_to_dict(
+                peer,
+                fields=["pubkey", "alias", "address", "ping_time", "inbound", "sat_sent", "sat_recv"],
             )
+            row["amboss_rank"] = amboss.get("rank")
+            row["amboss_capacity"] = amboss.get("capacity")
+            row["amboss_channels"] = amboss.get("channels")
+            peer_rows.append(row)
         context = {
             'peers': peer_rows,
             'num_peers': len(peer_rows),

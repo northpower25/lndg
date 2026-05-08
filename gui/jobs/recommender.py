@@ -273,6 +273,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                 )
             )
 
+    onchain_context = _onchain_context()
     created: list[Recommendation] = []
     for draft in sorted(drafts, key=lambda d: d.confidence, reverse=True)[:limit]:
         if draft.rec_type in {
@@ -281,7 +282,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
             Recommendation.TYPE_SPLICE_IN,
             Recommendation.TYPE_SPLICE_OUT,
         }:
-            draft.rationale["onchain_fee_context"] = _onchain_context()
+            draft.rationale["onchain_fee_context"] = onchain_context
         created.append(
             Recommendation.objects.create(
                 rec_type=draft.rec_type,

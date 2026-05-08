@@ -169,8 +169,10 @@ async function restartWizard() {
   window.location.reload();
 }
 
-document.querySelector('a.w3-button.w3-green')?.addEventListener('click', function () {
-  persistOnboarding(5, true);
+document.querySelector('a.w3-button.w3-green')?.addEventListener('click', async function (event) {
+  event.preventDefault();
+  await persistOnboarding(5, true);
+  window.location.href = '/';
 });
 </script>
 {% endblock %}

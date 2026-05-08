@@ -11,6 +11,7 @@ MEMPOOL_FEES_URL = "https://mempool.space/api/v1/fees/recommended"
 AMBOSS_GRAPHQL_URL = "https://api.amboss.space/graphql"
 _MEMPOOL_CACHE_TTL_SECONDS = 600
 _AMBOSS_CACHE_TTL_SECONDS = 600
+_AMBOSS_MAX_PUBKEYS_PER_REQUEST = 30
 
 _mempool_cache: dict = {"timestamp": 0.0, "value": None}
 _amboss_cache: dict = {}
@@ -27,11 +28,14 @@ async def fetch_mempool_recommended_fees_async() -> dict | None:
     """Fetch mempool fee recommendations with retry/backoff on HTTP 429."""
     delays = [0.4, 0.8, 1.6]
     for delay in delays:
-        response = await asyncio.to_thread(
-            requests.get,
-            MEMPOOL_FEES_URL,
-            timeout=8,
-        )
+        try:
+            response = await asyncio.to_thread(
+                requests.get,
+                MEMPOOL_FEES_URL,
+                timeout=8,
+            )
+        except Exception:
+            return None
         if response.status_code == 200:
             return response.json()
         if response.status_code == 429:
@@ -82,7 +86,7 @@ def get_amboss_peer_context(*, enabled: bool, api_key: str, pubkeys: list[str]) 
     """Fetch Amboss peer context for a bounded list of already known/evaluated peers."""
     if not enabled or not api_key.strip() or not pubkeys:
         return {}
-    limited_pubkeys = sorted({p for p in pubkeys if p})[:30]
+    limited_pubkeys = sorted({p for p in pubkeys if p})[:_AMBOSS_MAX_PUBKEYS_PER_REQUEST]
     cache_key = _amboss_cache_key(limited_pubkeys)
     entry = _amboss_cache.get(cache_key)
     if entry and _cache_valid(entry["timestamp"], _AMBOSS_CACHE_TTL_SECONDS):
