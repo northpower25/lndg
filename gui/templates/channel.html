@@ -139,10 +139,16 @@
 </div>
 <div class="w3-container w3-padding-small" style="overflow-x: scroll">
   <h2>{% trans "ML Controls" %}</h2>
+  <details class="w3-small w3-text-grey" style="margin-bottom:8px">
+    <summary>{% trans "Why?" %}</summary>
+    {% trans "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee." %}
+    {% trans "Data source: local ML history (AutoFeeMLRecord) and channel snapshots." %}
+    {% trans "The escalation level and confidence show the most recent ML shadow state for this channel." %}
+  </details>
   <table class="w3-table-all w3-centered w3-hoverable" style="margin-bottom:12px">
     <tr>
-      <th>{% trans "ML Rebalancing" %}</th>
-      <th>{% trans "ML Auto-Fee" %}</th>
+      <th title="{% trans 'Enable or disable ML shadow rebalancing suggestions for this channel.' %}">{% trans "ML Rebalancing" %}</th>
+      <th title="{% trans 'Enable or disable ML shadow auto-fee suggestions for this channel.' %}">{% trans "ML Auto-Fee" %}</th>
       <th>{% trans "Escalation Level" %}</th>
       <th>{% trans "Last ML Confidence" %}</th>
       <th>{% trans "Last ML Update" %}</th>

@@ -4,6 +4,7 @@ from django.db.models import Sum, IntegerField, Count, Max, Q
 from django.db.models.functions import Round
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
+import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +21,8 @@ from pandas import DataFrame
 from .utils import get_local_settings, get_tx_fees, graph_links, grpc_error_message, is_login_required, network_links, point
 import gui.jobs.auto_fees as af
 from gui.jobs.external_integrations import get_amboss_peer_context
+
+logger = logging.getLogger(__name__)
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channels(request):
@@ -482,7 +485,8 @@ def channel(request):
                     api_key=cfg.amboss_api_key,
                     pubkeys=[channel_pubkey],
                 ).get(channel_pubkey, {})
-        except Exception:
+        except Exception as exc:
+            logger.warning("Amboss peer context unavailable for channel %s: %s", chan_id, exc)
             amboss_peer = {}
 
         context = {
