@@ -616,3 +616,126 @@ msgstr "Gebührenrate (ppm)"
 
 msgid "Volume routed (sat)"
 msgstr "Geroutetes Volumen (sat)"
+
+msgid "Maintenance"
+msgstr "Wartung"
+
+msgid "Data Maintenance"
+msgstr "Datenpflege"
+
+msgid "Configure data-retention periods and manually trigger cleanup of old records."
+msgstr "Aufbewahrungszeiträume konfigurieren und die Bereinigung alter Datensätze manuell auslösen."
+
+msgid "All values are in days."
+msgstr "Alle Werte sind in Tagen."
+
+msgid "Retention Settings"
+msgstr "Aufbewahrungseinstellungen"
+
+msgid "Records older than the configured number of days are removed during the nightly cleanup run."
+msgstr "Datensätze, die älter als die konfigurierte Anzahl von Tagen sind, werden beim nächtlichen Bereinigungslauf entfernt."
+
+msgid "Data Type"
+msgstr "Datentyp"
+
+msgid "Retention (days)"
+msgstr "Aufbewahrung (Tage)"
+
+msgid "Default"
+msgstr "Standard"
+
+msgid "Channel Snapshots"
+msgstr "Kanal-Snapshots"
+
+msgid "Forwarding Aggregates"
+msgstr "Weiterleitungsaggregate"
+
+msgid "Change Log"
+msgstr "Änderungsprotokoll"
+
+msgid "Backup Log"
+msgstr "Backup-Protokoll"
+
+msgid "Failed Payments"
+msgstr "Fehlgeschlagene Zahlungen"
+
+msgid "These values are saved as LocalSettings and are used by the nightly retention run."
+msgstr "Diese Werte werden als LocalSettings gespeichert und beim nächtlichen Aufbewahrungslauf verwendet."
+
+msgid "Save Settings"
+msgstr "Einstellungen speichern"
+
+msgid "Saving..."
+msgstr "Wird gespeichert..."
+
+msgid "Settings saved."
+msgstr "Einstellungen gespeichert."
+
+msgid "Manual Cleanup Run"
+msgstr "Manueller Bereinigungslauf"
+
+msgid "medium"
+msgstr "mittel"
+
+msgid "All data types older than the retention values above will be permanently deleted."
+msgstr "Alle Datentypen, die älter als die obigen Aufbewahrungswerte sind, werden dauerhaft gelöscht."
+
+msgid "This operation cannot be undone. Create a backup first if needed."
+msgstr "Dieser Vorgang kann nicht rückgängig gemacht werden. Erstellen Sie bei Bedarf zuerst ein Backup."
+
+msgid "Check this to preview how many records would be deleted without actually removing them."
+msgstr "Aktivieren Sie dies, um eine Vorschau der zu löschenden Datensätze zu erhalten, ohne sie tatsächlich zu entfernen."
+
+msgid "Run Cleanup Now"
+msgstr "Jetzt bereinigen"
+
+msgid "Running cleanup..."
+msgstr "Bereinigung läuft..."
+
+msgid "Cleanup completed."
+msgstr "Bereinigung abgeschlossen."
+
+msgid "Dry Run"
+msgstr "Testlauf"
+
+msgid "Would delete"
+msgstr "Würde löschen"
+
+msgid "Deleted"
+msgstr "Gelöscht"
+
+msgid "WARNING: This will permanently delete records older than the configured retention periods. Continue?"
+msgstr "WARNUNG: Dies löscht dauerhaft Datensätze, die älter als die konfigurierten Aufbewahrungszeiträume sind. Fortfahren?"
+
+msgid "Manual cleanup is available in Expert mode only."
+msgstr "Die manuelle Bereinigung ist nur im Experten-Modus verfügbar."
+
+msgid "Switch to Expert mode using the mode selector in the navigation bar."
+msgstr "Wechseln Sie zum Experten-Modus über die Modusauswahl in der Navigationsleiste."
+
+msgid "Current Row Counts"
+msgstr "Aktuelle Zeilenanzahlen"
+
+msgid "Approximate number of records in each managed table."
+msgstr "Ungefähre Anzahl der Datensätze in jeder verwalteten Tabelle."
+
+msgid "Refresh"
+msgstr "Aktualisieren"
+
+msgid "Table"
+msgstr "Tabelle"
+
+msgid "Rows"
+msgstr "Zeilen"
+
+msgid "Error loading row counts."
+msgstr "Fehler beim Laden der Zeilenanzahlen."
+
+msgid "Failed Payments (failed/inflight)"
+msgstr "Fehlgeschlagene Zahlungen (fehlgeschlagen/in-flight)"
+
+msgid "Data Maintenance is available in Advanced or Expert mode only."
+msgstr "Datenpflege ist nur im Erweitert- oder Experten-Modus verfügbar."
+
+msgid "Inactive"
+msgstr "Inaktiv"

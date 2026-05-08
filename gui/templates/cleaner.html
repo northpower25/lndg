@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %} {{ block.super }} - {% trans "Maintenance" %}{% endblock %}
+{% block content %}
+{% if user_mode == 'expert' or user_mode == 'advanced' %}
+<div class="w3-container w3-padding">
+
+  <h2>{% trans "Data Maintenance" %}</h2>
+  <p class="w3-text-grey">
+    {% trans "Configure data-retention periods and manually trigger cleanup of old records." %}
+    {% trans "All values are in days." %}
+  </p>
+
+  <!-- ── Retention Settings ─────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <h3>{% trans "Retention Settings" %}
+      <span class="w3-small w3-text-grey" style="cursor:help"
+            title="{% trans 'Records older than the configured number of days are removed during the nightly cleanup run.' %}">❓</span>
+    </h3>
+    <table class="w3-table w3-bordered w3-small w3-margin-top" style="max-width:600px">
+      <thead>
+        <tr>
+          <th>{% trans "Data Type" %}</th>
+          <th>{% trans "Retention (days)" %}</th>
+          <th>{% trans "Default" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{% trans "Channel Snapshots" %}</td>
+          <td><input id="ret-snapshots" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.channel_snapshots|default:90 }}"></td>
+          <td class="w3-text-grey">90</td>
+        </tr>
+        <tr>
+          <td>{% trans "Forwarding Aggregates" %}</td>
+          <td><input id="ret-fwd-agg" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.forwarding_aggregates|default:180 }}"></td>
+          <td class="w3-text-grey">180</td>
+        </tr>
+        <tr>
+          <td>{% trans "Change Log" %}</td>
+          <td><input id="ret-changelog" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.change_log|default:365 }}"></td>
+          <td class="w3-text-grey">365</td>
+        </tr>
+        <tr>
+          <td>{% trans "Backup Log" %}</td>
+          <td><input id="ret-backuplog" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.backup_log|default:90 }}"></td>
+          <td class="w3-text-grey">90</td>
+        </tr>
+        <tr>
+          <td>{% trans "Failed Payments" %}</td>
+          <td><input id="ret-payments" type="number" min="7" max="3650"
+                     class="w3-input w3-border" style="width:90px;min-height:44px;"
+                     value="{{ retention.failed_payments|default:90 }}"></td>
+          <td class="w3-text-grey">90</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="w3-small w3-text-grey w3-margin-top">
+      {% trans "These values are saved as LocalSettings and are used by the nightly retention run." %}
+    </p>
+    <button class="w3-button w3-blue w3-round w3-margin-top"
+            style="min-height:44px;min-width:160px;"
+            onclick="saveRetentionSettings()">
+      {% trans "Save Settings" %}
+    </button>
+    <div id="save-status" class="w3-margin-top" style="display:none;"></div>
+  </div>
+
+  <!-- ── Manual Cleanup Run ─────────────────────────────────────── -->
+  {% if user_mode == 'expert' %}
+  <div class="w3-card w3-padding w3-margin-bottom w3-border-left w3-border-orange" style="border-left-width:4px!important;">
+    <h3>{% trans "Manual Cleanup Run" %}
+      <span class="w3-badge w3-orange w3-small">{% trans "medium" %}</span>
+    </h3>
+
+    <!-- Impact Preview (R-GUI-2) -->
+    <div class="w3-panel w3-pale-yellow w3-border">
+      <h4>⚠ {% trans "Impact Preview" %}</h4>
+      <ul>
+        <li>{% trans "All data types older than the retention values above will be permanently deleted." %}</li>
+        <li>{% trans "This operation cannot be undone. Create a backup first if needed." %}</li>
+        <li>{% trans "Risk Level" %}: <span class="w3-badge w3-orange">{% trans "medium" %}</span></li>
+      </ul>
+    </div>
+
+    <!-- dry_run toggle (R-GUI-3) -->
+    <div class="w3-margin-bottom">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px;">
+        <input type="checkbox" id="dry-run-cleaner" checked style="width:20px;height:20px;">
+        <span><strong>{% trans "Dry Run (preview only)" %}</strong> –
+          {% trans "Check this to preview how many records would be deleted without actually removing them." %}
+        </span>
+      </label>
+    </div>
+
+    <button id="btn-run-cleaner"
+            class="w3-button w3-orange w3-round"
+            style="min-height:44px;min-width:200px;"
+            onclick="runCleaner()">
+      {% trans "Run Cleanup Now" %}
+    </button>
+    <div id="cleaner-status" class="w3-margin-top" style="display:none;"></div>
+  </div>
+  {% else %}
+  <div class="w3-panel w3-pale-yellow w3-border">
+    <p>{% trans "Manual cleanup is available in Expert mode only." %}
+      {% trans "Switch to Expert mode using the mode selector in the navigation bar." %}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- ── Row counts ─────────────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <h3>{% trans "Current Row Counts" %}
+      <span class="w3-small w3-text-grey" style="cursor:help"
+            title="{% trans 'Approximate number of records in each managed table.' %}">❓</span>
+    </h3>
+    <button class="w3-button w3-light-grey w3-round w3-small w3-margin-bottom"
+            style="min-height:44px;"
+            onclick="loadRowCounts()">
+      {% trans "Refresh" %}
+    </button>
+    <div id="row-counts-container">
+      <p class="w3-text-grey">{% trans "Loading..." %}</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const API_CLEANER_RUN  = '{% url "api-v2-cleaner-run" %}';
+const API_SETTINGS_URL = '/api/v2/user/settings/';
+
+// ── Save Retention Settings ────────────────────────────────────────────────
+async function saveRetentionSettings() {
+  const statusDiv = document.getElementById('save-status');
+  const payload = {
+    retention_channel_snapshots:    parseInt(document.getElementById('ret-snapshots').value, 10),
+    retention_forwarding_aggregates: parseInt(document.getElementById('ret-fwd-agg').value, 10),
+    retention_change_log:            parseInt(document.getElementById('ret-changelog').value, 10),
+    retention_backup_log:            parseInt(document.getElementById('ret-backuplog').value, 10),
+    retention_failed_payments:       parseInt(document.getElementById('ret-payments').value, 10),
+  };
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Saving..." %}</p>';
+
+  try {
+    // Save each retention value as a LocalSetting via /api/v2/cleaner/settings/
+    const resp = await fetch('/api/v2/cleaner/settings/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      statusDiv.innerHTML = '<div class="w3-panel w3-pale-green w3-border"><p>✓ {% trans "Settings saved." %}</p></div>';
+    } else {
+      const d = await resp.json();
+      statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Error" %}: ${d.error || resp.statusText}</p></div>`;
+    }
+  } catch (e) {
+    statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Network error" %}: ${e.message}</p></div>`;
+  }
+}
+
+// ── Run Cleanup ────────────────────────────────────────────────────────────
+async function runCleaner() {
+  const btn = document.getElementById('btn-run-cleaner');
+  const statusDiv = document.getElementById('cleaner-status');
+  const dryRun = document.getElementById('dry-run-cleaner').checked;
+
+  if (!dryRun && !confirm('{% trans "WARNING: This will permanently delete records older than the configured retention periods. Continue?" %}')) {
+    return;
+  }
+  btn.disabled = true;
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<p class="w3-text-blue">{% trans "Running cleanup..." %}</p>';
+
+  try {
+    const resp = await fetch(API_CLEANER_RUN, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+      body: JSON.stringify({dry_run: dryRun}),
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      const r = data.results || data;
+      const dryLabel = data.dry_run ? ' <span class="w3-badge w3-orange">{% trans "Dry Run" %}</span>' : '';
+      statusDiv.innerHTML = `
+        <div class="w3-panel w3-pale-green w3-border">
+          <p>✓ <strong>{% trans "Cleanup completed." %}</strong>${dryLabel}</p>
+          <table class="w3-table w3-bordered w3-small w3-margin-top">
+            <tr><th>{% trans "Data Type" %}</th><th>${data.dry_run ? '{% trans "Would delete" %}' : '{% trans "Deleted" %}'}</th></tr>
+            <tr><td>{% trans "Channel Snapshots" %}</td><td>${r.channel_snapshots ?? '—'}</td></tr>
+            <tr><td>{% trans "Forwarding Aggregates" %}</td><td>${r.forwarding_aggregates ?? '—'}</td></tr>
+            <tr><td>{% trans "Change Log" %}</td><td>${r.change_log ?? '—'}</td></tr>
+            <tr><td>{% trans "Backup Log" %}</td><td>${r.backup_log ?? '—'}</td></tr>
+            <tr><td>{% trans "Failed Payments" %}</td><td>${r.failed_payments ?? '—'}</td></tr>
+          </table>
+        </div>`;
+      loadRowCounts();
+    } else {
+      statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Error" %}: ${data.error || resp.statusText}</p></div>`;
+    }
+  } catch (e) {
+    statusDiv.innerHTML = `<div class="w3-panel w3-pale-red w3-border"><p>✗ {% trans "Network error" %}: ${e.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Row Counts ─────────────────────────────────────────────────────────────
+async function loadRowCounts() {
+  const container = document.getElementById('row-counts-container');
+  try {
+    const resp = await fetch('/api/v2/cleaner/counts/', {
+      headers: {'X-CSRFToken': CSRF_TOKEN, 'Accept': 'application/json'},
+    });
+    if (!resp.ok) {
+      container.innerHTML = '<p class="w3-text-red">{% trans "Error loading row counts." %}</p>';
+      return;
+    }
+    const data = await resp.json();
+    const rows = [
+      ['{% trans "Channel Snapshots" %}',       data.channel_snapshots ?? '—'],
+      ['{% trans "Forwarding Aggregates" %}',    data.forwarding_aggregates ?? '—'],
+      ['{% trans "Change Log" %}',               data.change_log ?? '—'],
+      ['{% trans "Backup Log" %}',               data.backup_log ?? '—'],
+      ['{% trans "Failed Payments (failed/inflight)" %}', data.failed_payments ?? '—'],
+    ];
+    let html = '<table class="w3-table w3-bordered w3-small" style="max-width:400px"><thead><tr><th>{% trans "Table" %}</th><th>{% trans "Rows" %}</th></tr></thead><tbody>';
+    rows.forEach(function(r) { html += `<tr><td>${r[0]}</td><td>${Number(r[1]).toLocaleString()}</td></tr>`; });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<p class="w3-text-red">{% trans "Network error" %}: ${e.message}</p>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadRowCounts);
+</script>
+
+{% else %}
+<div class="w3-container w3-padding">
+  <div class="w3-panel w3-pale-yellow w3-border">
+    <p>{% trans "Data Maintenance is available in Advanced or Expert mode only." %}
+      {% trans "Switch mode using the selector in the navigation bar." %}
+    </p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

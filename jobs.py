@@ -1,3 +1,4 @@
+import asyncio
 import django
 from time import sleep
 from django.db.models import Max, Sum, Avg, Count
@@ -18,6 +19,16 @@ import gui.jobs.auto_fees as af  # noqa: E402
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
+
+# ── Phase-2 periodic-job intervals ────────────────────────────────────────────
+# How many main-loop iterations (each ≈ 20 s) between runs of each job.
+# Defaults can be overridden via LocalSettings keys:
+#   SNAPSHOT-Interval  → iterations between channel-snapshot collections
+#   AGGREGATOR-Interval → iterations between forwarding-aggregate runs
+#   CLEANER-Interval   → iterations between data-retention (cleaner) runs
+_SNAPSHOT_DEFAULT_ITERS = 45   # ≈ 15 min  (45 × 20 s)
+_AGGREGATOR_DEFAULT_ITERS = 180  # ≈ 60 min
+_CLEANER_DEFAULT_ITERS = 4320  # ≈ 24 h
 
 
 def _safe_notify(message: str) -> None:
@@ -880,7 +891,88 @@ def predictive_schedule():
     except Exception as e:
         print(f"{datetime.now().strftime('%c')} : [Data] : Error in predictive_schedule: {str(e)}")
 
+
+# ── Phase-2 helpers ────────────────────────────────────────────────────────────
+
+def _get_interval_setting(key: str, default: int) -> int:
+    """Read an integer job-interval override from LocalSettings."""
+    try:
+        qs = LocalSettings.objects.filter(key=key)
+        if qs.exists():
+            v = int(qs.first().value)
+            return v if v > 0 else default
+    except Exception:
+        pass
+    return default
+
+
+def _run_phase2_periodic_jobs(loop_counter: int) -> None:
+    """Run Phase-2 collector / aggregator / cleaner jobs at their configured intervals.
+
+    Called once per main-loop iteration.  Each job fires only when
+    ``loop_counter % interval == 0`` so they run at their respective periods
+    without additional threads.
+    """
+    from gui.backends.registry import get_active_backend
+    from gui.jobs.collector import collect_channel_snapshots
+    from gui.jobs.aggregator import aggregate_forwarding_windows
+
+    snap_iters = _get_interval_setting("SNAPSHOT-Interval", _SNAPSHOT_DEFAULT_ITERS)
+    agg_iters = _get_interval_setting("AGGREGATOR-Interval", _AGGREGATOR_DEFAULT_ITERS)
+    clean_iters = _get_interval_setting("CLEANER-Interval", _CLEANER_DEFAULT_ITERS)
+
+    # Channel snapshots (every ~15 min by default)
+    if loop_counter % snap_iters == 0:
+        backend = get_active_backend()
+        if backend is not None:
+            try:
+                saved = asyncio.run(collect_channel_snapshots(backend))
+                print(f"{datetime.now().strftime('%c')} : [Collector] : Saved {saved} channel snapshots.")
+            except Exception as exc:
+                print(f"{datetime.now().strftime('%c')} : [Collector] : Error collecting channel snapshots: {exc}")
+
+    # Forwarding aggregates (every ~60 min by default)
+    if loop_counter % agg_iters == 0:
+        try:
+            upserted = asyncio.run(aggregate_forwarding_windows())
+            print(f"{datetime.now().strftime('%c')} : [Aggregator] : Upserted {upserted} forwarding aggregate rows.")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [Aggregator] : Error aggregating forwarding windows: {exc}")
+
+    # Data retention / cleaner (every ~24 h by default)
+    if loop_counter % clean_iters == 0:
+        try:
+            results = asyncio.run(_run_all_cleaners())
+            print(f"{datetime.now().strftime('%c')} : [Cleaner] : Retention run complete. {results}")
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [Cleaner] : Error during retention run: {exc}")
+
+
+async def _run_all_cleaners() -> dict:
+    """Run all cleaner tasks and return a summary dict."""
+    from gui.jobs.cleaner import (
+        clean_channel_snapshots,
+        clean_forwarding_aggregates,
+        clean_change_log,
+        clean_backup_log,
+        clean_failed_payments as clean_failed_payments_job,
+    )
+    snap_del = await clean_channel_snapshots()
+    agg_del = await clean_forwarding_aggregates()
+    log_del = await clean_change_log()
+    bkp_del = await clean_backup_log()
+    pay_del = await clean_failed_payments_job()
+    return {
+        "channel_snapshots": snap_del,
+        "forwarding_aggregates": agg_del,
+        "change_log": log_del,
+        "backup_log": bkp_del,
+        "failed_payments": pay_del,
+    }
+
+
 def main():
+    loop_counter = 0
     while True:
         print(f"{datetime.now().strftime('%c')} : [Data] : Starting data execution...")
         try:
@@ -901,6 +993,16 @@ def main():
             predictive_schedule()
         except Exception as e:
             print(f"{datetime.now().strftime('%c')} : [Data] : Error processing background data: {str(e)}")
+
+        # Phase-2 periodic jobs (collector / aggregator / cleaner).
+        # These run independently of the LND stub so that a connection failure
+        # above does not skip them.
+        try:
+            _run_phase2_periodic_jobs(loop_counter)
+        except Exception as exc:
+            print(f"{datetime.now().strftime('%c')} : [Data] : Error in Phase-2 periodic jobs: {exc}")
+
+        loop_counter += 1
         print(f"{datetime.now().strftime('%c')} : [Data] : Data execution completed...sleeping for 20 seconds")
         sleep(20)
 

@@ -92,3 +92,86 @@ Before writing any code, verify each applicable item:
 □ R-DM-6:    Are amount fields named amount_sat / amount_msat?
 □ R-I18N-5:  Are DE + EN translations provided for every new user-visible text?
 ```
+
+---
+
+## Phase 1 + 2 – Remaining Gaps (Open Work)
+
+After every task execution, update this section with what was completed, what is still open,
+and — most importantly — **why** something could not yet be completed.
+
+### ✅ Completed (Phase 1 + 2)
+
+| Item | Details |
+|------|---------|
+| Multi-stage Dockerfile (rootless, `/lndg`) | `Dockerfile` |
+| CI pipeline split backend/frontend | `.github/workflows/ci.yml` |
+| Backend adapter interfaces + LND + CLN adapters | `gui/backends/` |
+| Capability registry singleton | `gui/backends/registry.py` |
+| **Registry auto-wiring on startup** | `gui/apps.py` `GuiConfig.ready()` – auto-detects CLN via `CLN-REST-URL`+`CLN-Rune` in LocalSettings, falls back to LND |
+| UserMode model + `/api/v2/user/settings/` | `gui/models.py`, `gui/api/v2/views.py` |
+| i18n settings infrastructure (DE+EN) | `initialize.py`, `locale/*/LC_MESSAGES/*.po` |
+| Cockpit tiles + new navigation | `gui/templates/home.html`, `gui/templates/base.html` |
+| Time-series models (ChannelSnapshot, ForwardingAggregate, ChangeLog, BackupLog) + migrations | `gui/models.py`, `gui/migrations/` |
+| Cleaner module with all retention functions | `gui/jobs/cleaner.py` |
+| Collector module | `gui/jobs/collector.py` |
+| Aggregator module | `gui/jobs/aggregator.py` |
+| **Collector + Aggregator + Cleaner in jobs.py** | `jobs.py` `_run_phase2_periodic_jobs()` – runs on configurable loop-counter intervals |
+| Charts UI + chart API endpoints | `gui/templates/charts.html`, `gui/api/v2/views.py` |
+| Backup/Restore UI + API endpoints | `gui/templates/backup_restore.html`, `gui/jobs/backup.py`, `gui/api/v2/views.py` |
+| **Cleaner/Maintenance UI** | `gui/templates/cleaner.html`, `gui/views/cleaner_view.py`, URL `/maintenance/`, nav link (advanced/expert) |
+| **`/api/v2/cleaner/settings/`** (save retention values) | `gui/api/v2/views.py` |
+| **`/api/v2/cleaner/counts/`** (row-count overview) | `gui/api/v2/views.py` |
+| **`/api/v2/cleaner/run/` extended** | now supports `dry_run` + all-tables mode alongside single-table backward-compat |
+| ChangeLog in fee-update write paths | `gui/views/channels.py` |
+| Onboarding wizard (CLN + LND) | `gui/templates/onboarding.html`, `gui/views/onboarding.py` |
+| requirements.in with version bounds | `requirements.in` |
+
+---
+
+### ❌ Not Completable in Phase 1 + 2 Scope — Why
+
+These items were identified as Phase 1+2 goals but **cannot** be completed without either
+a Phase 3+ effort, inherent technical/operational constraints, or unacceptable regression risk.
+
+#### 1. Full migration of legacy LND direct calls to Backend Adapter
+**Status:** ❌ Cannot be done in Phase 1/2 scope.
+**Why:** `jobs.py`, `gui/views/channels.py`, `gui/views/peers.py`, `gui/views/routing.py`, `gui/views/payments.py`, `gui/views/settings.py`, and others contain ~300+ direct gRPC (`lnd_connect()`/`LightningStub`) calls. Migrating all of these to go through the Backend Adapter would require:
+- Extending the adapter interface with ~30+ additional methods,
+- Rewriting every affected view and job function,
+- Running full regression tests against a live LND node.
+This is **Phase 3+ migration work** and carries high regression risk. The legacy paths are not broken; they just bypass the adapter layer. **Rule R-ARCH-2/R-ARCH-3 compliance for the existing code will be achieved incrementally in Phase 3.**
+
+#### 2. CLN end-to-end integration (live data, all views)
+**Status:** ❌ Adapter exists; full wiring to views deferred to Phase 3.
+**Why:** The `ClnBackend` adapter is implemented for `get_forwarding_events`, `update_fee_policy`, and `get_capabilities`. However, because all existing views still call LND gRPC directly (see item 1), a CLN node cannot currently replace LND as the primary data source for the full UI. Full CLN support requires completing Phase 3 (view-by-view migration to read-adapter). The onboarding wizard and capability flags already work correctly for CLN.
+
+#### 3. CLN HTLC-stream hooks
+**Status:** ❌ Phase 3+ / requires CLN WebSocket/notification infrastructure.
+**Why:** CLN's HTLC streaming requires either CLN's `htlc_accepted` hook (Python plugin) or the `notifications` WebSocket channel (CLN ≥ 24.08). Neither mechanism is in place in the current architecture. This is scoped for Phase 3 when CLN becomes a fully supported backend.
+
+#### 4. Pinned `requirements.txt` via `pip-compile`
+**Status:** ⚠️ Partially complete (`requirements.in` has version bounds).
+**Why:** `pip-compile` must be run in the target Python environment to produce a deterministic lock file. Running it inside the Copilot sandbox produces a lock that may differ from production (Python version, platform markers). The correct process is: **maintainers run `pip-compile requirements.in -o requirements.txt` locally and commit the result**. The `requirements.in` already provides upper-bound constraints as required by R-SEC-3. The unpinned `requirements.txt` is a known gap; CI should enforce `pip-compile --check` to catch drift.
+
+#### 5. Full i18n coverage of legacy templates
+**Status:** ⚠️ All **new** Phase 1+2 templates/views are fully i18n'd (DE+EN). Legacy templates are not.
+**Why:** Existing templates (`home.html`, `channels.html`, `peers.html`, `advanced.html`, `payments.html`, etc.) contain 400+ strings that predate i18n and are not wrapped in `{% trans %}`. Marking all of them correctly without introducing regressions requires a dedicated pass per template. This is **Phase 1 housekeeping debt** to be resolved incrementally. New code follows R-I18N-1/R-I18N-5 strictly.
+
+#### 6. ChangeLog for all write operations (rebalancer, autopilot, etc.)
+**Status:** ⚠️ Fee-update writes are logged. Rebalancer, autopilot, peer/channel open/close are not.
+**Why:** The rebalancer (`jobs.py`, `gui/jobs/rebalancer.py`) and peer operations trigger writes that currently bypass `ChangeLog`. Completing this requires adding `ChangeLog.objects.create(...)` calls throughout ~15 functions without breaking their existing logic. This is lower-risk than item 1 and should be completed in Phase 2 housekeeping or early Phase 3.
+
+#### 7. Database restore via the `/api/v2/backup/restore/` API
+**Status:** ⚠️ The restore API currently accepts settings-file restores only; full DB restore is intentionally locked.
+**Why:** Restoring the SQLite database while Django is running can corrupt it or silently lose in-flight writes. A safe DB restore requires stopping the application, replacing the file, and restarting — which cannot be done via an HTTP endpoint without a supervisor/container orchestration layer. The endpoint returns HTTP 400 for `type=database` restore requests by design (see `gui/api/v2/views.py`). This is an **operational/security constraint**, not a missing feature.
+
+---
+
+### 🔜 Recommended Next Steps (Phase 3 Priority)
+
+1. Run `pip-compile requirements.in -o requirements.txt` and commit to satisfy R-SEC-3.
+2. Add `ChangeLog` entries to the rebalancer and autopilot write paths.
+3. Begin Phase 3: migrate `gui/views/channels.py` fee-update path to use `LightningWriteAdapter` via `executor.py`.
+4. Add `pip-compile --check` to the CI `make lint` step to catch requirements drift.
+5. Progressively i18n legacy templates (one per PR, lowest-risk-first order).
