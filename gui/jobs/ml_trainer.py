@@ -212,6 +212,7 @@ def train_rebalance_model(*, force: bool = False) -> dict[str, Any]:
     cv_score: float | None = None
     if len(X) >= 6:
         try:
+            # Use at most 3 folds, at least 2; each fold covers ~1/3 of samples
             n_splits = min(3, max(2, len(X) // 3))
             scores = cross_val_score(pipeline, X, y, cv=n_splits, scoring="roc_auc")
             cv_score = float(scores.mean())
@@ -398,6 +399,7 @@ def get_autofee_suggestions(*, limit: int = 10) -> list[dict[str, Any]]:
         else:
             continue
 
+        # If current_fee is 0, any factor yields 0; _MIN_FEE_RATE_PPM acts as absolute floor
         suggested_fee = max(_MIN_FEE_RATE_PPM, int(current_fee * factor))
         confidence = min(0.90, 0.55 + 0.05 * current_level + abs(feat["confidence"]) * 0.2)
 

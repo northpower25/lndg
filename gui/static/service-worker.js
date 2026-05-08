@@ -60,11 +60,6 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // SSE events stream: network-only, never cache streaming connections
-  if (url.pathname.startsWith('/api/v2/events/')) {
-    return;
-  }
-
   // Static assets: cache-first
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(

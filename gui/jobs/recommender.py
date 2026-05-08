@@ -307,6 +307,9 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
 # Phase-6B: ML Shadow Recommendations
 # ---------------------------------------------------------------------------
 
+# Channels with outbound liquidity below this threshold (%) are considered depleted
+_ML_SHADOW_DEPLETED_OUTBOUND_PCT = 30
+
 def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
     """Generate ML shadow-mode recommendations alongside heuristic ones (R-AI-3).
 
@@ -343,7 +346,7 @@ def generate_ml_shadow_recommendations(*, limit: int = 3) -> list[dict]:
             break
         capacity = ch.capacity or 1
         outbound_pct = int((ch.local_balance * 100) / capacity)
-        if outbound_pct > 30:
+        if outbound_pct > _ML_SHADOW_DEPLETED_OUTBOUND_PCT:
             continue  # Only suggest for depleted channels
 
         prediction = _shadow_rebalance_predict(

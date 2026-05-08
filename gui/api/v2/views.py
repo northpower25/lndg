@@ -23,7 +23,11 @@ _SSE_MAX_CONNECTION_SECONDS = 3600  # 1 hour max SSE connection duration
 
 
 def _safe_int_param(value: str | None, default: int, min_val: int = 1, max_val: int = 1000) -> int:
-    """Parse a query parameter as int, clamped to [min_val, max_val]."""
+    """Parse a query parameter as int, clamped to [min_val, max_val].
+
+    Clamping applies only to successfully parsed values. The ``default`` is
+    returned as-is when ``value`` is None or non-numeric.
+    """
     if value is None:
         return default
     try:
