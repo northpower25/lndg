@@ -581,7 +581,7 @@
   <h2>Open a Channel</h2>
   {% if mempool_signal %}
   <div class="w3-small w3-text-grey">
-    {% trans "On-chain fee window" %}: <span role="img" aria-hidden="true">{{ mempool_signal.light }}</span><span class="w3-hide">{% trans "Fee status" %}: {{ mempool_signal.label }}</span> {{ mempool_signal.label }}
+    {% trans "On-chain fee window" %}: <span role="img" aria-label="{% trans 'Fee status' %}: {{ mempool_signal.label }}">{{ mempool_signal.light }}</span> {{ mempool_signal.label }}
     · {% trans "Wait-window hint" %}: {{ mempool_signal.wait_window }}
   </div>
   {% endif %}
@@ -605,7 +605,7 @@
   <h2>Close a Channel</h2>
   {% if mempool_signal %}
   <div class="w3-small w3-text-grey">
-    {% trans "On-chain fee window" %}: <span role="img" aria-hidden="true">{{ mempool_signal.light }}</span><span class="w3-hide">{% trans "Fee status" %}: {{ mempool_signal.label }}</span> {{ mempool_signal.label }}
+    {% trans "On-chain fee window" %}: <span role="img" aria-label="{% trans 'Fee status' %}: {{ mempool_signal.label }}">{{ mempool_signal.light }}</span> {{ mempool_signal.label }}
     · {% trans "Wait-window hint" %}: {{ mempool_signal.wait_window }}
   </div>
   {% endif %}

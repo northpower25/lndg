@@ -487,7 +487,7 @@ def channel(request):
                     pubkeys=[channel_pubkey],
                 ).get(channel_pubkey, {})
         except Exception as exc:
-            logger.warning("Amboss peer context unavailable for channel %s: %s", chan_id, exc)
+            logger.warning("Amboss peer context integration failed for channel %s: %s", chan_id, exc)
             amboss_peer = {}
 
         context = {
@@ -1043,7 +1043,7 @@ def update_channel(request):
                 db_channel.save()
                 messages.success(request, 'Max HTLC for channel ' + str(db_channel.alias) + ' (' + str(db_channel.chan_id) + ') updated to a value of: ' + str(target))
             elif update_target == 14:
-                db_channel.ml_rebalance_enabled = not bool(db_channel.ml_rebalance_enabled)
+                db_channel.ml_rebalance_enabled = not db_channel.ml_rebalance_enabled
                 db_channel.save(update_fields=['ml_rebalance_enabled'])
                 messages.success(
                     request,
@@ -1055,7 +1055,7 @@ def update_channel(request):
                     + str(db_channel.ml_rebalance_enabled),
                 )
             elif update_target == 15:
-                db_channel.ml_autofee_enabled = not bool(db_channel.ml_autofee_enabled)
+                db_channel.ml_autofee_enabled = not db_channel.ml_autofee_enabled
                 db_channel.save(update_fields=['ml_autofee_enabled'])
                 messages.success(
                     request,
