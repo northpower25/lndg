@@ -1,5 +1,6 @@
 import datetime
 import dataclasses
+import json
 from statistics import median as _median
 
 from django.db.models import Count, Sum
@@ -9,6 +10,8 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
+
+from gui.jobs.executor import execute_policy
 
 # msats per sat – used when converting amt_out_msat → sat
 _MSAT_PER_SAT = 1000
@@ -606,6 +609,16 @@ def _to_int(value, *, minimum: int | None = None, maximum: int | None = None) ->
     return parsed
 
 
+def _validate_trigger_data_shape(trigger_data: dict) -> bool:
+    if len(trigger_data) > 50:
+        return False
+    try:
+        encoded = json.dumps(trigger_data)
+    except (TypeError, ValueError):
+        return False
+    return len(encoded) <= 4096
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @throttle_classes([_RecommendationThrottle])
@@ -633,12 +646,12 @@ def recommendation_dry_run(request, recommendation_id: int) -> Response:
 @permission_classes([IsAuthenticated])
 @throttle_classes([_PolicyRunThrottle])
 def policy_run(request, policy_id: int) -> Response:
-    from gui.jobs.executor import execute_policy
-
     simulate = bool(request.data.get("simulate", True))
     trigger_data = request.data.get("trigger_data") or {}
     if not isinstance(trigger_data, dict):
         return Response({"error": _("trigger_data must be an object.")}, status=400)
+    if not _validate_trigger_data_shape(trigger_data):
+        return Response({"error": _("trigger_data is too large or invalid.")}, status=400)
     result = execute_policy(
         policy_id=policy_id,
         simulate=simulate,

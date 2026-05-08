@@ -17,11 +17,15 @@ def _get_write_backend() -> LightningWriteAdapter:
     return backend
 
 
-def _as_int(value: Any, *, default: int) -> int:
+def _safe_int(value: Any, *, default: int) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _int_field(value: Any) -> int:
+    return _safe_int(value, default=0)
 
 
 def _build_policy_snapshot(policy) -> dict[str, Any]:
@@ -76,20 +80,20 @@ def _execute_auto_fee_policy(policy, *, simulate: bool) -> dict[str, Any]:
         }
 
     current_fee_rate = int(channel.local_fee_rate or 0)
-    min_fee_rate = max(1, _as_int(definition.get("min_fee_rate_ppm"), default=1))
-    max_fee_rate = max(min_fee_rate, _as_int(definition.get("max_fee_rate_ppm"), default=5000))
-    max_delta_ppm = max(1, _as_int(limits.get("max_delta_ppm"), default=1000))
-    max_delta_percent = max(1, _as_int(limits.get("max_delta_percent"), default=40))
+    min_fee_rate = max(1, _safe_int(definition.get("min_fee_rate_ppm"), default=1))
+    max_fee_rate = max(min_fee_rate, _safe_int(definition.get("max_fee_rate_ppm"), default=5000))
+    max_delta_ppm = max(1, _safe_int(limits.get("max_delta_ppm"), default=1000))
+    max_delta_percent = max(1, _safe_int(limits.get("max_delta_percent"), default=40))
 
-    target_fee_rate = _as_int(definition.get("target_fee_rate_ppm"), default=current_fee_rate)
+    target_fee_rate = _safe_int(definition.get("target_fee_rate_ppm"), default=current_fee_rate)
     if "delta_ppm" in definition:
-        target_fee_rate = current_fee_rate + _as_int(definition.get("delta_ppm"), default=0)
+        target_fee_rate = current_fee_rate + _safe_int(definition.get("delta_ppm"), default=0)
     elif "delta_percent" in definition:
-        target_fee_rate = int(current_fee_rate * (1 + (_as_int(definition.get("delta_percent"), default=0) / 100)))
+        target_fee_rate = int(current_fee_rate * (1 + (_safe_int(definition.get("delta_percent"), default=0) / 100)))
 
     target_fee_rate = max(min_fee_rate, min(max_fee_rate, target_fee_rate))
     delta_ppm = target_fee_rate - current_fee_rate
-    delta_percent = abs(delta_ppm) * 100 / max(1, current_fee_rate)
+    delta_percent = (abs(delta_ppm) * 100.0) / max(1, current_fee_rate)
     if abs(delta_ppm) > max_delta_ppm or delta_percent > max_delta_percent:
         return {
             "status": "blocked",
@@ -100,7 +104,7 @@ def _execute_auto_fee_policy(policy, *, simulate: bool) -> dict[str, Any]:
             "outcome": {"status": "blocked", "message": "Hard cap exceeded for fee delta."},
         }
 
-    cooldown_minutes = max(1, _as_int(definition.get("cooldown_minutes"), default=60))
+    cooldown_minutes = max(1, _safe_int(definition.get("cooldown_minutes"), default=60))
     cutoff = timezone.now() - timedelta(minutes=cooldown_minutes)
     if ChangeLog.objects.filter(
         change_type="policy_auto_fee",
@@ -119,23 +123,23 @@ def _execute_auto_fee_policy(policy, *, simulate: bool) -> dict[str, Any]:
 
     old_value = {
         "local_fee_rate": current_fee_rate,
-        "local_base_fee": int(channel.local_base_fee or 0),
-        "local_inbound_fee_rate": int(channel.local_inbound_fee_rate or 0),
-        "local_min_htlc_msat": int(channel.local_min_htlc_msat or 0),
-        "local_max_htlc_msat": int(channel.local_max_htlc_msat or 0),
+        "local_base_fee": _int_field(channel.local_base_fee),
+        "local_inbound_fee_rate": _int_field(channel.local_inbound_fee_rate),
+        "local_min_htlc_msat": _int_field(channel.local_min_htlc_msat),
+        "local_max_htlc_msat": _int_field(channel.local_max_htlc_msat),
     }
     new_value = {
         "local_fee_rate": target_fee_rate,
-        "local_base_fee": _as_int(definition.get("base_fee_msat"), default=old_value["local_base_fee"]),
-        "local_inbound_fee_rate": _as_int(
+        "local_base_fee": _safe_int(definition.get("base_fee_msat"), default=old_value["local_base_fee"]),
+        "local_inbound_fee_rate": _safe_int(
             definition.get("inbound_fee_rate_ppm"),
             default=old_value["local_inbound_fee_rate"],
         ),
-        "local_min_htlc_msat": _as_int(
+        "local_min_htlc_msat": _safe_int(
             definition.get("min_htlc_msat"),
             default=old_value["local_min_htlc_msat"],
         ),
-        "local_max_htlc_msat": _as_int(
+        "local_max_htlc_msat": _safe_int(
             definition.get("max_htlc_msat"),
             default=old_value["local_max_htlc_msat"],
         ),
@@ -269,8 +273,8 @@ def execute_due_policies(*, limit: int = 20) -> list[dict[str, Any]]:
     due_policies = []
     for policy in Policy.objects.filter(is_active=True).order_by("id")[:limit]:
         definition = policy.definition if isinstance(policy.definition, dict) else {}
-        interval_minutes = max(1, _as_int(definition.get("run_interval_minutes"), default=60))
-        if policy.last_run and policy.last_run > now - timedelta(minutes=interval_minutes):
+        interval_minutes = max(1, _safe_int(definition.get("run_interval_minutes"), default=60))
+        if policy.last_run and (now - policy.last_run) < timedelta(minutes=interval_minutes):
             continue
         due_policies.append(policy.id)
 

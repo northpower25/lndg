@@ -16,6 +16,7 @@ environ['DJANGO_SETTINGS_MODULE'] = 'lndg.settings'
 django.setup()
 from gui.models import Payments, PaymentHops, Invoices, Forwards, Channels, Peers, Onchain, Closures, Resolutions, PendingHTLCs, LocalSettings, FailedHTLCs, Autofees, ChangeLog, InboundFeeLog, PendingChannels, HistFailedHTLC, PeerEvents, Rebalancer, ChannelEfficiency, NotificationSettings  # noqa: E402
 import gui.jobs.auto_fees as af  # noqa: E402
+from gui.jobs.executor import execute_due_policies  # noqa: E402
 
 HOURS_IN_WEEK = 168  # 7 days × 24 hours; used in revenue-per-sat-hour calculations
 EFFICIENCY_MIN_DIVISOR = 1  # epsilon added to rebal_costs_7d to prevent division by zero
@@ -963,8 +964,6 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     # Policy executor (every ~60 min by default)
     if loop_counter % policy_iters == 0:
         try:
-            from gui.jobs.executor import execute_due_policies
-
             runs = execute_due_policies(limit=20)
             print(f"{datetime.now().strftime('%c')} : [PolicyEngine] : Executed {len(runs)} due policies.")
         except Exception as exc:
