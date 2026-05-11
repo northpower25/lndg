@@ -5,7 +5,7 @@ RUN mkdir -p /frontend-dist
 
 # ── Stage 2: python dependencies ──────────────────────────────────────────────
 FROM python:3.13-alpine AS python-deps
-RUN apk add --no-cache g++ linux-headers libffi-dev rust cargo openssl-dev pkgconf make
+RUN apk add --no-cache g++ gfortran linux-headers libffi-dev rust cargo openssl-dev pkgconf make openblas-dev lapack-dev
 WORKDIR /lndg
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt supervisor whitenoise
