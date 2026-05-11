@@ -2138,6 +2138,8 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ## 19. ToDo-Liste / Implementierungs-Tracking
 
 > **Hinweis:** Jede Aufgabe ist so dimensioniert, dass sie in einer einzigen Copilot-Prompt-Sitzung umsetzbar ist. Abhängigkeiten innerhalb einer Phase sind durch die Reihenfolge impliziert – bei Zweifeln zuerst die früheren Aufgaben abschliessen.
+>
+> **Stand-Interpretation (05/2026):** Nicht abgehakte Punkte sind entweder noch offen oder nur teilweise umgesetzt. Das betrifft insbesondere die vollständige i18n-Abdeckung in Legacy-Views, die vollständige Capability-/ChangeLog-Migration alter Write-Pfade, verpflichtende Backup-Guards vor Restore/Bulk-Operationen, vollständige Tooltip-Abdeckung in allen neuen Charts sowie den noch offenen Analyzer-/„Was wäre passiert“-Baustein.
 
 ---
 

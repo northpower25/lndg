@@ -72,7 +72,7 @@ To install this fork via an Umbrel Community App Store, add the following reposi
 https://github.com/northpower25/lndg
 ```
 
-The app requires an active Lightning backend. LND is fully supported; CLN support is available via the adapter/capability path and is being expanded iteratively. After installation, LNDg is available at `http://umbrel.local:8890`.
+The app requires an active Lightning backend. LND is fully supported. CLN support is currently partial via the adapter/capability path and is being expanded iteratively. After installation, LNDg is available at `http://umbrel.local:8890`.
 
 When you open LNDg through the Umbrel dashboard, a credentials dialog will appear showing:
 - **Default username:** `lndg-admin`
@@ -325,7 +325,11 @@ Listen for and record HTLC failure events to the dashboard.
 
 ### API Backend
 
-Access data programmatically via the `/api` and `/api/v2/` endpoints. Available resources include:
+Access data programmatically via the `/api` and `/api/v2/` endpoints.
+- `/api` provides the legacy DRF resources listed below.
+- `/api/v2/` provides newer capability, chart, cleaner, backup, recommendation, policy, splice, and ML endpoints.
+
+Legacy `/api` resources include:
 `payments`, `paymenthops`, `invoices`, `forwards`, `onchain`, `peers`, `channels`, `rebalancer`, `settings`, `pendinghtlcs`, `failedhtlcs`.
 Append `?format=json` for JSON output.
 
