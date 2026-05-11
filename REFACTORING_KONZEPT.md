@@ -2138,91 +2138,93 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ## 19. ToDo-Liste / Implementierungs-Tracking
 
 > **Hinweis:** Jede Aufgabe ist so dimensioniert, dass sie in einer einzigen Copilot-Prompt-Sitzung umsetzbar ist. Abhängigkeiten innerhalb einer Phase sind durch die Reihenfolge impliziert – bei Zweifeln zuerst die früheren Aufgaben abschliessen.
+>
+> **Stand-Interpretation (05/2026):** Nicht abgehakte Punkte sind entweder noch offen oder nur teilweise umgesetzt. Das betrifft insbesondere die vollständige i18n-Abdeckung in Legacy-Views, die vollständige Capability-/ChangeLog-Migration alter Write-Pfade, verpflichtende Backup-Guards vor Restore/Bulk-Operationen, vollständige Tooltip-Abdeckung in allen neuen Charts sowie den noch offenen Analyzer-/„Was wäre passiert“-Baustein.
 
 ---
 
 ### Phase 1 – Foundation
 
 #### 1-A: Makefile & CI-Pipeline
-- [ ] `Makefile` anlegen mit Targets: `dev`, `test`, `lint`, `fmt`, `check`, `build`, `migrate`
-- [ ] `.github/workflows/ci.yml` anpassen: separater `test-backend`- und `test-frontend`-Job, pip-Cache per `requirements.txt`-Hash, Node-Cache per `package-lock.json`-Hash
+- [x] `Makefile` anlegen mit Targets: `dev`, `test`, `lint`, `fmt`, `check`, `build`, `migrate`
+- [x] `.github/workflows/ci.yml` anpassen: separater `test-backend`- und `test-frontend`-Job, pip-Cache per `requirements.txt`-Hash, Node-Cache per `package-lock.json`-Hash
 
 #### 1-B: Multi-Stage Dockerfile
-- [ ] `Dockerfile` als Multi-Stage-Build umschreiben (Stage: `frontend-builder`, `python-deps`, `final`)
-- [ ] Final-Image als rootless Container konfigurieren (non-root user, Arbeitsverzeichnis `/lndg/`)
-- [ ] Upgrade-Dokumentation für Breaking Change (`/app` → `/lndg/`) erstellen
+- [x] `Dockerfile` als Multi-Stage-Build umschreiben (Stage: `frontend-builder`, `python-deps`, `final`)
+- [x] Final-Image als rootless Container konfigurieren (non-root user, Arbeitsverzeichnis `/lndg/`)
+- [x] Upgrade-Dokumentation für Breaking Change (`/app` → `/lndg/`) erstellen
 
 #### 1-C: Sicherheits-Baseline
-- [ ] Alle `paramiko`-Verbindungen auf `RejectPolicy()` umstellen (kein `AutoAddPolicy`)
-- [ ] Alle Stellen prüfen und anpassen, wo Credential-Dateien erzeugt werden → `mode=0o600`
-- [ ] `requirements.in` anlegen und `pip-compile` für `requirements.txt` mit Versions-Bounds einrichten
+- [x] Alle `paramiko`-Verbindungen auf `RejectPolicy()` umstellen (kein `AutoAddPolicy`)
+- [x] Alle Stellen prüfen und anpassen, wo Credential-Dateien erzeugt werden → `mode=0o600`
+- [x] `requirements.in` anlegen und `pip-compile` für `requirements.txt` mit Versions-Bounds einrichten
 
 #### 1-D: Abstrakte Lightning-Domänenmodelle
-- [ ] Python-Dataclasses erstellen: `Node`, `Peer`, `Channel`, `ForwardingEvent`, `LiquidityState`, `FeePolicy`, `SpliceAction`, `RebalanceAction`
-- [ ] `AssetContext`-Dataclass mit Default `btc` einführen (als Vorbereitung für Phase 7)
-- [ ] Modul-Struktur unter `gui/domain/` anlegen und alle Domänenklassen dort platzieren
+- [x] Python-Dataclasses erstellen: `Node`, `Peer`, `Channel`, `ForwardingEvent`, `LiquidityState`, `FeePolicy`, `SpliceAction`, `RebalanceAction`
+- [x] `AssetContext`-Dataclass mit Default `btc` einführen (als Vorbereitung für Phase 7)
+- [x] Modul-Struktur unter `gui/domain/` anlegen und alle Domänenklassen dort platzieren
 
 #### 1-E: LightningBackend Interface (Read/Write-Trennung)
-- [ ] Abstrakte Klasse `LightningReadAdapter` mit allen Lese-Methoden (`get_node_info`, `list_channels`, `list_peers`, `get_forwarding_events`, `get_liquidity_state`, `get_capabilities`) definieren
-- [ ] Abstrakte Klasse `LightningWriteAdapter` mit allen Schreib-Methoden (`update_fee_policy`, `splice_in`, `splice_out`, `get_splice_status`) definieren
-- [ ] `BackendCapabilities`-Dataclass mit allen Capability-Flags (`can_auto_fee`, `can_rebalance`, `can_stream_htlcs`, `can_splice`, `can_inbound_fees`, `can_keysend`, `supports_plugins`, `can_multi_asset`, `ai_safe_actions`) definieren
+- [x] Abstrakte Klasse `LightningReadAdapter` mit allen Lese-Methoden (`get_node_info`, `list_channels`, `list_peers`, `get_forwarding_events`, `get_liquidity_state`, `get_capabilities`) definieren
+- [x] Abstrakte Klasse `LightningWriteAdapter` mit allen Schreib-Methoden (`update_fee_policy`, `splice_in`, `splice_out`, `get_splice_status`) definieren
+- [x] `BackendCapabilities`-Dataclass mit allen Capability-Flags (`can_auto_fee`, `can_rebalance`, `can_stream_htlcs`, `can_splice`, `can_inbound_fees`, `can_keysend`, `supports_plugins`, `can_multi_asset`, `ai_safe_actions`) definieren
 
 #### 1-F: LndBackend Adapter
-- [ ] `gui/backends/lnd_backend.py` anlegen, der `LightningReadAdapter` implementiert (bestehende LND-gRPC-Logik kapseln)
-- [ ] `LightningWriteAdapter` in `LndBackend` implementieren (bestehende Fee-Update-Logik kapseln)
-- [ ] gRPC-Credentials-Caching: Credentials einmalig laden und Connection über Job-Lifecycle wiederverwenden (kein Reconnect pro Request)
-- [ ] `LndBackend.get_capabilities()` mit korrekten LND-spezifischen Capability-Flags implementieren
+- [x] `gui/backends/lnd_backend.py` anlegen, der `LightningReadAdapter` implementiert (bestehende LND-gRPC-Logik kapseln)
+- [x] `LightningWriteAdapter` in `LndBackend` implementieren (bestehende Fee-Update-Logik kapseln)
+- [x] gRPC-Credentials-Caching: Credentials einmalig laden und Connection über Job-Lifecycle wiederverwenden (kein Reconnect pro Request)
+- [x] `LndBackend.get_capabilities()` mit korrekten LND-spezifischen Capability-Flags implementieren
 
 #### 1-G: ClnBackend Skelett
-- [ ] `gui/backends/cln_backend.py` anlegen mit Verbindungsaufbau via `clnrest` (HTTP REST)
-- [ ] Authentifizierung via Rune / API-Token implementieren
-- [ ] Basis-Methoden implementieren: `get_node_info`, `list_channels`, `list_peers`
-- [ ] `ClnBackend.get_capabilities()` mit CLN-spezifischen Flags implementieren (`can_splice=True` ab v24.02, `supports_plugins=True`)
+- [x] `gui/backends/cln_backend.py` anlegen mit Verbindungsaufbau via `clnrest` (HTTP REST)
+- [x] Authentifizierung via Rune / API-Token implementieren
+- [x] Basis-Methoden implementieren: `get_node_info`, `list_channels`, `list_peers`
+- [x] `ClnBackend.get_capabilities()` mit CLN-spezifischen Flags implementieren (`can_splice=True` ab v24.02, `supports_plugins=True`)
 
 #### 1-H: UserMode Django Model
-- [ ] `UserMode`-Model anlegen mit Feldern: `mode` (guided/advanced/expert), `onboarding_step`, `onboarding_completed`, `language`, `updated_at`
-- [ ] AI-Feature-Flags im Model anlegen: `ai_mode` (default `off`), `ai_explain_always`, `ai_min_data_days`, `ai_max_auto_actions_day`, `ai_cooldown_minutes`, `ai_shadow_log_enabled`
-- [ ] Migration erstellen und `class Meta: app_label = 'gui'` sicherstellen
-- [ ] API-Endpunkte `GET/PUT /api/v2/user/settings` anlegen (rate-limiting, CSRF, authentication)
+- [x] `UserMode`-Model anlegen mit Feldern: `mode` (guided/advanced/expert), `onboarding_step`, `onboarding_completed`, `language`, `updated_at`
+- [x] AI-Feature-Flags im Model anlegen: `ai_mode` (default `off`), `ai_explain_always`, `ai_min_data_days`, `ai_max_auto_actions_day`, `ai_cooldown_minutes`, `ai_shadow_log_enabled`
+- [x] Migration erstellen und `class Meta: app_label = 'gui'` sicherstellen
+- [x] API-Endpunkte `GET/PUT /api/v2/user/settings` anlegen (rate-limiting, CSRF, authentication)
 
 #### 1-I: Django i18n Basis
-- [ ] `settings.py` für i18n konfigurieren: `USE_I18N=True`, `USE_L10N=True`, `LANGUAGES=[('de', ...), ('en', ...)]`, `LOCALE_PATHS`
+- [x] `settings.py` für i18n konfigurieren: `USE_I18N=True`, `USE_L10N=True`, `LANGUAGES=[('de', ...), ('en', ...)]`, `LOCALE_PATHS`
 - [ ] Alle bestehenden User-facing Strings in Templates mit `{% trans "..." %}` markieren
 - [ ] Alle bestehenden User-facing Strings in Python-Dateien mit `_("...")` markieren
-- [ ] `locale/de/LC_MESSAGES/django.po` und `locale/en/LC_MESSAGES/django.po` initial befüllen und kompilieren
+- [x] `locale/de/LC_MESSAGES/django.po` und `locale/en/LC_MESSAGES/django.po` initial befüllen und kompilieren
 
 #### 1-J: Neue Hauptnavigation & Modus-Switcher
-- [ ] Navigation auf 5 Kernbereiche umstellen: Cockpit, Channels, Peers, Automationen, Lernen & Verlauf
-- [ ] Modus-Switcher (Guided/Advanced/Expert) im Header implementieren, Auswahl in `UserMode` speichern
-- [ ] Cockpit-Seite mit Basis-Kacheln anlegen (Routing-Aktivität, Liquiditätsbalance, Fee-Positionierung, Probleme, Nächste Aktion) – vorerst nur Darstellung ohne Recommendation Engine
+- [x] Navigation auf 5 Kernbereiche umstellen: Cockpit, Channels, Peers, Automationen, Lernen & Verlauf
+- [x] Modus-Switcher (Guided/Advanced/Expert) im Header implementieren, Auswahl in `UserMode` speichern
+- [x] Cockpit-Seite mit Basis-Kacheln anlegen (Routing-Aktivität, Liquiditätsbalance, Fee-Positionierung, Probleme, Nächste Aktion) – vorerst nur Darstellung ohne Recommendation Engine
 
 ---
 
 ### Phase 2 – CLN-Integration & Daten
 
 #### 2-A: Zeitreihen-Models
-- [ ] `ChannelSnapshot`-Model mit Feldern anlegen: `timestamp` (db_index), `chan_id` (db_index), `local_balance`, `remote_balance`, `capacity`, `local_fee_rate`, `local_base_fee`, `local_disabled`, `is_active` + Composite-Index `[chan_id, timestamp]`
-- [ ] `ForwardingAggregate`-Model anlegen mit `window`, `chan_id`, `window_start`, `in_msat`, `out_msat`, `fees_msat`, `forward_count`, `fail_count` + `unique_together`
-- [ ] Migrationen erstellen; Retention-Regeln in `cleaner.py` für beide Models hinzufügen
+- [x] `ChannelSnapshot`-Model mit Feldern anlegen: `timestamp` (db_index), `chan_id` (db_index), `local_balance`, `remote_balance`, `capacity`, `local_fee_rate`, `local_base_fee`, `local_disabled`, `is_active` + Composite-Index `[chan_id, timestamp]`
+- [x] `ForwardingAggregate`-Model anlegen mit `window`, `chan_id`, `window_start`, `in_msat`, `out_msat`, `fees_msat`, `forward_count`, `fail_count` + `unique_together`
+- [x] Migrationen erstellen; Retention-Regeln in `cleaner.py` für beide Models hinzufügen
 
 #### 2-B: ChangeLog Model
-- [ ] `ChangeLog`-Model anlegen: `timestamp`, `change_type`, `target_chan_id`, `actor` (`manual`/`policy:<name>`/`ml:<model>:<version>`), `old_value`, `new_value`, `rationale`, `policy_run` (FK)
-- [ ] Migration erstellen; Index auf `timestamp` und `target_chan_id`
+- [x] `ChangeLog`-Model anlegen: `timestamp`, `change_type`, `target_chan_id`, `actor` (`manual`/`policy:<name>`/`ml:<model>:<version>`), `old_value`, `new_value`, `rationale`, `policy_run` (FK)
+- [x] Migration erstellen; Index auf `timestamp` und `target_chan_id`
 - [ ] `ChangeLog`-Eintrag bei jeder bestehenden Fee-Änderung / Rebalance-Aktion automatisch erzeugen
 
 #### 2-C: Collector Job
-- [ ] `jobs/collector.py` erstellen: liest Channel-Daten von aktivem Backend (LND + CLN) und erstellt `ChannelSnapshot`-Einträge alle 15 Min (konfigurierbar)
+- [x] `jobs/collector.py` erstellen: liest Channel-Daten von aktivem Backend (LND + CLN) und erstellt `ChannelSnapshot`-Einträge alle 15 Min (konfigurierbar)
 - [ ] Async ORM-Methoden verwenden (`abulk_create`, `aget`, `afilter`)
-- [ ] gRPC-Verbindung über gesamten Job-Lifecycle cachen (kein Reconnect pro Snapshot)
+- [x] gRPC-Verbindung über gesamten Job-Lifecycle cachen (kein Reconnect pro Snapshot)
 
 #### 2-D: Aggregator Job
-- [ ] `jobs/aggregator.py` erstellen: berechnet `ForwardingAggregate` für Fenster `1d`, `7d`, `30d` stündlich aus `Forwards`-Tabelle
-- [ ] Idempotent implementieren (kein Duplikat bei Mehrfachausführung)
+- [x] `jobs/aggregator.py` erstellen: berechnet `ForwardingAggregate` für Fenster `1d`, `7d`, `30d` stündlich aus `Forwards`-Tabelle
+- [x] Idempotent implementieren (kein Duplikat bei Mehrfachausführung)
 
 #### 2-E: Capability-Registry & capability-basierte UI
-- [ ] `BackendCapabilities`-Instanz beim Start des Backends registrieren und als Singleton verfügbar machen
+- [x] `BackendCapabilities`-Instanz beim Start des Backends registrieren und als Singleton verfügbar machen
 - [ ] Alle bestehenden `if settings.backend == "LND":`-Branches in Templates/Views durch Capability-Checks ersetzen
-- [ ] API-Endpunkt `GET /api/v2/capabilities` anlegen, der aktuelle Capabilities zurückgibt
+- [x] API-Endpunkt `GET /api/v2/capabilities` anlegen, der aktuelle Capabilities zurückgibt
 - [ ] Buttons für nicht unterstützte Capabilities in UI deaktivieren + Tooltip-Erklärung
 
 #### 2-F: CLN Backend vollständig
@@ -2236,21 +2238,21 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 - [ ] LND-Terminologie aus allen Templates entfernen (kein `chan_id`, `lnd_short_chan_id` in UI-Texten)
 
 #### 2-H: Backup/Restore
-- [ ] `BackupLog`-Model anlegen + Migration + `cleaner.py`-Regel
-- [ ] Backup-Job in `jobs/` anlegen: Settings-Backup (JSON), vollständiger DB-Dump, optionaler Macaroon-Backup
+- [x] `BackupLog`-Model anlegen + Migration + `cleaner.py`-Regel
+- [x] Backup-Job in `jobs/` anlegen: Settings-Backup (JSON), vollständiger DB-Dump, optionaler Macaroon-Backup
 - [ ] Automatisches Backup vor jedem Restore und vor jeder Bulk-DB-Operation
-- [ ] UI-Flow für Backup (Typ wählen, Passwortschutz, Download) und Restore (Upload, Checksum, Vorschau, Bestätigung)
+- [x] UI-Flow für Backup (Typ wählen, Passwortschutz, Download) und Restore (Upload, Checksum, Vorschau, Bestätigung)
 
 #### 2-I: DB-Bereinigung (cleaner.py)
-- [ ] `jobs/cleaner.py` anlegen mit konfigurierbaren Retention-Regeln für alle Tabellen (Standard-Aufbewahrungszeiten aus Abschnitt 11.3)
-- [ ] Bestehende `clean_failed_payments`-Funktion in `cleaner.py` integrieren
+- [x] `jobs/cleaner.py` anlegen mit konfigurierbaren Retention-Regeln für alle Tabellen (Standard-Aufbewahrungszeiten aus Abschnitt 11.3)
+- [x] Bestehende `clean_failed_payments`-Funktion in `cleaner.py` integrieren
 - [ ] Batch-Löschung (verhindert DB-Lock); automatisches Mini-Backup der gelöschten Daten (optional)
-- [ ] UI: Tabellen-Übersicht, Schieberegler für Aufbewahrungsdauer, Vorschau der Löschmenge, manueller Trigger
+- [x] UI: Tabellen-Übersicht, Schieberegler für Aufbewahrungsdauer, Vorschau der Löschmenge, manueller Trigger
 
 #### 2-J: Neue Chart-Komponenten
-- [ ] **Liquidity Donut**: Inbound vs. Outbound pro Channel + Node-Gesamt (Daten: `Channels.local/remote_balance`)
-- [ ] **Channel Health Heatmap**: Zeit vs. Channel (Balance/Volume) basierend auf `ChannelSnapshot`
-- [ ] **Fee vs. Volume Scatter**: Fee-Elastizität aus `Forwards` + `FeeLog`
+- [x] **Liquidity Donut**: Inbound vs. Outbound pro Channel + Node-Gesamt (Daten: `Channels.local/remote_balance`)
+- [x] **Channel Health Heatmap**: Zeit vs. Channel (Balance/Volume) basierend auf `ChannelSnapshot`
+- [x] **Fee vs. Volume Scatter**: Fee-Elastizität aus `Forwards` + `FeeLog`
 - [ ] Alle Komponenten mit `title` + `tooltip` ausstatten (R-GUI-4)
 
 ---
@@ -2258,20 +2260,20 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ### Phase 3 – Empfehlungs-Engine & Splice-Workflow
 
 #### 3-A: Recommendation & Policy Models
-- [ ] `Recommendation`-Model anlegen: `created_at`, `rec_type`, `target_chan_id`, `target_pubkey`, `rationale` (JSONField), `confidence`, `risk_level`, `status`, `dry_run_result`, `applied_at` + Migration
-- [ ] `Policy`-Model anlegen: `name`, `policy_type`, `definition` (JSONField), `is_active`, `dry_run` (default `True`), `created_at`, `last_run`, `mode_required` + Migration
-- [ ] `PolicyRun`-Model anlegen: `policy` (FK), `executed_at`, `was_dry_run`, `trigger_data`, `actions_taken`, `outcome` + Migration + Retention-Regel in `cleaner.py`
+- [x] `Recommendation`-Model anlegen: `created_at`, `rec_type`, `target_chan_id`, `target_pubkey`, `rationale` (JSONField), `confidence`, `risk_level`, `status`, `dry_run_result`, `applied_at` + Migration
+- [x] `Policy`-Model anlegen: `name`, `policy_type`, `definition` (JSONField), `is_active`, `dry_run` (default `True`), `created_at`, `last_run`, `mode_required` + Migration
+- [x] `PolicyRun`-Model anlegen: `policy` (FK), `executed_at`, `was_dry_run`, `trigger_data`, `actions_taken`, `outcome` + Migration + Retention-Regel in `cleaner.py`
 
 #### 3-B: Heuristik-Engine
-- [ ] `jobs/recommender.py` anlegen (nur lesend, kein `LightningWriteAdapter`-Import)
-- [ ] Heuristiken implementieren: Stagnation (kein Outbound-Flow), einseitige Balance, hohe Failed-HTLC-Rate, Peer-Konzentration, ungenutzte Kapazität, hoher Outbound-Flow
-- [ ] Rationale-Schema (JSON) gemäß Abschnitt 5.2 für jede Empfehlung befüllen (`reasons`, `confidence`, `confidence_label='heuristic'`, `alternatives`, `simulation_available`)
-- [ ] Empfehlungen als `Recommendation`-Objekte in DB speichern; Top-3 pro Cockpit-Aufruf liefern
+- [x] `jobs/recommender.py` anlegen (nur lesend, kein `LightningWriteAdapter`-Import)
+- [x] Heuristiken implementieren: Stagnation (kein Outbound-Flow), einseitige Balance, hohe Failed-HTLC-Rate, Peer-Konzentration, ungenutzte Kapazität, hoher Outbound-Flow
+- [x] Rationale-Schema (JSON) gemäß Abschnitt 5.2 für jede Empfehlung befüllen (`reasons`, `confidence`, `confidence_label='heuristic'`, `alternatives`, `simulation_available`)
+- [x] Empfehlungen als `Recommendation`-Objekte in DB speichern; Top-3 pro Cockpit-Aufruf liefern
 
 #### 3-C: Simulation Layer (Dry-Run Framework)
-- [ ] Jede Policy mit `simulate=True`-Flag aufrufbar machen; Ergebnis in `dry_run_result` speichern
+- [x] Jede Policy mit `simulate=True`-Flag aufrufbar machen; Ergebnis in `dry_run_result` speichern
 - [ ] `jobs/analyzer.py` anlegen: berechnet Channel-Scores, Peer-Scores auf Basis historischer Daten
-- [ ] API-Endpunkte: `POST /api/v2/recommendations/{id}/dryrun` und `POST /api/v2/policies/{id}/run` (mit `simulate=True`)
+- [x] API-Endpunkte: `POST /api/v2/recommendations/{id}/dryrun` und `POST /api/v2/policies/{id}/run` (mit `simulate=True`)
 - [ ] „Was wäre passiert wenn…"-Widget im Lernen-&-Verlauf-Bereich
 
 #### 3-D: Explainability-UI
@@ -2280,9 +2282,9 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 - [ ] Glossar-Begriffe in Templates automatisch als Tooltip-Links hervorheben
 
 #### 3-E: SpliceLog Model & API
-- [ ] `SpliceLog`-Model anlegen: `channel_id`, `splice_type`, `amount_sat`, `on_chain_fee_sat`, `status`, `txid`, `initiated_at`, `confirmed_at`, `rationale`, `recommendation_id` + Migration + Index
-- [ ] API-Endpunkte anlegen: `GET /api/v2/channels/{id}/splice/preview`, `POST /api/v2/channels/{id}/splice/in`, `POST /api/v2/channels/{id}/splice/out`, `GET /api/v2/channels/{id}/splice/status`
-- [ ] Alle Endpunkte: rate-limiting, CSRF, authentication; nur über `LightningWriteAdapter` via Validation Layer
+- [x] `SpliceLog`-Model anlegen: `channel_id`, `splice_type`, `amount_sat`, `on_chain_fee_sat`, `status`, `txid`, `initiated_at`, `confirmed_at`, `rationale`, `recommendation_id` + Migration + Index
+- [x] API-Endpunkte anlegen: `GET /api/v2/channels/{id}/splice/preview`, `POST /api/v2/channels/{id}/splice/in`, `POST /api/v2/channels/{id}/splice/out`, `GET /api/v2/channels/{id}/splice/status`
+- [x] Alle Endpunkte: rate-limiting, CSRF, authentication; nur über `LightningWriteAdapter` via Validation Layer
 
 #### 3-F: Guided Splice-Workflow CLN
 - [ ] Schritt-für-Schritt UI für Splice-In: Impact-Vorschau (neue Kapazität, On-Chain-Kosten, Routing-Pausierung, erwarteter Effekt), Betrag-Schieberegler, Bestätigungs-Dialog mit Risiko-Label
@@ -2291,34 +2293,34 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 - [ ] Audit-Log-Eintrag bei jedem Splice-Vorgang; `actor`-Feld gemäß R-AI-4 befüllen
 
 #### 3-G: Splice-Workflow LND & CLN Plugin-Panel
-- [ ] LND-Splice-Workflow: gleicher UI-Flow wie CLN, aber capability-abhängig aktiviert (`can_splice`); Button deaktiviert + Tooltip wenn nicht verfügbar (R-GUI-7)
-- [ ] CLN Plugin-Status-Panel (Expert-Mode): Liste aller bekannten CLN-Plugins mit Status (installiert/aktiv/fehlend), Erklärung + Installationshinweis für fehlende Plugins
+- [x] LND-Splice-Workflow: gleicher UI-Flow wie CLN, aber capability-abhängig aktiviert (`can_splice`); Button deaktiviert + Tooltip wenn nicht verfügbar (R-GUI-7)
+- [x] CLN Plugin-Status-Panel (Expert-Mode): Liste aller bekannten CLN-Plugins mit Status (installiert/aktiv/fehlend), Erklärung + Installationshinweis für fehlende Plugins
 
 ---
 
 ### Phase 4 – Policy-Engine & Automationen
 
 #### 4-A: Policy-Engine & Executor Job
-- [ ] `jobs/executor.py` anlegen: führt Policies aus – als **einzige Datei** mit `LightningWriteAdapter`-Import
-- [ ] Validation Layer implementieren: Sanity-Checks, Hard Caps, Cooldown-Guard vor jeder Ausführung
-- [ ] `PolicyRun`-Eintrag vor jeder Ausführung anlegen; `ChangeLog`-Eintrag nach jeder Ausführung mit `actor=policy:<name>`
-- [ ] Policy-Snapshot vor jeder Änderung speichern (ermöglicht Rollback)
+- [x] `jobs/executor.py` anlegen: führt Policies aus – als **einzige Datei** mit `LightningWriteAdapter`-Import
+- [x] Validation Layer implementieren: Sanity-Checks, Hard Caps, Cooldown-Guard vor jeder Ausführung
+- [x] `PolicyRun`-Eintrag vor jeder Ausführung anlegen; `ChangeLog`-Eintrag nach jeder Ausführung mit `actor=policy:<name>`
+- [x] Policy-Snapshot vor jeder Änderung speichern (ermöglicht Rollback)
 
 #### 4-B: Auto-Fee Templates
 - [ ] Drei UI-Templates implementieren: Conservative (max. alle 7d, ±10 %), Balanced (alle 2–3d, ±20 %), Revenue-Seeking (täglich, ±40 %)
 - [ ] Expert-Detailpanel: alle Parameter erst bei explizitem Aufklappen sichtbar
-- [ ] Templates als Default-`Policy`-Objekte in DB anlegen (keine Defaults in View-Logik, R-DM-2)
-- [ ] Default `dry_run=True` für alle neuen Policies (R-GUI-3)
+- [x] Templates als Default-`Policy`-Objekte in DB anlegen (keine Defaults in View-Logik, R-DM-2)
+- [x] Default `dry_run=True` für alle neuen Policies (R-GUI-3)
 
 #### 4-C: CLN Policy-Adapter
-- [ ] `setchannel`-Aufrufe für Fee-Policies in `ClnBackend.update_fee_policy` implementieren
+- [x] `setchannel`-Aufrufe für Fee-Policies in `ClnBackend.update_fee_policy` implementieren
 - [ ] CLN-Rebalancing via `rebalance`-Plugin in `ClnBackend` integrieren (capability-abhängig)
-- [ ] Policy-Objekte sind implementierungsneutral auf Domänenebene; Executor delegiert via Backend-Adapter
+- [x] Policy-Objekte sind implementierungsneutral auf Domänenebene; Executor delegiert via Backend-Adapter
 
 #### 4-D: RebalanceMLRecord & AutoFeeMLRecord Models
-- [ ] `RebalanceMLRecord`-Model anlegen: `timestamp`, `source_chan_id`, `target_chan_id`, `amount_sat`, `fee_ppm`, `hour_of_day`, `day_of_week`, `success`, `routing_revenue_delta_24h`, `routing_revenue_delta_7d`, `ml_predicted_success_prob`, `ml_confidence` + Migration + Composite-Index
-- [ ] `AutoFeeMLRecord`-Model anlegen: `timestamp`, `chan_id`, `param_name`, `old_value`, `new_value`, `trigger_reason`, `ml_confidence`, `routing_volume_delta_24h`, `routing_revenue_delta_24h`, `escalation_level` + Migration + Index
-- [ ] Beide Models: `amount_sat`/`routing_revenue_delta_*` als `BigIntegerField` (R-DM-3); keine `FloatField` für Beträge
+- [x] `RebalanceMLRecord`-Model anlegen: `timestamp`, `source_chan_id`, `target_chan_id`, `amount_sat`, `fee_ppm`, `hour_of_day`, `day_of_week`, `success`, `routing_revenue_delta_24h`, `routing_revenue_delta_7d`, `ml_predicted_success_prob`, `ml_confidence` + Migration + Composite-Index
+- [x] `AutoFeeMLRecord`-Model anlegen: `timestamp`, `chan_id`, `param_name`, `old_value`, `new_value`, `trigger_reason`, `ml_confidence`, `routing_volume_delta_24h`, `routing_revenue_delta_24h`, `escalation_level` + Migration + Index
+- [x] Beide Models: `amount_sat`/`routing_revenue_delta_*` als `BigIntegerField` (R-DM-3); keine `FloatField` für Beträge
 
 #### 4-E: ML Shadow Mode – Auto-Fee
 - [ ] Balance-Drain-Velocity-Berechnung implementieren (Trend-Analyse aus `ChannelSnapshot`)
@@ -2349,21 +2351,21 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ### Phase 5 – Externe Integrationen & Erweiterte Features
 
 #### 5-A: mempool.space Integration
-- [ ] Async HTTP-Client für `GET https://mempool.space/api/v1/fees/recommended` einrichten (TTL-Cache 5–10 Min, exponential backoff bei 429)
-- [ ] Kostenampel (🟢/🟡/🔴) bei allen Open/Close/Splice-Empfehlungen anzeigen
-- [ ] „Wartefenster"-Vorschlag in UI (nie blockierend); keine Channel- oder Node-Daten an externe API senden
-- [ ] Notifier-Job: Notification wenn mempool günstig (gutes Zeitfenster für On-Chain-Aktionen)
+- [x] Async HTTP-Client für `GET https://mempool.space/api/v1/fees/recommended` einrichten (TTL-Cache 5–10 Min, exponential backoff bei 429)
+- [x] Kostenampel (🟢/🟡/🔴) bei allen Open/Close/Splice-Empfehlungen anzeigen
+- [x] „Wartefenster"-Vorschlag in UI (nie blockierend); keine Channel- oder Node-Daten an externe API senden
+- [x] Notifier-Job: Notification wenn mempool günstig (gutes Zeitfenster für On-Chain-Aktionen)
 
 #### 5-B: Amboss Integration
-- [ ] Optionalen API-Key (User-Settings) für Amboss GraphQL-API einrichten
-- [ ] Abfrage **nur** für bereits vorhandene oder aktiv evaluierte Peers (kein Overfetch)
-- [ ] Peer-Cards um Netzwerk-Einordnung erweitern; Hinweis auf nicht-kommerzielle Nutzungsbedingungen im UI
-- [ ] Kein externer Call ohne explizite Nutzereinwilligung (R-SEC-4)
+- [x] Optionalen API-Key (User-Settings) für Amboss GraphQL-API einrichten
+- [x] Abfrage **nur** für bereits vorhandene oder aktiv evaluierte Peers (kein Overfetch)
+- [x] Peer-Cards um Netzwerk-Einordnung erweitern; Hinweis auf nicht-kommerzielle Nutzungsbedingungen im UI
+- [x] Kein externer Call ohne explizite Nutzereinwilligung (R-SEC-4)
 
 #### 5-C: Onboarding-Wizard
-- [ ] 5-Schritte-Wizard implementieren: Node-Profil wählen, Channels verstehen, Fees erklären, Rebalancing erklären, erste sichere Optimierung
-- [ ] LND-Variante: Macaroon-Pfad, gRPC-Adresse; CLN-Variante: Rune/Token, clnrest-Endpunkt, Plugin-Status
-- [ ] Fortschritt in `UserMode.onboarding_step` speichern; Wizard jederzeit überspringbar und wiederholbar
+- [x] 5-Schritte-Wizard implementieren: Node-Profil wählen, Channels verstehen, Fees erklären, Rebalancing erklären, erste sichere Optimierung
+- [x] LND-Variante: Macaroon-Pfad, gRPC-Adresse; CLN-Variante: Rune/Token, clnrest-Endpunkt, Plugin-Status
+- [x] Fortschritt in `UserMode.onboarding_step` speichern; Wizard jederzeit überspringbar und wiederholbar
 - [ ] Sprachauswahl als erster Schritt im Wizard
 
 #### 5-D: Missions & Glossar (Learning Center)
@@ -2377,36 +2379,36 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ### Phase 6 – ML-Infrastruktur & SPA-Konsolidierung
 
 #### 6-A: ML-Infrastruktur & Feature-Engineering
-- [ ] `jobs/ml_trainer.py` anlegen: Batch-Retraining täglich (konfigurierbar); auf ressourcenschwachen Nodes deaktivierbar oder nur manuell auslösbar
-- [ ] Feature-Engineering aus `ChannelSnapshot`, `RebalanceMLRecord`, `AutoFeeMLRecord`: Rolling Windows 1d/7d/30d, Balance-Drift-Rate, Peer-Stabilität, Fee-Elastizität
-- [ ] Modell-Persistenz als `.joblib`-Datei unter `models/rebalance_v{timestamp}.joblib` (scikit-learn, lokal, privacy-safe)
-- [ ] API: `POST /api/v2/ml/rebalance/train` (manuelles Retraining); `GET /api/v2/ml/status` (Konfidenz, Datenmenge, letztes Training)
+- [x] `jobs/ml_trainer.py` anlegen: Batch-Retraining täglich (konfigurierbar); auf ressourcenschwachen Nodes deaktivierbar oder nur manuell auslösbar
+- [x] Feature-Engineering aus `ChannelSnapshot`, `RebalanceMLRecord`, `AutoFeeMLRecord`: Rolling Windows 1d/7d/30d, Balance-Drift-Rate, Peer-Stabilität, Fee-Elastizität
+- [x] Modell-Persistenz als `.joblib`-Datei unter `models/rebalance_v{timestamp}.joblib` (scikit-learn, lokal, privacy-safe)
+- [x] API: `POST /api/v2/ml/rebalance/train` (manuelles Retraining); `GET /api/v2/ml/status` (Konfidenz, Datenmenge, letztes Training)
 
 #### 6-B: ML Shadow Mode – Rebalancing Vollbetrieb
-- [ ] ML-Empfehlungen parallel zur Heuristik in `Recommendation`-Tabelle speichern mit `confidence_label='ml_shadow'`
-- [ ] Shadow-Mode-Protokoll: Empfehlung vs. tatsächlichem Ergebnis kontinuierlich vergleichen
-- [ ] Mindestdatenmenge (30 Tage, R-AI-3) und Konfidenz-Schwelle prüfen bevor ML Empfehlungen ausgibt
-- [ ] UI-Toggle pro Kanal: ML-Nutzung aktivier-/deaktivierbar (R-P8-Entscheidung)
+- [x] ML-Empfehlungen parallel zur Heuristik in `Recommendation`-Tabelle speichern mit `confidence_label='ml_shadow'`
+- [x] Shadow-Mode-Protokoll: Empfehlung vs. tatsächlichem Ergebnis kontinuierlich vergleichen
+- [x] Mindestdatenmenge (30 Tage, R-AI-3) und Konfidenz-Schwelle prüfen bevor ML Empfehlungen ausgibt
+- [x] UI-Toggle pro Kanal: ML-Nutzung aktivier-/deaktivierbar (R-P8-Entscheidung)
 
 #### 6-C: ML Shadow Mode – Auto-Fee Vollbetrieb
 - [ ] ML-gesteuerte Gebührenanpassungsvorschläge für alle Fee-Parameter (fee_rate, base_fee, min/max_htlc, inbound_fee) generieren
 - [ ] Eskalations-/Deeskalations-Logik implementieren (konfigurierbare Faktoren und Grenzen)
 - [ ] Dynamische Zielanpassung basierend auf Routing-Verhalten; Änderungen im Netzwerk-Umfeld einbeziehen
-- [ ] UI: `GET /api/v2/ml/autofee/suggestions`, `GET /api/v2/ml/autofee/history`
+- [x] UI: `GET /api/v2/ml/autofee/suggestions`, `GET /api/v2/ml/autofee/history`
 
 #### 6-D: ML Vollautomation (opt-in, Expert-Mode)
-- [ ] `ai_mode='policy_bound'` freischalten (nur Expert-Modus, nur nach ≥ 30 Tagen Shadow-Mode-Daten, R-AI-2/R-AI-3)
-- [ ] Human-Confirmation-Layer für policy_bound: UI-Bestätigung vor jeder ML-getriggerten Ausführung
-- [ ] Hard Caps, Cooldown-Guard, vollständiger Audit-Trail für alle automatischen Aktionen
-- [ ] Jede ML-getriggerte Änderung im ChangeLog mit `actor=ml:<model>:<version>` (R-AI-4)
+- [x] `ai_mode='policy_bound'` freischalten (nur Expert-Modus, nur nach ≥ 30 Tagen Shadow-Mode-Daten, R-AI-2/R-AI-3)
+- [x] Human-Confirmation-Layer für policy_bound: UI-Bestätigung vor jeder ML-getriggerten Ausführung
+- [x] Hard Caps, Cooldown-Guard, vollständiger Audit-Trail für alle automatischen Aktionen
+- [x] Jede ML-getriggerte Änderung im ChangeLog mit `actor=ml:<model>:<version>` (R-AI-4)
 
 #### 6-E: Eskalations-/Deeskalations-Tuning UI
-- [ ] Konfigurierbare Eskalationsfaktoren und Grenzwerte pro Kanal oder global im UI einstellbar
-- [ ] Cooldown-Konfiguration zwischen Anpassungen desselben Parameters
-- [ ] Anzeige: letzter ML-Eingriff, aktueller Konfidenzwert, Eskalationsstufe im Channel-Detail
+- [x] Konfigurierbare Eskalationsfaktoren und Grenzwerte pro Kanal oder global im UI einstellbar
+- [x] Cooldown-Konfiguration zwischen Anpassungen desselben Parameters
+- [x] Anzeige: letzter ML-Eingriff, aktueller Konfidenzwert, Eskalationsstufe im Channel-Detail
 
 #### 6-F: SPA als Hauptprodukt & PWA
-- [ ] SPA-Phase-2-Rollout: Startseite → SPA (`/cockpit`); Standard-Navigation → SPA; alte Seiten als Expert-Mode / Deep-Link
+- [x] SPA-Phase-2-Rollout: Startseite → SPA (`/cockpit`); Standard-Navigation → SPA; alte Seiten als Expert-Mode / Deep-Link
 - [ ] Service Worker, Web App Manifest, Offline-Fallback (PWA-Grundfunktionen)
 - [ ] SSE-Endpunkt für Live-Updates (Rebalance-Status, HTLC-Stream) als Alternative zu Polling
 
