@@ -1015,3 +1015,69 @@ msgstr "Quelle"
 
 msgid "Confidence"
 msgstr "Konfidenz"
+
+msgid "ML Controls"
+msgstr "ML-Steuerung"
+
+msgid "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee."
+msgstr "Diese Schalter steuern, ob dieser Kanal für ML-Shadow-Empfehlungen beim Rebalancing und Auto-Fee berücksichtigt wird."
+
+msgid "Shadow means recommendations are generated and logged, but not auto-executed."
+msgstr "Shadow bedeutet: Empfehlungen werden generiert und protokolliert, aber nicht automatisch ausgeführt."
+
+msgid "Data source: local ML history (AutoFeeMLRecord) and channel snapshots."
+msgstr "Datenquelle: lokale ML-Historie (AutoFeeMLRecord) und Kanal-Snapshots."
+
+msgid "The escalation level and confidence show the most recent ML shadow state for this channel."
+msgstr "Eskalationsstufe und Konfidenz zeigen den aktuellsten ML-Shadow-Zustand dieses Kanals."
+
+msgid "ML Rebalancing"
+msgstr "ML-Rebalancing"
+
+msgid "Enable or disable ML shadow rebalancing suggestions for this channel."
+msgstr "ML-Shadow-Rebalancing-Vorschläge für diesen Kanal aktivieren oder deaktivieren."
+
+msgid "Toggle ML Rebalancing"
+msgstr "ML-Rebalancing umschalten"
+
+msgid "Toggle ML Rebalancing unavailable: channel record missing"
+msgstr "ML-Rebalancing-Umschalter nicht verfügbar: Kanalseintrag fehlt"
+
+msgid "ML Auto-Fee"
+msgstr "ML-Auto-Fee"
+
+msgid "Enable or disable ML shadow auto-fee suggestions for this channel."
+msgstr "ML-Shadow-Auto-Fee-Vorschläge für diesen Kanal aktivieren oder deaktivieren."
+
+msgid "Toggle ML Auto-Fee"
+msgstr "ML-Auto-Fee umschalten"
+
+msgid "Toggle ML Auto-Fee unavailable: channel record missing"
+msgstr "ML-Auto-Fee-Umschalter nicht verfügbar: Kanalseintrag fehlt"
+
+msgid "Escalation Level"
+msgstr "Eskalationsstufe"
+
+msgid "Last ML Confidence"
+msgstr "Letzte ML-Konfidenz"
+
+msgid "Last ML Update"
+msgstr "Letztes ML-Update"
+
+msgid "Policy-Bound Confirmation"
+msgstr "Policy-Bound-Bestätigung"
+
+msgid "ML-triggered policy execution is blocked until you confirm in this dialog."
+msgstr "ML-gesteuerte Policy-Ausführung ist gesperrt, bis Sie in diesem Dialog bestätigen."
+
+msgid "Policy ID"
+msgstr "Policy-ID"
+
+msgid "Run ML Action"
+msgstr "ML-Aktion ausführen"
+
+msgid "Please provide a valid Policy ID."
+msgstr "Bitte eine gültige Policy-ID angeben."
+
+msgid "This action requires manual confirmation. Execute now?"
+msgstr "Diese Aktion erfordert manuelle Bestätigung. Jetzt ausführen?"

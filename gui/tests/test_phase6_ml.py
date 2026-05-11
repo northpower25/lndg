@@ -109,9 +109,11 @@ class TestMLExecuteActionAPI(TestCase):
         User.objects.create_superuser("testuser_ml_exec", "test_ml_exec@test.com", "password")
 
     def test_execute_action_awaits_confirmation(self):
+        from unittest.mock import patch
+
         from gui.models import UserMode
 
-        self.client.login(username="testuser_ml_exec", ******)
+        self.client.login(username="testuser_ml_exec", password="password")
         mode = UserMode.load()
         mode.ai_mode = UserMode.AI_MODE_POLICY_BOUND
         mode.mode = UserMode.MODE_EXPERT
@@ -120,18 +122,21 @@ class TestMLExecuteActionAPI(TestCase):
 
         import json
 
-        resp = self.client.post(
-            "/api/v2/ml/actions/execute/",
-            data=json.dumps({"policy_id": 1, "model_name": "rebalance", "model_version": "v1", "ml_confidence": 0.8, "confirm": False}),
-            content_type="application/json",
-        )
+        with patch("rest_framework.throttling.UserRateThrottle.allow_request", return_value=True):
+            resp = self.client.post(
+                "/api/v2/ml/actions/execute/",
+                data=json.dumps({"policy_id": 1, "model_name": "rebalance", "model_version": "v1", "ml_confidence": 0.8, "confirm": False}),
+                content_type="application/json",
+            )
         self.assertEqual(resp.status_code, 202)
         self.assertEqual(resp.json().get("status"), "awaiting_confirmation")
 
     def test_execute_action_confirmed_runs_policy_path(self):
+        from unittest.mock import patch
+
         from gui.models import Policy, UserMode
 
-        self.client.login(username="testuser_ml_exec", ******)
+        self.client.login(username="testuser_ml_exec", password="password")
         mode = UserMode.load()
         mode.ai_mode = UserMode.AI_MODE_POLICY_BOUND
         mode.mode = UserMode.MODE_EXPERT
@@ -141,19 +146,20 @@ class TestMLExecuteActionAPI(TestCase):
 
         import json
 
-        resp = self.client.post(
-            "/api/v2/ml/actions/execute/",
-            data=json.dumps(
-                {
-                    "policy_id": policy.id,
-                    "model_name": "rebalance",
-                    "model_version": "v1",
-                    "ml_confidence": 0.8,
-                    "confirm": True,
-                }
-            ),
-            content_type="application/json",
-        )
+        with patch("rest_framework.throttling.UserRateThrottle.allow_request", return_value=True):
+            resp = self.client.post(
+                "/api/v2/ml/actions/execute/",
+                data=json.dumps(
+                    {
+                        "policy_id": policy.id,
+                        "model_name": "rebalance",
+                        "model_version": "v1",
+                        "ml_confidence": 0.8,
+                        "confirm": True,
+                    }
+                ),
+                content_type="application/json",
+            )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data.get("ok"))

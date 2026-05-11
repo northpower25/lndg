@@ -479,22 +479,25 @@ Nach erneuter Prüfung in Phase 6 (offene Punkte, die weiterhin nicht umsetzbar 
 
 > ✅ **Gelöst in Phase 6:** ML-Shadow-Joblogik (Phase 4-E/4-F) – `generate_ml_shadow_recommendations()` + periodische Ausführung in `jobs.py`.
 
+### ✅ Neu umgesetzt in Phase 6 (dieser Iterationsstand)
+
+| Item | Details |
+|---|---|
+| **6-B: UI-Toggle pro Kanal** | `Channels.ml_rebalance_enabled` + `ml_autofee_enabled` (Migration `0010_phase6_channel_ml_toggles`); Channel-Detail-Seite mit Toggle-Forms (`update_target=14/15`); ML-Pipeline gated auf Channel-Flags in `recommender.py` + `ml_trainer.py` |
+| **6-D: UI-Bestätigungsdialog** | `POST /api/v2/ml/actions/execute/` Endpunkt mit `confirm`-Flag; `channel.html` zeigt Policy-Bound-Panel mit JS-`window.confirm()`-Dialog; Backend-Gate `ai_policy_bound_confirm` bereits vorhanden; Tests in `test_phase6_ml.py` (`TestMLExecuteActionAPI`) |
+| **6-E: Eskalationsstufe im Channel-Detail** | `ml_state.escalation_level`, `last_ml_confidence`, `last_ml_update` in `channel.html`-Tabelle; Daten aus `AutoFeeMLRecord`/`RebalanceMLRecord` via View-Context `ml_state` |
+| **i18n Phase 6** | `locale/de` + `locale/en`: alle neuen Strings aus Channel-Detail ML-Controls und Policy-Bound-Dialog vollständig ergänzt (R-I18N-5) |
+
 ### ❌ Weiterhin offen in Phase 6
 
-1. **6-B UI-Toggle pro Kanal für ML-Nutzung**
-   - **Warum offen:** Benötigt eigenen Channel-Detail-UI-Durchlauf; Backend-Logik (shadow-mode-Flag pro Channel) noch nicht im Datenmodell.
-2. **6-C Dynamische Zielanpassung aus Netzwerk-Umfeld**
+1. **6-C Dynamische Zielanpassung aus Netzwerk-Umfeld**
    - **Warum offen:** Erfordert externe Netzwerkdaten (z.B. Gossip-basierte Peer-Analyse); zu komplex für einen einzelnen Phase-6-Sprint.
-3. **6-D UI-Bestätigungsdialog für policy_bound-Aktionen**
-   - **Warum offen:** Backend-Gate (`ai_policy_bound_confirm`) ist implementiert; Frontend-Bestätigungsdialog fehlt noch.
-4. **6-E Eskalationsstufe im Channel-Detail anzeigen**
-   - **Warum offen:** API-Endpunkt vorhanden; UI-Einbettung in Channel-Detailseite fehlt.
-5. **6-F SPA-Phase-2-Rollout (Startseite → SPA)**
+2. **6-F SPA-Phase-2-Rollout (Startseite → SPA)**
    - **Warum offen:** Die bestehende Django-Template-Architektur ist noch primär; vollständige SPA-Migration (React/HTMX) erfordert separates Frontend-Refactoring-Paket mit hohem Umfang.
-6. **Pinned `requirements.txt` via `pip-compile`**
+3. **Pinned `requirements.txt` via `pip-compile`**
    - **Warum offen:** `requirements.in` hat Versionsgrenzen (inkl. scikit-learn, joblib); `pip-compile` muss in der Ziel-Python-Umgebung ausgeführt werden.
-7. **Vollständige i18n-Abdeckung der Legacy-Templates**
-   - **Warum offen:** Neue Phase-6-Texte haben keine eigenständigen `.po`-Einträge (API-only, kein neues Template-HTML); Legacy-Template-i18n bleibt technische Schuld.
+4. **Vollständige i18n-Abdeckung der Legacy-Templates**
+   - **Warum offen:** Alle neuen Phase-6-Texte haben jetzt `.po`-Einträge; verbleibende technische Schuld liegt ausschließlich in unberührten Legacy-Templates (nicht in dieser PR geändert).
 
 ### ❌ Weiterhin offen in Phase 5
 
