@@ -1,10 +1,35 @@
 {% extends "base.html" %}
 {% block title %} {{ block.super }} - Dashboard{% endblock %}
+{% load static %}
 {% block content %}
 {% load euformat %}
 {% load i18n %}
-<!-- ── Cockpit Tiles ─────────────────────────────────────────────────────── -->
-<div id="cockpit-tiles" class="w3-container w3-padding-small" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+{# ── SPA: inject CSRF token for the React cockpit (6-F) ──────────────────── #}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+{# ── SPA mount point – React renders the cockpit tiles here ──────────────── #}
+<div id="lndg-root" class="w3-container w3-padding-small"></div>
+
+{# Load the compiled React/Vite bundle. Falls back silently if not yet built. #}
+<script>
+(function() {
+  var s = document.createElement('script');
+  s.type = 'module';
+  s.src = '{% static "spa/index.js" %}';
+  s.onerror = function() {
+    /* SPA bundle not found (not built yet). Show legacy cockpit tiles. */
+    var legacy = document.getElementById('cockpit-tiles-legacy');
+    if (legacy) legacy.style.display = 'flex';
+    var root = document.getElementById('lndg-root');
+    if (root) root.style.display = 'none';
+  };
+  document.head.appendChild(s);
+})();
+</script>
+
+{# ── Legacy cockpit tiles (shown when React SPA is unavailable / JS-off) ─── #}
+<!-- ── Cockpit Tiles (Legacy / Fallback) ─────────────────────────────────── -->
+<div id="cockpit-tiles-legacy" class="w3-container w3-padding-small" style="display:none;flex-wrap:wrap;gap:8px;margin-top:8px">
 
   <!-- Tile 1: Routing Activity -->
   <div class="w3-card w3-padding" style="flex:1;min-width:160px">
