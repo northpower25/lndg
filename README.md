@@ -4,6 +4,7 @@ Welcome to LNDg, an advanced web interface designed for analyzing Lightning Netw
 
 ## Table of Contents
 
+- [Refactoring Status (LNDg Next)](#refactoring-status-lndg-next)
 - [Installation](#installation)
   - [1-Click Installation](#1-click-installation)
   - [Docker Installation](#docker-installation)
@@ -47,6 +48,18 @@ Welcome to LNDg, an advanced web interface designed for analyzing Lightning Netw
   - [Steps to Start the Auto-Rebalancer](#steps-to-start-the-auto-rebalancer)
 - [Preview Screens](#preview-screens)
 
+## Refactoring Status (LNDg Next)
+
+Current refactoring progress is tracked in [`REFACTORING_KONZEPT.md`](./REFACTORING_KONZEPT.md), chapter **19. ToDo-Liste / Implementierungs-Tracking**.
+
+Implemented highlights in this branch include:
+- Multi-stage/rootless Docker setup (`/lndg` workdir) and split backend/frontend CI jobs
+- Backend adapter layer (`LndBackend`, `ClnBackend`) with capability registry
+- `/api/v2/` foundation (capabilities, cleaner, backup, recommendation/policy/splice, ML endpoints)
+- Time-series/automation models (`ChannelSnapshot`, `ForwardingAggregate`, `ChangeLog`, `Recommendation`, `Policy`, `PolicyRun`, `SpliceLog`, ML records)
+- Cleaner/retention jobs, onboarding flow, guided splice UI, CLN plugin panel
+- Phase-6 ML shadow/policy-bound foundations and SPA entry on home dashboard
+
 ## Installation
 
 Choose your preferred installation method:
@@ -59,7 +72,7 @@ To install this fork via an Umbrel Community App Store, add the following reposi
 https://github.com/northpower25/lndg
 ```
 
-The app requires an active LND node (the built-in Umbrel Lightning node is supported). After installation, LNDg is available at `http://umbrel.local:8890`.
+The app requires an active Lightning backend. LND is fully supported; CLN support is available via the adapter/capability path and is being expanded iteratively. After installation, LNDg is available at `http://umbrel.local:8890`.
 
 When you open LNDg through the Umbrel dashboard, a credentials dialog will appear showing:
 - **Default username:** `lndg-admin`
@@ -79,7 +92,7 @@ This method requires Docker and Docker Compose to be installed on your system.
 
 ```bash
 # Clone the repository
-git clone https://github.com/cryptosharks131/lndg.git
+git clone https://github.com/northpower25/lndg.git
 
 # Change directory to the repository
 cd lndg
@@ -129,7 +142,7 @@ This method provides a hands-on approach to setting up LNDg.
 
 ```bash
 # Clone the repository
-git clone https://github.com/cryptosharks131/lndg.git
+git clone https://github.com/northpower25/lndg.git
 
 # Change directory
 cd lndg
@@ -166,7 +179,7 @@ The `controller.py` script manages backend database updates, automated rebalanci
 
 - **Systemd:**
   - Option 1 (Script): `sudo bash systemd.sh`
-  - Option 2 (Manual): [Manual Systemd Setup Instructions](https://github.com/cryptosharks131/lndg/blob/master/systemd.md)
+  - Option 2 (Manual): [Manual Systemd Setup Instructions](https://github.com/northpower25/lndg/blob/master/systemd.md)
 
 - **Supervisord:**
   - Configure Supervisord: `.venv/bin/python initialize.py -sd`
@@ -250,7 +263,7 @@ Remember to restart the `uwsgi.service` after updates if using this setup.
 
 LNDg uses SQLite3 by default. You can configure it to use a PostgreSQL database for potentially better performance in high-usage scenarios.
 
-See the [Postgres Setup Guide](https://github.com/cryptosharks131/lndg/blob/master/postgres.md) for instructions.
+See the [Postgres Setup Guide](https://github.com/northpower25/lndg/blob/master/postgres.md) for instructions.
 
 ### Important Notes
 
@@ -312,7 +325,7 @@ Listen for and record HTLC failure events to the dashboard.
 
 ### API Backend
 
-Access data programmatically via the `/api` endpoint. Available resources include:
+Access data programmatically via the `/api` and `/api/v2/` endpoints. Available resources include:
 `payments`, `paymenthops`, `invoices`, `forwards`, `onchain`, `peers`, `channels`, `rebalancer`, `settings`, `pendinghtlcs`, `failedhtlcs`.
 Append `?format=json` for JSON output.
 
@@ -423,7 +436,7 @@ Customize Auto-Fees (AF) behavior via the settings page:
 
 ## Auto-Rebalancer
 
-Automatically manage channel liquidity to maintain outbound capacity on profitable routes. See the [Quick Start Guide](https://github.com/cryptosharks131/lndg/blob/master/quickstart.md).
+Automatically manage channel liquidity to maintain outbound capacity on profitable routes. See the [Quick Start Guide](https://github.com/northpower25/lndg/blob/master/quickstart.md).
 
 ### Understanding Auto-Rebalancer
 
@@ -500,7 +513,7 @@ Configure Auto-Rebalancer (AR) globally:
 ![image](https://user-images.githubusercontent.com/38626122/148699445-88efeacd-3cfc-429c-91d8-3a52ee633195.png)
 ![image](https://user-images.githubusercontent.com/38626122/148699467-62ebbd7d-9f36-4707-88fd-62f2cc2a5506.png)
 
-### API Browser (`/api`)
+### API Browser (`/api` and `/api/v2/`)
 ![image](https://user-images.githubusercontent.com/38626122/137810278-7f38ac5b-8932-4953-aa4c-9c29d66dce0c.png)
 
 ### View Keysend Messages
