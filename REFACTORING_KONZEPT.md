@@ -1159,6 +1159,32 @@ build:
 - **Node:** `package-lock.json` committen, `npm ci` statt `npm install` in CI
 - **Renovate/Dependabot:** Automatische Dependency-Updates mit PR-Vorschlag
 
+### 12.7 🔧 Aufgabe: pip-compile Lock-Datei erstellen (R-SEC-3)
+
+**Was:** `requirements.txt` wird derzeit manuell gepflegt und enthält keine versionsgenauen Hash-Pins. Das verletzt R-SEC-3 und öffnet die Tür für Supply-Chain-Angriffe (unsichere Abhängigkeiten, die beim nächsten `pip install` eingeschleust werden können).
+
+**Warum:** `requirements.in` existiert bereits mit oberen Versionsgrenzen. Es fehlt nur der generierte Lock-File, der die exakten Versionen + Hashes aller transitiven Abhängigkeiten festschreibt.
+
+**Wie:**
+
+```bash
+# Einmalig in der Ziel-Python-Umgebung (Python 3.12, Linux) ausführen:
+pip install pip-tools
+pip-compile requirements.in --generate-hashes --output-file requirements.txt
+# Ergebnis prüfen und committen
+git add requirements.txt && git commit -m "chore: pin requirements via pip-compile"
+```
+
+**CI-Schutz (damit der Lock nie veraltet):**
+
+```yaml
+# In .github/workflows/ci.yml hinzufügen:
+- name: Check requirements.txt is up to date
+  run: pip-compile requirements.in --generate-hashes --dry-run --check
+```
+
+**Wichtig:** `pip-compile` muss **lokal vom Maintainer** in der exakten Produktions-Python-Umgebung ausgeführt werden (gleiche Python-Version, gleiche Plattform). Ein Ausführen im Copilot-Sandbox kann zu anderen Hash-Werten führen (andere Python-Micro-Version, Plattform-Marker). Nach jeder Änderung an `requirements.in` muss `pip-compile` neu ausgeführt und das Ergebnis committed werden.
+
 ---
 
 ## 13. UI/UX-Hybrid-Strategie

@@ -6,6 +6,7 @@ from .models import (
     LiquidityState,
     Node,
     Peer,
+    PeerNetworkInfo,
     RebalanceAction,
     SpliceAction,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "LiquidityState",
     "Node",
     "Peer",
+    "PeerNetworkInfo",
     "RebalanceAction",
     "SpliceAction",
 ]

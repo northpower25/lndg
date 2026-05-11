@@ -114,6 +114,8 @@ class Channels(models.Model):
     ar_max_cost = models.IntegerField()
     fees_updated = models.DateTimeField(default=timezone.now)
     auto_fees = models.BooleanField()
+    ml_rebalance_enabled = models.BooleanField(default=True)
+    ml_autofee_enabled = models.BooleanField(default=True)
     notes = models.TextField(default='', blank=True)
 
     def save(self, *args, **kwargs):
@@ -724,3 +726,23 @@ class AutoFeeMLRecord(models.Model):
     class Meta:
         app_label = 'gui'
         indexes = [models.Index(fields=['chan_id', 'timestamp'])]
+
+
+class PeerNetworkSnapshot(models.Model):
+    """Gossip-network snapshot for a peer pubkey (6-C).
+
+    Collected periodically by the gossip collector.  Used by the recommendation
+    engine for dynamic fee-target adjustment based on a peer's network position.
+    """
+
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    pubkey = models.CharField(max_length=66, db_index=True)
+    alias = models.CharField(max_length=64, blank=True, default='')
+    channel_count = models.IntegerField(default=0)
+    total_capacity_sat = models.BigIntegerField(default=0)
+    avg_fee_rate_ppm = models.FloatField(default=0.0)
+    last_gossip_update = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'gui'
+        indexes = [models.Index(fields=['pubkey', 'timestamp'])]

@@ -18,6 +18,7 @@ from gui.domain import (
     LiquidityState,
     Node,
     Peer,
+    PeerNetworkInfo,
     SpliceAction,
 )
 
@@ -207,6 +208,42 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
             can_multi_asset=False,
             ai_safe_actions=["update_fee_policy"],
         )
+
+    def get_peer_network_info(self, pubkeys: list[str]) -> list[PeerNetworkInfo]:
+        """Fetch gossip-network statistics via CLN ``listnodes``.
+
+        CLN ``listnodes`` does not currently return ``num_channels`` or
+        ``total_capacity`` for a single node; those fields are zeroed here.
+        TODO: Implement full channel-count and capacity lookup via
+        ``listchannels`` (filter by source/destination) and cache the result.
+        Tracked as open work in ENTWICKLUNGSREGELN.md Phase 3 / CLN integration.
+        """
+        results: list[PeerNetworkInfo] = []
+        for pubkey in pubkeys:
+            try:
+                data = self._post("listnodes", {"id": pubkey})
+                nodes = data.get("nodes", [])
+                if not nodes:
+                    continue
+                node = nodes[0]
+                last_update = None
+                if node.get("last_timestamp"):
+                    last_update = datetime.fromtimestamp(
+                        node["last_timestamp"], tz=dt_timezone.utc
+                    )
+                results.append(
+                    PeerNetworkInfo(
+                        pubkey=pubkey,
+                        alias=node.get("alias", ""),
+                        channel_count=0,
+                        total_capacity_sat=0,
+                        avg_fee_rate_ppm=0.0,
+                        last_gossip_update=last_update,
+                    )
+                )
+            except Exception as exc:
+                logger.debug("CLN listnodes failed for %s: %s", pubkey[:16], exc)
+        return results
 
     # ── LightningWriteAdapter ─────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@
 {% block content %}
 {% load euformat %}
 {% load humanize %}
+{% load i18n %}
 {% if channel %}
 <div class="w3-container w3-padding-small">
   <h3><a href="{{ graph_links }}/{{ network }}node/{{ channel.remote_pubkey }}" target="_blank">{% if channel.alias != "" %}{{ channel.alias }}</a> | {{ channel.remote_pubkey }}{% else %}{{ channel.remote_pubkey }}</a>{% endif %}
@@ -19,6 +20,13 @@
     Opened In: <a href="{{ network_links }}/{{ network }}block/{{ channel.open_block }}" target="_blank">{{ channel.open_block|eucomma }}</a> | 
     Opener: {% if channel.initiator == True %}Local{% else %}Remote{% endif %}
   </span>
+  {% if amboss_peer %}
+  <div style="padding-top:5px" class="w3-small w3-text-grey">
+    {% trans "Amboss context" %}: {% trans "Rank" %} {{ amboss_peer.rank|default:"—" }},
+    {% trans "Capacity" %} {{ amboss_peer.capacity|default:"—" }},
+    {% trans "Channels" %} {{ amboss_peer.channels|default:"—" }}
+  </div>
+  {% endif %}
 </div>
 <br/>
 <div class="w3-row" style="text-align:center;max-width:1500px;">
@@ -130,6 +138,100 @@
   </table>
 </div>
 <div class="w3-container w3-padding-small" style="overflow-x: scroll">
+  <h2>{% trans "ML Controls" %}</h2>
+  <details class="w3-small w3-text-grey" style="margin-bottom:8px">
+    <summary>{% trans "Why?" %}</summary>
+    {% trans "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee." %}
+    {% trans "Shadow means recommendations are generated and logged, but not auto-executed." %}
+    {% trans "Data source: local ML history (AutoFeeMLRecord) and channel snapshots." %}
+    {% trans "The escalation level and confidence show the most recent ML shadow state for this channel." %}
+  </details>
+  <table class="w3-table-all w3-centered w3-hoverable" style="margin-bottom:12px">
+    <tr>
+      <th title="{% trans 'Enable or disable ML shadow rebalancing suggestions for this channel.' %}">{% trans "ML Rebalancing" %}</th>
+      <th title="{% trans 'Enable or disable ML shadow auto-fee suggestions for this channel.' %}">{% trans "ML Auto-Fee" %}</th>
+      <th>{% trans "Escalation Level" %}</th>
+      <th>{% trans "Last ML Confidence" %}</th>
+      <th>{% trans "Last ML Update" %}</th>
+    </tr>
+    <tr>
+      <td>
+        <form action="/update_channel/" method="post">
+          {% csrf_token %}
+          <input
+            type="submit"
+            aria-label="{% if ml_state.can_toggle %}{% trans 'Toggle ML Rebalancing' %}{% else %}{% trans 'Toggle ML Rebalancing unavailable: channel record missing' %}{% endif %}"
+            {% if not ml_state.can_toggle %}disabled{% endif %}
+            value="{% if ml_state.rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
+          <input type="hidden" name="update_target" value="14">
+          <input type="hidden" name="target" value="0">
+        </form>
+      </td>
+      <td>
+        <form action="/update_channel/" method="post">
+          {% csrf_token %}
+          <input
+            type="submit"
+            aria-label="{% if ml_state.can_toggle %}{% trans 'Toggle ML Auto-Fee' %}{% else %}{% trans 'Toggle ML Auto-Fee unavailable: channel record missing' %}{% endif %}"
+            {% if not ml_state.can_toggle %}disabled{% endif %}
+            value="{% if ml_state.autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}">
+          <input type="hidden" name="chan_id" value="{{ channel.chan_id }}">
+          <input type="hidden" name="update_target" value="15">
+          <input type="hidden" name="target" value="0">
+        </form>
+      </td>
+      <td>{{ ml_state.escalation_level|default:"—" }}</td>
+      <td>{% if ml_state.last_ml_confidence is not None %}{{ ml_state.last_ml_confidence }}{% else %}—{% endif %}</td>
+      <td>{% if ml_state.last_ml_update %}{{ ml_state.last_ml_update|naturaltime }}{% else %}—{% endif %}</td>
+    </tr>
+  </table>
+  <div class="w3-small w3-text-grey" style="margin-bottom:12px">
+    <strong>{% trans "Policy-Bound Confirmation" %}</strong>
+    <span title="{% trans 'ML-triggered policy execution is blocked until you confirm in this dialog.' %}">❓</span>
+    <div style="margin-top:4px">
+      <input id="ml-policy-id" type="number" min="1" placeholder="{% trans 'Policy ID' %}" style="max-width:140px">
+      <button type="button" onclick="runMlPolicyBoundAction(false)">{% trans "Run ML Action" %}</button>
+      <span id="ml-policy-result" class="w3-tiny"></span>
+    </div>
+  </div>
+  <script>
+    async function runMlPolicyBoundAction(confirmAction) {
+      const policyId = parseInt(document.getElementById('ml-policy-id').value || '0', 10);
+      const resultEl = document.getElementById('ml-policy-result');
+      if (!policyId) {
+        resultEl.textContent = "{% trans 'Please provide a valid Policy ID.' %}";
+        return;
+      }
+      const tokenEl = document.getElementById('api');
+      const csrfToken = tokenEl ? tokenEl.dataset.token : '';
+      const payload = {
+        policy_id: policyId,
+        model_name: "ui_policy_bound",
+        model_version: "v1",
+        ml_confidence: 0.75,
+        confirm: !!confirmAction,
+      };
+      const resp = await fetch('/api/v2/ml/actions/execute/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.status === 'awaiting_confirmation' && !confirmAction) {
+        const ok = window.confirm("{% trans 'This action requires manual confirmation. Execute now?' %}");
+        if (ok) {
+          return runMlPolicyBoundAction(true);
+        }
+      }
+      resultEl.textContent = (data.status || 'error') + (data.reason ? (': ' + data.reason) : '');
+    }
+  </script>
   <h2>Channel Settings</h2>
   <table class="w3-table-all w3-centered w3-hoverable">
     <tr>

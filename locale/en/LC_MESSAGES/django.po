@@ -1012,3 +1012,69 @@ msgstr "Source"
 
 msgid "Confidence"
 msgstr "Confidence"
+
+msgid "ML Controls"
+msgstr "ML Controls"
+
+msgid "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee."
+msgstr "These toggles control whether this channel is considered for ML shadow recommendations for rebalancing and auto-fee."
+
+msgid "Shadow means recommendations are generated and logged, but not auto-executed."
+msgstr "Shadow means recommendations are generated and logged, but not auto-executed."
+
+msgid "Data source: local ML history (AutoFeeMLRecord) and channel snapshots."
+msgstr "Data source: local ML history (AutoFeeMLRecord) and channel snapshots."
+
+msgid "The escalation level and confidence show the most recent ML shadow state for this channel."
+msgstr "The escalation level and confidence show the most recent ML shadow state for this channel."
+
+msgid "ML Rebalancing"
+msgstr "ML Rebalancing"
+
+msgid "Enable or disable ML shadow rebalancing suggestions for this channel."
+msgstr "Enable or disable ML shadow rebalancing suggestions for this channel."
+
+msgid "Toggle ML Rebalancing"
+msgstr "Toggle ML Rebalancing"
+
+msgid "Toggle ML Rebalancing unavailable: channel record missing"
+msgstr "Toggle ML Rebalancing unavailable: channel record missing"
+
+msgid "ML Auto-Fee"
+msgstr "ML Auto-Fee"
+
+msgid "Enable or disable ML shadow auto-fee suggestions for this channel."
+msgstr "Enable or disable ML shadow auto-fee suggestions for this channel."
+
+msgid "Toggle ML Auto-Fee"
+msgstr "Toggle ML Auto-Fee"
+
+msgid "Toggle ML Auto-Fee unavailable: channel record missing"
+msgstr "Toggle ML Auto-Fee unavailable: channel record missing"
+
+msgid "Escalation Level"
+msgstr "Escalation Level"
+
+msgid "Last ML Confidence"
+msgstr "Last ML Confidence"
+
+msgid "Last ML Update"
+msgstr "Last ML Update"
+
+msgid "Policy-Bound Confirmation"
+msgstr "Policy-Bound Confirmation"
+
+msgid "ML-triggered policy execution is blocked until you confirm in this dialog."
+msgstr "ML-triggered policy execution is blocked until you confirm in this dialog."
+
+msgid "Policy ID"
+msgstr "Policy ID"
+
+msgid "Run ML Action"
+msgstr "Run ML Action"
+
+msgid "Please provide a valid Policy ID."
+msgstr "Please provide a valid Policy ID."
+
+msgid "This action requires manual confirmation. Execute now?"
+msgstr "This action requires manual confirmation. Execute now?"

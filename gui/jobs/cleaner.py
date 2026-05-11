@@ -11,6 +11,7 @@ from gui.models import (
     ChannelSnapshot,
     ChangeLog,
     ForwardingAggregate,
+    PeerNetworkSnapshot,
     PolicyRun,
     RebalanceMLRecord,
     Recommendation,
@@ -27,6 +28,7 @@ DEFAULT_POLICYRUN_RETENTION_DAYS = 90
 DEFAULT_SPLICE_LOG_RETENTION_DAYS = 365
 DEFAULT_REBALANCE_ML_RECORD_RETENTION_DAYS = 180
 DEFAULT_AUTOFEE_ML_RECORD_RETENTION_DAYS = 180
+DEFAULT_PEER_NETWORK_SNAPSHOT_RETENTION_DAYS = 30
 
 
 async def _delete_older_than(
@@ -125,3 +127,11 @@ async def clean_autofee_ml_records(
 ) -> int:
     cutoff = timezone.now() - timedelta(days=retention_days)
     return await _delete_older_than(AutoFeeMLRecord.objects, cutoff, time_field="timestamp")
+
+
+async def clean_peer_network_snapshots(
+    retention_days: int = DEFAULT_PEER_NETWORK_SNAPSHOT_RETENTION_DAYS,
+) -> int:
+    """Delete peer network snapshots older than *retention_days* days (6-C)."""
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    return await _delete_older_than(PeerNetworkSnapshot.objects, cutoff, time_field="timestamp")

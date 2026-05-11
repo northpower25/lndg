@@ -18,6 +18,7 @@ from gui.domain import (
     LiquidityState,
     Node,
     Peer,
+    PeerNetworkInfo,
     SpliceAction,
 )
 from gui.lnd_deps import lightning_pb2 as ln
@@ -137,6 +138,46 @@ class LndBackend(LightningReadAdapter, LightningWriteAdapter):
             can_multi_asset=False,
             ai_safe_actions=["update_fee_policy"],
         )
+
+    def get_peer_network_info(self, pubkeys: list[str]) -> list[PeerNetworkInfo]:
+        """Fetch gossip-network statistics for each pubkey via LND GetNodeInfo."""
+        stub = self._get_stub()
+        results: list[PeerNetworkInfo] = []
+        for pubkey in pubkeys:
+            try:
+                resp = stub.GetNodeInfo(
+                    ln.NodeInfoRequest(pub_key=pubkey, include_channels=True)
+                )
+                node = resp.node
+                channels = resp.channels
+                avg_fee_rate = 0.0
+                if channels:
+                    fee_rates = []
+                    for ch in channels:
+                        p1 = ch.node1_policy
+                        p2 = ch.node2_policy
+                        if p1 and p1.fee_rate_milli_msat:
+                            fee_rates.append(p1.fee_rate_milli_msat)
+                        if p2 and p2.fee_rate_milli_msat:
+                            fee_rates.append(p2.fee_rate_milli_msat)
+                    if fee_rates:
+                        avg_fee_rate = sum(fee_rates) / len(fee_rates)
+                last_update = None
+                if node.last_update:
+                    last_update = datetime.fromtimestamp(node.last_update, tz=timezone.utc)
+                results.append(
+                    PeerNetworkInfo(
+                        pubkey=pubkey,
+                        alias=node.alias or "",
+                        channel_count=resp.num_channels,
+                        total_capacity_sat=resp.total_capacity,
+                        avg_fee_rate_ppm=avg_fee_rate,
+                        last_gossip_update=last_update,
+                    )
+                )
+            except Exception as exc:
+                logger.debug("GetNodeInfo failed for %s: %s", pubkey[:16], exc)
+        return results
 
     # ── LightningWriteAdapter ─────────────────────────────────────────────────
 

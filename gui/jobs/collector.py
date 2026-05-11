@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from gui.models import ChannelSnapshot
+from gui.models import ChannelSnapshot, PeerNetworkSnapshot
 
 
 def normalize_snapshot_interval_minutes(
@@ -39,4 +40,50 @@ async def collect_channel_snapshots(
     if not snapshots:
         return 0
     await ChannelSnapshot.objects.abulk_create(snapshots, batch_size=batch_size)
+    return len(snapshots)
+
+
+async def collect_peer_network_snapshots(
+    read_adapter, *, snapshot_at: datetime | None = None, batch_size: int = 200
+) -> int:
+    """Collect gossip-network snapshots for all currently connected peers (6-C).
+
+    Queries the backend adapter for each peer's network-wide channel count,
+    total capacity, and average fee rate.  Results are stored in
+    ``PeerNetworkSnapshot`` for use by the recommendation engine.
+    """
+    from gui.models import Channels as DbChannels
+
+    snapshot_time = snapshot_at or timezone.now()
+
+    # Collect distinct peer pubkeys from open/active channels.
+    # Hard cap: 200 peers per run to limit gRPC call volume.
+    # Configurable via LocalSettings "GOSSIP-MaxPeers" (future improvement).
+    pubkeys: list[str] = await sync_to_async(
+        lambda: list(
+            DbChannels.objects.filter(is_open=True, is_active=True)
+            .values_list("remote_pubkey", flat=True)
+            .distinct()[:200]
+        )
+    )()
+    if not pubkeys:
+        return 0
+
+    peer_infos = read_adapter.get_peer_network_info(pubkeys)
+    if not peer_infos:
+        return 0
+
+    snapshots = [
+        PeerNetworkSnapshot(
+            timestamp=snapshot_time,
+            pubkey=info.pubkey,
+            alias=info.alias,
+            channel_count=info.channel_count,
+            total_capacity_sat=info.total_capacity_sat,
+            avg_fee_rate_ppm=info.avg_fee_rate_ppm,
+            last_gossip_update=info.last_gossip_update,
+        )
+        for info in peer_infos
+    ]
+    await PeerNetworkSnapshot.objects.abulk_create(snapshots, batch_size=batch_size)
     return len(snapshots)

@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from gui.jobs.executor import execute_policy
+from gui.jobs.executor import execute_ml_action, execute_policy
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
 
 # msats per sat – used when converting amt_out_msat → sat
@@ -1216,6 +1216,36 @@ def ml_escalation_config(request):
     return Response({"status": "ok", "updated": updated})
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_MLThrottle])
+def ml_execute_action(request):
+    """POST /api/v2/ml/actions/execute – policy_bound ML action with UI confirmation support."""
+    policy_id = _safe_int_param(str(request.data.get("policy_id")), 0, 0, 10_000_000)
+    model_name = str(request.data.get("model_name", "manual_ui")).strip() or "manual_ui"
+    model_version = str(request.data.get("model_version", "v1")).strip() or "v1"
+    try:
+        ml_confidence = float(request.data.get("ml_confidence", 0.0))
+    except (TypeError, ValueError):
+        ml_confidence = 0.0
+    confirm = bool(request.data.get("confirm", False))
+
+    result = execute_ml_action(
+        policy_id=policy_id,
+        model_name=model_name,
+        model_version=model_version,
+        ml_confidence=ml_confidence,
+        pending_confirmation=not confirm,
+        trigger_data={"source": "ui_policy_bound_dialog"},
+    )
+    status_code = 200
+    if result.get("status") == "awaiting_confirmation":
+        status_code = 202
+    elif not result.get("ok", False):
+        status_code = 400
+    return Response(result, status=status_code)
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Phase-6-F – Server-Sent Events (SSE) for live updates
 # ────────────────────────────────────────────────────────────────────────────
@@ -1294,3 +1324,55 @@ def sse_live_events(request):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 6-C – Gossip Network Peer Snapshots
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class _NetworkReadThrottle(UserRateThrottle):
+    rate = "60/minute"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_NetworkReadThrottle])
+def network_peers(request):
+    """GET /api/v2/network/peers/ – latest gossip-network snapshot for open channel peers.
+
+    Returns the most recent ``PeerNetworkSnapshot`` per peer pubkey.
+    Optional query params:
+      - ``pubkey`` – filter to a single peer
+      - ``limit``  – max rows (default 50, max 200)
+    """
+    from gui.models import PeerNetworkSnapshot
+
+    pubkey_filter = request.query_params.get("pubkey")
+    limit = _safe_int_param(request.query_params.get("limit"), 50, 1, 200)
+
+    qs = PeerNetworkSnapshot.objects.order_by("pubkey", "-timestamp")
+    if pubkey_filter:
+        qs = qs.filter(pubkey=pubkey_filter)
+
+    # Python-side dedup (latest snapshot per pubkey) to stay cross-database
+    # compatible (SQLite does not support DISTINCT ON).
+    seen: set[str] = set()
+    rows = []
+    for s in qs:
+        if s.pubkey in seen:
+            continue
+        seen.add(s.pubkey)
+        rows.append({
+            "pubkey": s.pubkey,
+            "alias": s.alias,
+            "channel_count": s.channel_count,
+            "total_capacity_sat": s.total_capacity_sat,
+            "avg_fee_rate_ppm": round(s.avg_fee_rate_ppm, 1),
+            "last_gossip_update": s.last_gossip_update.isoformat() if s.last_gossip_update else None,
+            "snapshot_at": s.timestamp.isoformat(),
+        })
+        if len(rows) >= limit:
+            break
+    return Response({"peers": rows, "count": len(rows)})
+
