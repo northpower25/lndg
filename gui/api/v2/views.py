@@ -1324,3 +1324,49 @@ def sse_live_events(request):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 6-C – Gossip Network Peer Snapshots
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class _NetworkReadThrottle(UserRateThrottle):
+    rate = "60/minute"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([_NetworkReadThrottle])
+def network_peers(request):
+    """GET /api/v2/network/peers/ – latest gossip-network snapshot for open channel peers.
+
+    Returns the most recent ``PeerNetworkSnapshot`` per peer pubkey.
+    Optional query params:
+      - ``pubkey`` – filter to a single peer
+      - ``limit``  – max rows (default 50, max 200)
+    """
+    from gui.models import PeerNetworkSnapshot
+
+    pubkey_filter = request.query_params.get("pubkey")
+    limit = _safe_int_param(request.query_params.get("limit"), 50, 1, 200)
+
+    qs = PeerNetworkSnapshot.objects.order_by("pubkey", "-timestamp").distinct("pubkey")
+    if pubkey_filter:
+        qs = qs.filter(pubkey=pubkey_filter)
+    qs = qs[:limit]
+
+    rows = [
+        {
+            "pubkey": s.pubkey,
+            "alias": s.alias,
+            "channel_count": s.channel_count,
+            "total_capacity_sat": s.total_capacity_sat,
+            "avg_fee_rate_ppm": s.avg_fee_rate_ppm,
+            "last_gossip_update": s.last_gossip_update.isoformat() if s.last_gossip_update else None,
+            "snapshot_at": s.timestamp.isoformat(),
+        }
+        for s in qs
+    ]
+    return Response({"peers": rows, "count": len(rows)})
+

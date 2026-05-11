@@ -19,6 +19,7 @@ from .views import (
     ml_escalation_config,
     ml_rebalance_train,
     ml_status,
+    network_peers,
     policy_run,
     recommendation_dry_run,
     splice_in,
@@ -56,6 +57,8 @@ urlpatterns = [
     path("ml/autofee/history/", ml_autofee_history, name="api-v2-ml-autofee-history"),
     path("ml/escalation/config/", ml_escalation_config, name="api-v2-ml-escalation-config"),
     path("ml/actions/execute/", ml_execute_action, name="api-v2-ml-execute-action"),
+    # Phase-6-C Gossip Network
+    path("network/peers/", network_peers, name="api-v2-network-peers"),
     # Phase-6-F SSE endpoint
     path("events/", sse_live_events, name="api-v2-sse-events"),
 ]

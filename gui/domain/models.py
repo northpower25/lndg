@@ -85,6 +85,22 @@ class SpliceAction:
 
 
 @dataclass(frozen=True)
+class PeerNetworkInfo:
+    """Gossip-network statistics for a single peer pubkey.
+
+    Populated from LND ``GetNodeInfo`` / CLN ``listnodes``.  Used by the
+    recommendation engine for dynamic fee-target adjustment (6-C).
+    """
+
+    pubkey: str
+    alias: str
+    channel_count: int
+    total_capacity_sat: int
+    avg_fee_rate_ppm: float
+    last_gossip_update: datetime | None = None
+
+
+@dataclass(frozen=True)
 class RebalanceAction:
     source_channel_id: str
     target_channel_id: str

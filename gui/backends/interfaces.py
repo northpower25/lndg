@@ -17,6 +17,7 @@ from gui.domain import (
     LiquidityState,
     Node,
     Peer,
+    PeerNetworkInfo,
     SpliceAction,
 )
 
@@ -90,6 +91,15 @@ class LightningReadAdapter(ABC):
     @abstractmethod
     def get_capabilities(self) -> BackendCapabilities:
         """Return the capabilities supported by this backend."""
+
+    @abstractmethod
+    def get_peer_network_info(self, pubkeys: list[str]) -> list[PeerNetworkInfo]:
+        """Return gossip-network statistics for the given peer pubkeys.
+
+        Used by the recommendation engine for dynamic fee-target adjustment (6-C).
+        Implementations may return an empty list for pubkeys that cannot be
+        resolved (e.g. private nodes not announced on the gossip layer).
+        """
 
 
 class LightningWriteAdapter(ABC):

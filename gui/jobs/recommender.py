@@ -7,7 +7,7 @@ from django.db.models import Count, Sum
 from django.utils import timezone
 
 from gui.jobs.external_integrations import classify_fee_signal, get_mempool_recommended_fees
-from gui.models import Channels, FailedHTLCs, Forwards, NotificationSettings, Recommendation
+from gui.models import Channels, FailedHTLCs, Forwards, NotificationSettings, PeerNetworkSnapshot, Recommendation
 
 try:
     from gui.jobs.ml_trainer import shadow_rebalance_predict as _shadow_rebalance_predict
@@ -55,6 +55,32 @@ def _cached_recent_recommendations(limit: int) -> list[Recommendation]:
             status=Recommendation.STATUS_PENDING, created_at__gte=cutoff
         ).order_by("-confidence", "-created_at")[:limit]
     )
+
+
+def _get_peer_network_context(pubkeys: list[str]) -> dict[str, dict]:
+    """Return latest PeerNetworkSnapshot data keyed by pubkey (6-C).
+
+    Used to enrich fee recommendations with gossip-network context:
+    routing hubs (many channels, high capacity) justify competitive fees.
+    """
+    if not pubkeys:
+        return {}
+    cutoff = timezone.now() - timedelta(hours=6)
+    snapshots = (
+        PeerNetworkSnapshot.objects
+        .filter(pubkey__in=pubkeys, timestamp__gte=cutoff)
+        .order_by("pubkey", "-timestamp")
+        .distinct("pubkey")
+    )
+    result: dict[str, dict] = {}
+    for s in snapshots:
+        result[s.pubkey] = {
+            "alias": s.alias,
+            "channel_count": s.channel_count,
+            "total_capacity_sat": s.total_capacity_sat,
+            "avg_fee_rate_ppm": round(s.avg_fee_rate_ppm, 1),
+        }
+    return result
 
 
 def _to_next_action(item: Recommendation) -> dict:
@@ -117,16 +143,37 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
     }
     active_out_ids = {row["chan_id_out"] for row in fwd_out_7d}
 
-    for ch in open_channels[:25]:
+    # 6-C: load gossip network context for peer dynamic adjustment
+    channel_list = list(open_channels[:25])
+    peer_pubkeys = list({ch.remote_pubkey for ch in channel_list if ch.remote_pubkey})
+    peer_network_map = _get_peer_network_context(peer_pubkeys)
+
+    for ch in channel_list:
         if len(drafts) >= limit:
             break
         capacity = ch.capacity or 1
         outbound_pct = int((ch.local_balance * 100) / capacity)
         inbound_pct = 100 - outbound_pct
         flow_30d = fwd_out_30d_map.get(ch.chan_id, {"total": 0, "volume": 0})
+        peer_net = peer_network_map.get(ch.remote_pubkey, {})
 
         if ch.chan_id not in active_out_ids:
-            confidence = 0.76
+            # 6-C: routing hubs with many channels justify higher confidence on fee review
+            hub_bonus = 0.04 if peer_net.get("channel_count", 0) >= 10 else 0.0
+            confidence = min(0.92, 0.76 + hub_bonus)
+            rationale = _build_rationale(
+                title=f"Fee-Check: {ch.alias or ch.chan_id[:8]}",
+                reasons=[
+                    {"rank": 1, "signal": "no_outbound_flow", "value": "No outbound flow in 7 days", "weight": 0.5},
+                    {"rank": 2, "signal": "stagnation_window", "value": "Review window: 14 days", "weight": 0.3},
+                    {"rank": 3, "signal": "fee_position", "value": f"Current local fee rate: {ch.local_fee_rate} ppm", "weight": 0.2},
+                ],
+                data_window_days=14,
+                confidence=confidence,
+                alternatives=["rebalance", "close"],
+            )
+            if peer_net:
+                rationale["network_context"] = peer_net
             drafts.append(
                 RecommendationDraft(
                     rec_type=Recommendation.TYPE_FEE,
@@ -135,17 +182,7 @@ def generate_recommendations(*, limit: int = 3) -> list[dict]:
                     target_pubkey=ch.remote_pubkey,
                     risk_level=Recommendation.RISK_LOW,
                     confidence=confidence,
-                    rationale=_build_rationale(
-                        title=f"Fee-Check: {ch.alias or ch.chan_id[:8]}",
-                        reasons=[
-                            {"rank": 1, "signal": "no_outbound_flow", "value": "No outbound flow in 7 days", "weight": 0.5},
-                            {"rank": 2, "signal": "stagnation_window", "value": "Review window: 14 days", "weight": 0.3},
-                            {"rank": 3, "signal": "fee_position", "value": f"Current local fee rate: {ch.local_fee_rate} ppm", "weight": 0.2},
-                        ],
-                        data_window_days=14,
-                        confidence=confidence,
-                        alternatives=["rebalance", "close"],
-                    ),
+                    rationale=rationale,
                 )
             )
             continue

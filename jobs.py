@@ -41,6 +41,7 @@ _RECOMMENDER_DEFAULT_ITERS = 180  # ≈ 60 min
 _POLICY_EXECUTOR_DEFAULT_ITERS = 180  # ≈ 60 min
 _MEMPOOL_NOTIFY_DEFAULT_ITERS = 180  # ≈ 60 min
 _ML_TRAINER_DEFAULT_ITERS = 4320  # ≈ 24 h (daily batch retraining)
+_GOSSIP_COLLECTOR_DEFAULT_ITERS = 270  # ≈ 90 min (gossip data changes slowly)
 _last_mempool_light = None
 
 
@@ -957,7 +958,7 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     without additional threads.
     """
     from gui.backends.registry import get_active_backend
-    from gui.jobs.collector import collect_channel_snapshots
+    from gui.jobs.collector import collect_channel_snapshots, collect_peer_network_snapshots
     from gui.jobs.aggregator import aggregate_forwarding_windows
     from gui.jobs.recommender import generate_recommendations
 
@@ -967,6 +968,7 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
     rec_iters = _get_interval_setting("RECOMMENDER-Interval", _RECOMMENDER_DEFAULT_ITERS)
     policy_iters = _get_interval_setting("POLICY-Interval", _POLICY_EXECUTOR_DEFAULT_ITERS)
     mempool_notify_iters = _get_interval_setting("MEMPOOL-NotifyInterval", _MEMPOOL_NOTIFY_DEFAULT_ITERS)
+    gossip_iters = _get_interval_setting("GOSSIP-Interval", _GOSSIP_COLLECTOR_DEFAULT_ITERS)
 
     # Channel snapshots (every ~15 min by default)
     if loop_counter % snap_iters == 0:
@@ -1025,6 +1027,16 @@ def _run_phase2_periodic_jobs(loop_counter: int) -> None:
         except Exception as exc:
             print(f"{datetime.now().strftime('%c')} : [Notify] : Error in mempool fee notifier: {exc}")
 
+    # 6-C: Gossip network snapshot collection (every ~90 min by default)
+    if loop_counter % gossip_iters == 0:
+        backend = get_active_backend()
+        if backend is not None:
+            try:
+                saved = asyncio.run(collect_peer_network_snapshots(backend))
+                print(f"{datetime.now().strftime('%c')} : [Gossip] : Saved {saved} peer network snapshots.")
+            except Exception as exc:
+                print(f"{datetime.now().strftime('%c')} : [Gossip] : Error collecting peer network snapshots: {exc}")
+
     # Phase-6 ML batch retraining (daily, configurable, can be disabled via ML-TrainingEnabled=false)
     ml_trainer_iters = _get_interval_setting("ML-TrainingInterval", _ML_TRAINER_DEFAULT_ITERS)
     if loop_counter % ml_trainer_iters == 0:
@@ -1053,6 +1065,7 @@ async def _run_all_cleaners() -> dict:
         clean_change_log,
         clean_backup_log,
         clean_failed_payments as clean_failed_payments_job,
+        clean_peer_network_snapshots,
         clean_policy_runs,
         clean_rebalance_ml_records,
         clean_recommendations,
@@ -1069,6 +1082,7 @@ async def _run_all_cleaners() -> dict:
     spl_del = await clean_splice_log()
     rml_del = await clean_rebalance_ml_records()
     aml_del = await clean_autofee_ml_records()
+    pns_del = await clean_peer_network_snapshots()
     return {
         "channel_snapshots": snap_del,
         "forwarding_aggregates": agg_del,
@@ -1080,6 +1094,7 @@ async def _run_all_cleaners() -> dict:
         "splice_log": spl_del,
         "rebalance_ml_records": rml_del,
         "autofee_ml_records": aml_del,
+        "peer_network_snapshots": pns_del,
     }
 
 
