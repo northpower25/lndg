@@ -1351,22 +1351,28 @@ def network_peers(request):
     pubkey_filter = request.query_params.get("pubkey")
     limit = _safe_int_param(request.query_params.get("limit"), 50, 1, 200)
 
-    qs = PeerNetworkSnapshot.objects.order_by("pubkey", "-timestamp").distinct("pubkey")
+    qs = PeerNetworkSnapshot.objects.order_by("pubkey", "-timestamp")
     if pubkey_filter:
         qs = qs.filter(pubkey=pubkey_filter)
-    qs = qs[:limit]
 
-    rows = [
-        {
+    # Python-side dedup (latest snapshot per pubkey) to stay cross-database
+    # compatible (SQLite does not support DISTINCT ON).
+    seen: set[str] = set()
+    rows = []
+    for s in qs:
+        if s.pubkey in seen:
+            continue
+        seen.add(s.pubkey)
+        rows.append({
             "pubkey": s.pubkey,
             "alias": s.alias,
             "channel_count": s.channel_count,
             "total_capacity_sat": s.total_capacity_sat,
-            "avg_fee_rate_ppm": s.avg_fee_rate_ppm,
+            "avg_fee_rate_ppm": round(s.avg_fee_rate_ppm, 1),
             "last_gossip_update": s.last_gossip_update.isoformat() if s.last_gossip_update else None,
             "snapshot_at": s.timestamp.isoformat(),
-        }
-        for s in qs
-    ]
+        })
+        if len(rows) >= limit:
+            break
     return Response({"peers": rows, "count": len(rows)})
 

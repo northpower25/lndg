@@ -56,7 +56,9 @@ async def collect_peer_network_snapshots(
 
     snapshot_time = snapshot_at or timezone.now()
 
-    # Collect distinct peer pubkeys from open/active channels
+    # Collect distinct peer pubkeys from open/active channels.
+    # Hard cap: 200 peers per run to limit gRPC call volume.
+    # Configurable via LocalSettings "GOSSIP-MaxPeers" (future improvement).
     pubkeys: list[str] = await sync_to_async(
         lambda: list(
             DbChannels.objects.filter(is_open=True, is_active=True)

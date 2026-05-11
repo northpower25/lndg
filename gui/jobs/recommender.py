@@ -62,6 +62,8 @@ def _get_peer_network_context(pubkeys: list[str]) -> dict[str, dict]:
 
     Used to enrich fee recommendations with gossip-network context:
     routing hubs (many channels, high capacity) justify competitive fees.
+    Uses a Python-side dedup instead of DISTINCT ON to remain cross-database
+    compatible (SQLite does not support DISTINCT ON).
     """
     if not pubkeys:
         return {}
@@ -70,16 +72,16 @@ def _get_peer_network_context(pubkeys: list[str]) -> dict[str, dict]:
         PeerNetworkSnapshot.objects
         .filter(pubkey__in=pubkeys, timestamp__gte=cutoff)
         .order_by("pubkey", "-timestamp")
-        .distinct("pubkey")
     )
     result: dict[str, dict] = {}
     for s in snapshots:
-        result[s.pubkey] = {
-            "alias": s.alias,
-            "channel_count": s.channel_count,
-            "total_capacity_sat": s.total_capacity_sat,
-            "avg_fee_rate_ppm": round(s.avg_fee_rate_ppm, 1),
-        }
+        if s.pubkey not in result:
+            result[s.pubkey] = {
+                "alias": s.alias,
+                "channel_count": s.channel_count,
+                "total_capacity_sat": s.total_capacity_sat,
+                "avg_fee_rate_ppm": round(s.avg_fee_rate_ppm, 1),
+            }
     return result
 
 

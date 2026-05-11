@@ -210,7 +210,14 @@ class ClnBackend(LightningReadAdapter, LightningWriteAdapter):
         )
 
     def get_peer_network_info(self, pubkeys: list[str]) -> list[PeerNetworkInfo]:
-        """Fetch gossip-network statistics via CLN ``listnodes``."""
+        """Fetch gossip-network statistics via CLN ``listnodes``.
+
+        CLN ``listnodes`` does not currently return ``num_channels`` or
+        ``total_capacity`` for a single node; those fields are zeroed here.
+        TODO: Implement full channel-count and capacity lookup via
+        ``listchannels`` (filter by source/destination) and cache the result.
+        Tracked as open work in ENTWICKLUNGSREGELN.md Phase 3 / CLN integration.
+        """
         results: list[PeerNetworkInfo] = []
         for pubkey in pubkeys:
             try:
