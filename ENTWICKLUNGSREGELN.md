@@ -374,6 +374,21 @@ Erlaubte `confidence_label`-Werte: `heuristic` | `rule_based` | `ml_shadow` | `m
 
 Niemals eine nackte Empfehlung ohne Herkunft und Begründung.
 
+### R-AI-6 – ML-Imports in `ml_trainer.py` immer lokal (nicht auf Modulebene)
+
+`scikit-learn` und `joblib` sind optionale Abhängigkeiten (`requirements-ml.txt`). Alle `import sklearn`, `from sklearn...` und `import joblib`-Statements in `gui/jobs/ml_trainer.py` **müssen** innerhalb der Funktionen stehen, die sie benötigen – niemals auf Modulebene. Jede Funktion, die sklearn/joblib nutzt, ruft zuerst `_require_sklearn()` auf oder fängt `ImportError` mit einer aussagekräftigen Meldung ab.
+
+```python
+# ❌ VERBOTEN – bricht den Import bei fehlendem scikit-learn
+from sklearn.ensemble import RandomForestClassifier  # Modulebene
+
+# ✅ PFLICHT – lazy import innerhalb der Funktion
+def train_rebalance_model(...):
+    _require_sklearn()
+    from sklearn.ensemble import RandomForestClassifier
+    ...
+```
+
 ---
 
 ## 6. Sicherheitsregeln
@@ -438,8 +453,8 @@ Jeder neue schreibende API-Endpunkt (`POST`, `PUT`, `DELETE`) bekommt:
 | Item | Details |
 |---|---|
 | **6-A: ML-Infrastruktur** | `gui/jobs/ml_trainer.py`: Feature-Engineering aus `ChannelSnapshot`/`RebalanceMLRecord`/`AutoFeeMLRecord`, scikit-learn RandomForestClassifier, Rolling-Window-Features (24h/7d), Modell-Persistenz als `.joblib` unter `models/`, tägliches Batch-Retraining (konfigurierbar, deaktivierbar via `ML-TrainingEnabled=false`) |
-| **6-A API** | `POST /api/v2/ml/rebalance/train` (manuelles Retraining), `GET /api/v2/ml/status` (Konfidenz, Datenmenge, letztes Training, data_gate_ok) |
-| **6-A deps** | `scikit-learn>=1.4,<2` und `joblib>=1.3,<2` in `requirements.in` und `requirements.txt` |
+| **6-A API** | `POST /api/v2/ml/rebalance/train` (manuelles Retraining), `GET /api/v2/ml/status` (Konfidenz, Datenmenge, letztes Training, data_gate_ok, **ml_available**) |
+| **6-A deps** | `scikit-learn>=1.4,<2` und `joblib>=1.3,<2` in `requirements-ml.txt` (optional); Basis-Image enthält diese Pakete **nicht** mehr. Für ML-Features `:latest-ml` Docker-Image verwenden oder `pip install -r requirements-ml.txt`. Wenn scikit-learn fehlt: ML-API-Endpunkte antworten mit `"ml_available": false`, ML-Funktionsaufrufe werfen `ImportError` mit Installations-Hinweis. |
 | **6-B: ML Shadow Recommendations** | `generate_ml_shadow_recommendations()` in `recommender.py`: shadow_rebalance_predict-Integration, `confidence_label='ml_shadow'`, Mindestdatenprüfung R-AI-3 (≥30 Tage, ≥50 Events), nur aktiv wenn `ai_mode` in `shadow`/`policy_bound` |
 | **6-C: Auto-Fee ML Suggestions** | `get_autofee_suggestions()` und `get_autofee_history()` in `ml_trainer.py`; Eskalations-/Deeskalations-Faktoren, API `GET /api/v2/ml/autofee/suggestions`, `GET /api/v2/ml/autofee/history` |
 | **6-D: ML Vollautomation** | `UserMode.AI_MODE_POLICY_BOUND = 'policy_bound'` + Migration `0009_phase6_usermode_policy_bound.py`; `ai_policy_bound_confirm` Feld (default `True`); `execute_ml_action()` in `executor.py` mit Expert-Mode-Gate, Human-Confirmation-Layer, ChangeLog-Actor `ml:<model>:<version>` (R-AI-4) |

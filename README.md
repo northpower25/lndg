@@ -9,6 +9,7 @@ Welcome to LNDg, an advanced web interface designed for analyzing Lightning Netw
   - [1-Click Installation](#1-click-installation)
   - [Docker Installation](#docker-installation)
   - [Manual Installation](#manual-installation)
+- [ML-Features (Machine Learning)](#ml-features-machine-learning)
 - [Updating LNDg](#updating-lndg)
   - [Docker Update](#docker-update)
   - [Manual Update](#manual-update)
@@ -188,7 +189,42 @@ The `controller.py` script manages backend database updates, automated rebalanci
 
 Alternatively, use your preferred task scheduler (like `cron`) to run `controller.py`.
 
-## Updating LNDg
+## ML-Features (Machine Learning)
+
+LNDg ships **without** scikit-learn in the default Docker image to keep build times fast (especially on ARM). ML features are fully optional and disabled by default (`ai_mode = off`).
+
+### Standard image (no ML)
+
+```bash
+docker pull ghcr.io/northpower25/lndg:latest
+```
+
+All ML API endpoints (`/api/v2/ml/*`) respond with `"ml_available": false` when scikit-learn is not installed. The rest of LNDg runs normally.
+
+### ML-flavor image (scikit-learn included)
+
+Use the `-ml` image variant when you want to activate shadow-mode predictions or auto-fee ML suggestions:
+
+```bash
+docker pull ghcr.io/northpower25/lndg:latest-ml
+```
+
+In `docker-compose.yaml`, replace the image tag accordingly:
+
+```yaml
+image: ghcr.io/northpower25/lndg:latest-ml
+```
+
+After switching to the ML image, enable ML features in LNDg under **Settings → AI Mode** (options: `shadow`, `policy_bound`).
+
+### Manual / virtualenv installation with ML
+
+```bash
+pip install -r requirements.txt       # core dependencies
+pip install -r requirements-ml.txt    # ML extras (scikit-learn, joblib)
+```
+
+
 
 ### Docker Update
 

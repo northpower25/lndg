@@ -1,0 +1,22 @@
+name: Build ML-flavor Docker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to publish (e.g. v1.12.0). Resulting tags: :<tag>-ml and :latest-ml'
+        required: false
+        default: 'latest'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-ml:
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ github.event.inputs.tag || 'latest' }}
+      build_target: final-ml
+      tag_suffix: '-ml'
+    secrets: inherit
