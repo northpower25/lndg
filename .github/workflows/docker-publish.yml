@@ -1,0 +1,107 @@
+name: Docker publish reusable
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Image tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-platform:
+    name: Build ${{ matrix.platform }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+          - platform: linux/arm64
+            suffix: arm64
+          - platform: linux/arm/v7
+            suffix: armv7
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set env variables
+        run: |
+          IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
+          echo "IMAGE_NAME=${IMAGE_NAME//docker-/}" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker buildx action
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push architecture image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}-${{ matrix.suffix }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.suffix }}
+          cache-from: type=gha,scope=docker-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.suffix }}
+
+  merge-manifests:
+    name: Merge multi-arch manifests
+    runs-on: ubuntu-22.04
+    needs: build-platform
+
+    steps:
+      - name: Set env variables
+        run: |
+          IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
+          echo "IMAGE_NAME=${IMAGE_NAME//docker-/}" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker buildx action
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create multi-arch tag manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }} \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}-amd64 \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}-arm64 \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}-armv7
+
+      - name: Create multi-arch latest manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest-amd64 \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest-arm64 \
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest-armv7
+
+      - name: Make package public
+        continue-on-error: true
+        run: |
+          gh api --method PATCH /user/packages/container/$IMAGE_NAME \
+            -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
