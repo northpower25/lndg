@@ -1,0 +1,151 @@
+name: Docker publish reusable
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Image tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-platform:
+    name: Build ${{ matrix.platform }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+          - platform: linux/arm64
+            suffix: arm64
+          - platform: linux/arm/v7
+            suffix: armv7
+    env:
+      CACHE_SCOPE: docker-${{ github.repository_id }}-${{ matrix.suffix }}
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set env variables
+        run: |
+          RAW_IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
+          IMAGE_NAME="${RAW_IMAGE_NAME//docker-/}"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker buildx action
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push architecture image by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.suffix }}
+          path: /tmp/digests/${{ matrix.suffix }}
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-manifests:
+    name: Merge multi-arch manifests
+    runs-on: ubuntu-22.04
+    needs: build-platform
+
+    steps:
+      - name: Set env variables
+        run: |
+          RAW_IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
+          IMAGE_NAME="${RAW_IMAGE_NAME//docker-/}"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker buildx action
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download digest artifacts
+        uses: actions/download-artifact@v4.1.3
+        with:
+          pattern: digests-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Validate digest artifacts
+        run: |
+          shopt -s nullglob
+          digest_files=(/tmp/digests/*)
+          if [ "${#digest_files[@]}" -eq 0 ]; then
+            echo "No digest files found in /tmp/digests" >&2
+            exit 1
+          fi
+
+          for digest_file in "${digest_files[@]}"; do
+            digest_value="$(tr -d '[:space:]' < "$digest_file")"
+            if ! [[ "$digest_value" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Invalid digest in $digest_file: $digest_value" >&2
+              exit 1
+            fi
+          done
+
+      - name: Create multi-arch manifests
+        run: |
+          shopt -s nullglob
+          digest_files=(/tmp/digests/*)
+          if [ "${#digest_files[@]}" -eq 0 ]; then
+            echo "No digest files found in /tmp/digests" >&2
+            exit 1
+          fi
+
+          DIGEST_ARGS=()
+          for digest_file in "${digest_files[@]}"; do
+            DIGEST_ARGS+=("${IMAGE}@$(tr -d '[:space:]' < "$digest_file")")
+          done
+
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${{ inputs.tag }}" \
+            --tag "${IMAGE}:latest" \
+            "${DIGEST_ARGS[@]}"
+
+      - name: Make package public
+        continue-on-error: true
+        run: |
+          gh api --method PATCH /user/packages/container/$IMAGE_NAME \
+            -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -26,6 +26,7 @@
 17. [Multi-Backend-Architektur: LND & CLN (inkl. Channel-Splice)](#17-multi-backend-architektur-lnd--cln-inkl-channel-splice)
 18. [KI & Agentic KI – Advisory, Safety und graduierte Autonomie](#18-ki--agentic-ki--advisory-safety-und-graduierte-autonomie)
 19. [ToDo-Liste / Implementierungs-Tracking](#19-todo-liste--implementierungs-tracking)
+20. [Build-Pipeline-Optimierung – Offene Maßnahmen (C / D / G)](#20-build-pipeline-optimierung--offene-maßnahmen-c--d--g)
 
 ---
 
@@ -2436,3 +2437,497 @@ Die folgenden Punkte sind bewusst ausgeschlossen bis die Sicherheitsarchitektur 
 ---
 
 > **Tracking-Hinweis:** Abgehakte Aufgaben (`- [x]`) kennzeichnen abgeschlossene Implementierungen. Eine Phase gilt als abgeschlossen, wenn alle Aufgaben dieser Phase abgehakt sind. Neue Erkenntnisse während der Implementierung können zusätzliche Aufgaben in eine Phase einbringen – diese werden direkt in der jeweiligen Phase ergänzt.
+
+---
+
+## 20. Build-Pipeline-Optimierung – Offene Maßnahmen (C / D / G)
+
+> **Status:** Noch nicht umgesetzt. Dieses Kapitel dokumentiert die drei Punkte aus dem ursprünglichen Refactoring-Konzept, die eine Infrastruktur-/Kostenentscheidung (C), einen separaten Release-Workstream (D) oder einen tieferen Eingriff in das Runtime-Modell (G) erfordern. Jede Maßnahme wird mit konkretem Umsetzungsplan, Abhängigkeiten, Risiken und empfohlener Reihenfolge beschrieben.
+
+---
+
+### 20.1 Maßnahme C – Native ARM64-Runner für arm64-Builds
+
+#### Ausgangslage
+
+Der aktuelle `docker-publish.yml`-Workflow baut `linux/arm64` via QEMU-Emulation auf einem x86-`ubuntu-22.04`-Runner. QEMU-Emulation ist 10–50× langsamer als nativer ARM; die schwere `python-deps`-Stage (gfortran, rust, cargo, openblas) ist besonders betroffen und kann unter QEMU über 60 Minuten dauern – selbst mit dem jetzt aktivierten GHA-Layer-Cache bei einem ersten Cache-Miss.
+
+#### Ziel
+
+Die `linux/arm64`-Plattform läuft nativ auf einem ARM64-Runner, sodass QEMU für diese Architektur entfällt. `linux/arm/v7` bleibt weiter emuliert (kein nativer armhf-Runner verfügbar), wird aber durch den GHA-Cache und Maßnahme D (Base-Image) stark entlastet.
+
+#### Voraussetzungen / Entscheidungsbedarf
+
+| Punkt | Details |
+|---|---|
+| **Runner-Verfügbarkeit** | GitHub bietet `ubuntu-22.04-arm` und `ubuntu-24.04-arm` als standardmäßig aktivierte Hosted Runner (seit April 2024 allgemein verfügbar). Für **öffentliche Repositories** sind diese Runner kostenlos; für private Repositories fallen zusätzliche Minuten-Kosten an (Stand 2024: 0,008 USD/min für ARM-Runner, doppelter Faktor gegenüber x86). |
+| **Org-Einstellungen** | Ob ARM-Runner im Repository nutzbar sind, muss in den GitHub-Organisation-/Repository-Einstellungen unter „Actions → Runners" geprüft werden. |
+| **Kostenabschätzung** | Ein arm64-Build der `python-deps`-Stage dauert nativ ca. 5–10 Min statt 60+ Min via QEMU. Bei monatlich 10 Releases: ~1 USD Mehrkosten vs. ~60 Min gesparte Build-Zeit pro Release. |
+
+#### Umsetzungsplan
+
+**Schritt 1: Runner-Matrix in `docker-publish.yml` erweitern**
+
+Die `runs-on`-Zeile im `build-platform`-Job erhält pro Plattform einen eigenen Runner-Typ. Die Matrix-Konfiguration in `docker-publish.yml` wird von einer festen `runs-on: ubuntu-22.04` auf eine pro-Plattform-Variable umgestellt:
+
+```yaml
+jobs:
+  build-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+            runner: ubuntu-22.04
+          - platform: linux/arm64
+            suffix: arm64
+            runner: ubuntu-22.04-arm   # ← nativer ARM64-Runner
+          - platform: linux/arm/v7
+            suffix: armv7
+            runner: ubuntu-22.04        # weiterhin QEMU, kein nativer armhf
+    runs-on: ${{ matrix.runner }}
+```
+
+**Schritt 2: QEMU-Step für arm64 überspringen**
+
+Da arm64 jetzt nativ läuft, wird der `docker/setup-qemu-action`-Step für diesen Job überflüssig. Damit QEMU nur dort eingerichtet wird, wo es noch benötigt wird (arm/v7 auf x86), bekommt der QEMU-Step eine Bedingung:
+
+```yaml
+      - name: Set up QEMU
+        if: matrix.platform == 'linux/arm/v7'
+        uses: docker/setup-qemu-action@v3
+```
+
+**Schritt 3: Cache-Scope beibehalten**
+
+Der bestehende `CACHE_SCOPE: docker-${{ github.repository_id }}-${{ matrix.suffix }}` bleibt unverändert. Da jetzt arm64 nativ baut, sind die gecachten Layer auf einem arm64-Runner und auf einem x86-Runner physisch verschieden (arm64 vs. amd64 Binaries). Der unterschiedliche Suffix (`arm64` vs. `amd64`) stellt bereits sicher, dass kein Cross-Cache-Pollution auftreten kann.
+
+**Schritt 4: Validierung**
+
+Nach dem ersten erfolgreichen nativen arm64-Build: Vergleich der tatsächlichen Job-Laufzeiten im GitHub Actions Summary zwischen altem QEMU-Build und nativem Run. Erwartetes Ziel: arm64-Job ≤ 15 Min statt >60 Min.
+
+#### Abhängigkeiten
+
+- Maßnahme D (Base-Image-Cache) ist unabhängig von C, aber zusammen mit C führen beide zu der größten Zeitersparnis für ARM-Builds.
+- Keine Code-Änderungen außerhalb von `.github/workflows/docker-publish.yml` erforderlich.
+
+#### Risiken
+
+| Risiko | Wahrscheinlichkeit | Minderung |
+|---|---|---|
+| ARM-Runner nicht im Plan verfügbar | Mittel (bei privaten Repos) | Kostenkalkulation vorab; alternativ selbst-gehosteten ARM-Runner (Raspberry Pi 5 / Ampere-VM) einrichten |
+| GHA-Cache inkompatibel zwischen Runners | Gering | Unterschiedliche `CACHE_SCOPE`-Suffixe trennen bereits beide Caches |
+| arm/v7-Build bleibt langsam | Sicher | Durch Maßnahme D (Base-Image) und Maßnahme G (scikit-learn optional) deutlich entschärft |
+
+#### Tracking
+
+- [ ] GitHub-Organisation auf ARM-Runner-Verfügbarkeit prüfen
+- [ ] Matrix in `docker-publish.yml`: `runner`-Feld je Plattform ergänzen
+- [ ] `runs-on` auf `${{ matrix.runner }}` umstellen
+- [ ] QEMU-Step auf `if: matrix.platform == 'linux/arm/v7'` konditionalisieren
+- [ ] Ersten Testlauf auslösen und Job-Laufzeiten dokumentieren
+
+---
+
+### 20.2 Maßnahme D – Separates gecachtes `python-deps`-Base-Image
+
+#### Ausgangslage
+
+Die `python-deps`-Stage im `Dockerfile` installiert eine Reihe schwerer nativer Abhängigkeiten (gfortran, rust, cargo, openblas-dev, lapack-dev) sowie alle Python-Packages aus `requirements.txt`. Diese Stage ist der dominierende Zeitfaktor im Docker-Build – insbesondere für arm64 (QEMU) und arm/v7. Auch mit GHA-Cache wird bei einem Cache-Miss (z. B. nach `requirements.txt`-Änderung oder nach Cache-Eviction) der volle Build erneut durchlaufen.
+
+Das Base-Image-Konzept entkoppelt den teuren Dependency-Build vom schnellen Applikations-Build: Die `python-deps`-Stage wird nur dann neu gebaut, wenn `requirements.txt` oder der `python-deps`-Block im `Dockerfile` sich ändert. In allen anderen Releases wird ein bereits im Container-Registry gecachtes Layer-Set genutzt.
+
+#### Ziel
+
+Ein separates Image `ghcr.io/<owner>/lndg-python-deps:<hash>` wird gebaut und im GHCR gespeichert. Es enthält ausschließlich die installierten Python-Packages (kein App-Code). Der Haupt-`Dockerfile` referenziert dieses Image direkt via `FROM … AS python-deps`, sodass die lange Compilierungsphase vollständig entfällt wenn sich `requirements.txt` nicht geändert hat.
+
+#### Umsetzungsplan
+
+**Schritt 1: Neuen Workflow `build-python-deps.yml` anlegen**
+
+```yaml
+name: Build python-deps base image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'requirements.txt'
+      - 'Dockerfile'        # Nur der python-deps-Block
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+            runner: ubuntu-22.04
+          - platform: linux/arm64
+            suffix: arm64
+            runner: ubuntu-22.04-arm   # oder ubuntu-22.04 + QEMU wenn C noch nicht umgesetzt
+          - platform: linux/arm/v7
+            suffix: armv7
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute deps hash
+        id: hash
+        run: |
+          echo "DEPS_HASH=$(sha256sum requirements.txt Dockerfile | sha256sum | cut -c1-16)" >> $GITHUB_ENV
+
+      - name: Set image name
+        run: |
+          RAW="${GITHUB_REPOSITORY#*/}"
+          echo "DEPS_IMAGE=ghcr.io/${{ github.repository_owner }}/${RAW//docker-/}-python-deps" >> $GITHUB_ENV
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        if: matrix.platform == 'linux/arm/v7'
+        uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push python-deps image by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: python-deps         # ← nur die python-deps Stage
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.DEPS_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=python-deps-${{ github.repository_id }}-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=python-deps-${{ github.repository_id }}-${{ matrix.suffix }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-deps-digests-${{ matrix.suffix }}
+          path: /tmp/digests/${{ matrix.suffix }}
+          retention-days: 7         # länger, da selten gebaut
+
+  merge:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set image name + hash
+        run: |
+          RAW="${GITHUB_REPOSITORY#*/}"
+          echo "DEPS_IMAGE=ghcr.io/${{ github.repository_owner }}/${RAW//docker-/}-python-deps" >> $GITHUB_ENV
+          echo "DEPS_HASH=$(sha256sum requirements.txt Dockerfile | sha256sum | cut -c1-16)" >> $GITHUB_ENV
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@v4.1.3
+        with:
+          pattern: python-deps-digests-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Create and push multi-arch manifest
+        run: |
+          shopt -s nullglob
+          digest_files=(/tmp/digests/*)
+          DIGEST_ARGS=()
+          for f in "${digest_files[@]}"; do
+            DIGEST_ARGS+=("${DEPS_IMAGE}@$(tr -d '[:space:]' < "$f")")
+          done
+          docker buildx imagetools create \
+            --tag "${DEPS_IMAGE}:latest" \
+            --tag "${DEPS_IMAGE}:${DEPS_HASH}" \
+            "${DIGEST_ARGS[@]}"
+
+      - name: Write resolved tag to summary
+        run: echo "python-deps image: \`${DEPS_IMAGE}:${DEPS_HASH}\`" >> $GITHUB_STEP_SUMMARY
+```
+
+**Schritt 2: `Dockerfile` auf das Base-Image umstellen**
+
+Der `python-deps`-Block im Haupt-`Dockerfile` wird ersetzt durch ein `FROM`-Statement auf das gespeicherte Base-Image:
+
+```dockerfile
+# ── Stage 2: python dependencies (gecachtes Base-Image) ─────────────────────
+ARG PYTHON_DEPS_IMAGE=ghcr.io/<owner>/lndg-python-deps:latest
+FROM ${PYTHON_DEPS_IMAGE} AS python-deps
+# Keine weiteren RUN-Schritte nötig – alle Packages sind bereits installiert
+```
+
+Beim Haupt-Build via `docker-publish.yml` wird der `ARG PYTHON_DEPS_IMAGE`-Wert auf den zuletzt gebauten `lndg-python-deps`-Tag gesetzt:
+
+```yaml
+      - name: Build and push architecture image by digest
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            PYTHON_DEPS_IMAGE=ghcr.io/${{ github.repository_owner }}/lndg-python-deps:latest
+          ...
+```
+
+**Schritt 3: Trigger-Reihenfolge definieren**
+
+`build-python-deps.yml` muss bei einem Release-Publish abgeschlossen sein, bevor `docker-publish.yml` startet. Die sauberste Umsetzung ist `workflow_run`:
+
+```yaml
+# In docker-publish.yml (Trigger-Erweiterung)
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_run:
+    workflows: ["Build python-deps base image"]
+    types: [completed]
+    branches: [main]
+```
+
+Alternativ kann das Base-Image-Tag als Input an `docker-publish.yml` übergeben werden, sodass Release-Builds immer einen explizit bekannten Tag nutzen (kein `latest`-Floating-Tag im Release-Pfad).
+
+**Schritt 4: Fallback für Erstbuild**
+
+Beim allerersten Lauf existiert das Base-Image noch nicht. Der `build-python-deps.yml`-Workflow muss daher einmal manuell über `workflow_dispatch` ausgelöst werden – oder als Teil des ersten Release-Workflows.
+
+#### Abhängigkeiten
+
+- Maßnahme C (native ARM-Runner) ist empfohlen, aber nicht zwingend erforderlich. Ohne C wird das Base-Image für arm64 und arm/v7 weiterhin via QEMU gebaut – jedoch deutlich seltener (nur bei `requirements.txt`-Änderungen).
+- Erfordert eine neue GHCR-Image-Registrierung (`lndg-python-deps`) und ggf. manuelle Sichtbarkeitseinstellung für öffentliche Nutzung.
+
+#### Risiken
+
+| Risiko | Wahrscheinlichkeit | Minderung |
+|---|---|---|
+| Base-Image veraltet / Hash-Mismatch | Gering | Hash-basierte Tags statt `latest` im Release-Pfad |
+| GHCR-Speicherkosten für zusätzliches Image | Gering | Öffentliche Images sind in GHCR kostenlos |
+| Haupt-Build startet vor Base-Image-Build | Möglich bei Parallelauslösung | `workflow_run`-Abhängigkeit oder expliziter Tag-Input absichern |
+| Dockerfile-Kompatibilität (ARG-Vererbung in Multi-Stage) | Gering | Bekannte Docker-Einschränkung: `ARG` vor dem ersten `FROM` muss global deklariert sein |
+
+#### Tracking
+
+- [ ] Neuen Workflow `build-python-deps.yml` anlegen (Trigger: `paths: requirements.txt, Dockerfile`)
+- [ ] Multi-Arch-Build mit Digest-Push und Manifest-Merge (analog zu `docker-publish.yml`)
+- [ ] Hash-basiertes Tag-Schema implementieren (`sha256sum requirements.txt Dockerfile`)
+- [ ] `Dockerfile`: `ARG PYTHON_DEPS_IMAGE` vor erstem `FROM`; `FROM ${PYTHON_DEPS_IMAGE} AS python-deps`
+- [ ] `docker-publish.yml`: `build-args: PYTHON_DEPS_IMAGE=...` ergänzen
+- [ ] Trigger-Reihenfolge via `workflow_run` oder expliziten Tag-Input sicherstellen
+- [ ] Ersten Testlauf manuell auslösen; Build-Zeit ohne Base-Image vs. mit Base-Image messen
+
+---
+
+### 20.3 Maßnahme G – `scikit-learn` als optionale Abhängigkeit auslagern
+
+#### Ausgangslage
+
+`scikit-learn>=1.4,<2` und `joblib>=1.3,<2` stehen derzeit in `requirements.txt` und werden damit in jedes Docker-Image (alle Architekturen) installiert. Die Installation erfordert unter Alpine folgende native Build-Tools, die ausschließlich wegen scikit-learn/scipy nötig sind:
+
+```
+gfortran  rust  cargo  openblas-dev  lapack-dev  g++  make
+```
+
+Diese Compiler und Bibliotheken machen die `python-deps`-Stage zur mit Abstand langsamsten Stage des Builds. Auf ARM-Architekturen unter QEMU ist dies der Haupttreiber für Build-Zeiten von 30–90 Minuten.
+
+ML-Features (scikit-learn) sind gemäß Architektur-Regel **R-AI-2** im Shadow-Mode – sie loggen, aber führen keine automatischen Aktionen aus. Alle ML-Features sind hinter dem `ai_mode`-Flag in `UserMode` gated und werden beim Start des Nodes **nicht automatisch aktiviert**. Die ML-Funktionalität ist damit optional: Wer `ai_mode='off'` (Default) betreibt, braucht scikit-learn nicht zur Laufzeit.
+
+#### Ziel
+
+`scikit-learn` und `joblib` werden in eine separate `requirements-ml.txt` ausgelagert. Das Basis-Docker-Image enthält diese Packages nicht mehr; ein neues `ML`-Flavor-Image enthält sie. `ml_trainer.py` importiert scikit-learn lazy (nur wenn ML-Features genutzt werden), sodass ein Node ohne ML-Image normal weiterläuft.
+
+#### Umsetzungsplan
+
+**Schritt 1: Dependency-Dateien aufteilen**
+
+```
+requirements.txt       # Kernabhängigkeiten (unveränderter Rest)
+requirements-ml.txt    # ML-spezifische Ergänzungen
+```
+
+`requirements-ml.txt`:
+
+```
+scikit-learn>=1.4,<2
+joblib>=1.3,<2
+```
+
+`requirements.txt` bleibt unverändert bis auf das Entfernen dieser zwei Zeilen.
+
+**Schritt 2: `ml_trainer.py` auf Lazy-Import umstellen**
+
+`gui/jobs/ml_trainer.py` importiert scikit-learn derzeit auf Modulebene (implizit über `from sklearn...`). Diese Importe werden in alle Funktionen, die scikit-learn benötigen, verschoben und mit einem sprechenden Fehler abgesichert:
+
+```python
+def _require_sklearn():
+    """Raise ImportError with actionable message if scikit-learn is not installed."""
+    try:
+        import sklearn          # noqa: F401
+        import joblib           # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "scikit-learn and joblib are required for ML features. "
+            "Install them with: pip install -r requirements-ml.txt"
+        ) from exc
+
+def train_rebalance_model(...):
+    _require_sklearn()
+    from sklearn.ensemble import RandomForestClassifier
+    import joblib
+    ...
+```
+
+Alle weiteren `from sklearn...`- und `import joblib`-Statements in `ml_trainer.py` werden entsprechend auf lokale Imports innerhalb ihrer Funktionen umgestellt.
+
+**Schritt 3: `recommender.py` absichern**
+
+`gui/jobs/recommender.py` importiert `_shadow_rebalance_predict` aus `ml_trainer` auf Modulebene. Dieses Import-Statement muss ebenfalls auf einen bedingten Import umgestellt werden:
+
+```python
+# recommender.py – bisheriger Modulebenen-Import ersetzen durch:
+try:
+    from gui.jobs.ml_trainer import shadow_rebalance_predict as _shadow_rebalance_predict
+    _ML_AVAILABLE = True
+except ImportError:
+    _shadow_rebalance_predict = None
+    _ML_AVAILABLE = False
+```
+
+An allen Stellen, an denen `_shadow_rebalance_predict` aufgerufen wird, wird vorab geprüft:
+
+```python
+if _ML_AVAILABLE and _shadow_rebalance_predict is not None:
+    prob = _shadow_rebalance_predict(...)
+else:
+    prob = None   # Fallback: Heuristik ohne ML-Konfidenz
+```
+
+**Schritt 4: `jobs.py` absichern**
+
+`jobs.py` ruft `_train_rebalance_model()` periodisch auf. Dieser Call wird mit einem try/except um `ImportError` erweitert:
+
+```python
+try:
+    from gui.jobs.ml_trainer import train_rebalance_model as _train_rebalance_model
+    _ML_AVAILABLE = True
+except ImportError:
+    _ML_AVAILABLE = False
+    logger.info("ML features disabled: scikit-learn not installed.")
+
+# Im Scheduler:
+if _ML_AVAILABLE:
+    _train_rebalance_model(...)
+```
+
+**Schritt 5: Dockerfile-Varianten**
+
+**Basis-Image (kein ML):**
+
+```dockerfile
+FROM python:3.13-alpine AS python-deps
+RUN apk add --no-cache g++ linux-headers libffi-dev rust cargo openssl-dev pkgconf make
+WORKDIR /lndg
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt supervisor whitenoise
+```
+
+Durch das Entfernen von `gfortran`, `openblas-dev`, `lapack-dev` aus dem `apk add`-Aufruf werden die schwersten nativen Build-Tools nicht mehr benötigt (scikit-learn ist die einzige Abhängigkeit, die Fortran/BLAS/LAPACK erfordert; numpy und scipy fallen damit ebenfalls weg, sofern sie nur als transitive Dependencies von scikit-learn eingezogen wurden).
+
+**ML-Flavor-Image (opt-in):**
+
+Ein zweiter Build-Target `python-deps-ml` ergänzt das Basis-Image um die ML-Dependencies:
+
+```dockerfile
+FROM python-deps AS python-deps-ml
+COPY requirements-ml.txt .
+RUN apk add --no-cache gfortran openblas-dev lapack-dev && \
+    pip install --no-cache-dir --prefix=/install -r requirements-ml.txt
+```
+
+Der Haupt-`Dockerfile` bekommt einen `ARG`:
+
+```dockerfile
+ARG ML_ENABLED=false
+```
+
+Das `final`-Stage-`COPY` bezieht sich auf `python-deps` (Standard) oder `python-deps-ml` (wenn `ML_ENABLED=true`):
+
+```dockerfile
+FROM python-deps${ML_ENABLED:+-ml} AS deps-selected
+...
+FROM python:3.13-alpine AS final
+COPY --from=deps-selected /install /usr/local
+```
+
+> **Hinweis:** Docker's ARG-basierte Stage-Auswahl ist technisch eingeschränkt; die sauberere Alternative ist ein zweistufiger Build: `docker buildx build --target final-ml ...` für das ML-Image und `docker buildx build --target final ...` für das Basis-Image.
+
+**Schritt 6: CI-Anpassung**
+
+`docker-publish.yml` baut standardmäßig das Basis-Image (kein `--build-arg ML_ENABLED`). Ein optionaler separater `docker-publish-ml.yml`-Workflow baut das ML-Flavor-Image und publiziert es als `:latest-ml` / `:<tag>-ml`. Dieser Workflow kann zunächst manuell via `workflow_dispatch` ausgelöst werden; eine automatische Auslösung bei `requirements-ml.txt`-Änderungen kann später ergänzt werden.
+
+**Schritt 7: Dokumentation / Nutzer-Kommunikation**
+
+- `README.md`: Abschnitt „ML-Features aktivieren" mit Hinweis auf das `-ml`-Image
+- `ENTWICKLUNGSREGELN.md`: Hinweis, dass ML-Imports in `ml_trainer.py` immer lokal (nicht auf Modulebene) erfolgen müssen
+- Release-Notes beim ersten Release mit getrennten Images: Breaking Change dokumentieren (Nutzer, die `ai_mode` != `'off'` verwenden, müssen auf das ML-Image wechseln)
+
+#### Abhängigkeiten
+
+- Maßnahme D (Base-Image-Cache) profitiert direkt von G: Das Base-Image ohne scikit-learn ist deutlich kleiner und schneller zu bauen, sodass auch Maßnahme D eine deutlichere Zeitersparnis erzielt.
+- Maßnahme C (nativer ARM-Runner) ist unabhängig, aber der relative Vorteil von C für arm64 wird durch G größer, weil die verbleibende Build-Zeit sinkt.
+- Keine Änderungen an Django-Models, Migrations oder API-Endpoints erforderlich. Die Änderungen beschränken sich auf `ml_trainer.py`, `recommender.py`, `jobs.py`, `requirements.txt`, `requirements-ml.txt` und `Dockerfile`.
+
+#### Risiken
+
+| Risiko | Wahrscheinlichkeit | Minderung |
+|---|---|---|
+| Nutzer mit `ai_mode != 'off'` bemerken Fehler nach Image-Wechsel | Mittel | `_require_sklearn()`-Fehlermeldung mit konkretem Hinweis auf ML-Image; Release-Note als Breaking Change markieren |
+| Lazy-Import versteckt Import-Fehler bis zur Laufzeit | Mittel | `_require_sklearn()`-Guard in allen Funktionen + API-Endpoint `/api/v2/ml/status` meldet `"ml_available": false` wenn sklearn fehlt |
+| Transitive Dependencies (numpy, scipy) werden dadurch ebenfalls entfernt, aber anderswo genutzt | Gering | `requirements.txt` auf transitive numpy/scipy-Nutzung prüfen; ggf. numpy explizit in `requirements.txt` behalten |
+| Zwei Images erhöhen Wartungsaufwand | Mittel | ML-Flavor-Image teilt Base-Image als Layer → nur Differenz wird rebuild |
+
+#### Tracking
+
+- [ ] `requirements-ml.txt` anlegen (`scikit-learn>=1.4,<2`, `joblib>=1.3,<2`)
+- [ ] `requirements.txt`: `scikit-learn` und `joblib` entfernen
+- [ ] `gui/jobs/ml_trainer.py`: alle `from sklearn...`- und `import joblib`-Imports auf lokale Funktionsimporte mit `_require_sklearn()`-Guard umstellen
+- [ ] `gui/jobs/recommender.py`: Modulebenen-Import `_shadow_rebalance_predict` auf bedingten `try/except ImportError` umstellen
+- [ ] `jobs.py`: `_train_rebalance_model`-Aufruf mit `if _ML_AVAILABLE`-Guard absichern
+- [ ] `Dockerfile`: `gfortran`, `openblas-dev`, `lapack-dev` aus Basis-`python-deps`-Stage entfernen; `python-deps-ml`-Stage ergänzen
+- [ ] `docker-publish.yml`: Basis-Build ohne ML-Build-Arg sicherstellen
+- [ ] Optionaler `docker-publish-ml.yml`-Workflow für das ML-Flavor-Image anlegen
+- [ ] `/api/v2/ml/status`-Endpunkt: `"ml_available"` anhand von Import-Verfügbarkeit melden
+- [ ] `README.md` und `ENTWICKLUNGSREGELN.md` aktualisieren
+- [ ] Django-Tests prüfen: `test_shadow_predict_no_model` und verwandte ML-Tests müssen auch ohne scikit-learn im Testumfeld laufen (Mock-Strategie)
+
+---
+
+### 20.4 Empfohlene Umsetzungsreihenfolge
+
+Die drei Maßnahmen sind unabhängig voneinander einsetzbar, aber die Reihenfolge maximiert den Nutzen bei minimalem Risiko:
+
+| Schritt | Maßnahme | Aufwand | Primärer Nutzen |
+|---|---|---|---|
+| **1** | **G** – scikit-learn optional | ~1 Tag (Code) + ~1 Tag (Test/Doku) | Entfernt schwerste native Build-Tools aus Basis-Image; sofortige Wirkung auf alle Plattformen |
+| **2** | **D** – separates Base-Image | ~1 Tag (Workflow) | Nach G ist das Base-Image klein genug, dass D maximalen Effekt hat (selten rebuild nötig) |
+| **3** | **C** – native ARM64-Runner | ~2h (Config + Entscheidung) | Letzter Restfaktor QEMU für arm64 entfällt; setzt Org-/Kosten-Entscheidung voraus |
+
+> **Begründung der Reihenfolge:** G wirkt auf alle Architekturen und alle Cache-Szenarien gleichzeitig, weil es den teuersten Layer schlanker macht. D nutzt diesen schlankeren Layer für eine effektive Caching-Strategie. C ist der letzte "freie" Gewinn und setzt eine externe Entscheidung voraus, die keine Code-Änderungen beeinflusst.
