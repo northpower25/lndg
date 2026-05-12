@@ -1,5 +1,9 @@
 name: Build on release
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   release:
     types: [published]
@@ -9,5 +13,5 @@ jobs:
   build:
     uses: ./.github/workflows/docker-publish.yml
     with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && 'latest' || github.event.release.tag_name }}
+      tag: ${{ github.event.release.tag_name || 'latest' }}
     secrets: inherit
