@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
+
+: "${APP_DATA_DIR:?APP_DATA_DIR is required}"
 
 APP_PASSWORD_FILE="${APP_DATA_DIR}/.app_password"
 
@@ -9,7 +12,7 @@ generate_password() {
     return
   fi
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -hex 24 | cut -c1-24
+    openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24
     return
   fi
   head -c 128 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-24
@@ -28,5 +31,7 @@ if [ "${#APP_PASSWORD}" -lt 12 ]; then
 fi
 chmod 600 "${APP_PASSWORD_FILE}"
 
+# Umbrel expects `exports.sh` to output KEY=VALUE pairs; APP_PASSWORD is consumed
+# for compose templating and login metadata display.
 echo "APP_PASSWORD=${APP_PASSWORD}"
 echo "APP_LNDG_PORT=8889"
