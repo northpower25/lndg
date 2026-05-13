@@ -1,14 +1,27 @@
+# Global build arg – override in CI to pull the pre-built base image from GHCR
+# and skip the expensive compiler stage entirely.  Local builds fall back to
+# python-deps-builder (the stage defined below) so no external image is needed.
+ARG PYTHON_DEPS_IMAGE=python-deps-builder
+
 # ── Stage 1: frontend builder (placeholder for SPA artifacts) ─────────────────
 FROM alpine:3.21 AS frontend-builder
 WORKDIR /workspace
 RUN mkdir -p /frontend-dist
 
-# ── Stage 2: python dependencies (base – no ML) ───────────────────────────────
-FROM python:3.13-alpine AS python-deps
+# ── Stage 2-builder: compile python packages from source ─────────────────────
+# This stage is the source of truth used by build-python-deps.yml to produce
+# the ghcr.io/<owner>/lndg-python-deps cached base image.
+FROM python:3.13-alpine AS python-deps-builder
 RUN apk add --no-cache g++ linux-headers libffi-dev rust cargo openssl-dev pkgconf make
 WORKDIR /lndg
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt supervisor whitenoise
+
+# ── Stage 2: python dependencies ─────────────────────────────────────────────
+# In CI docker-publish.yml sets PYTHON_DEPS_IMAGE to the pre-built GHCR image,
+# skipping the compiler stage above.  Default (local builds) references
+# python-deps-builder so no registry access is required.
+FROM ${PYTHON_DEPS_IMAGE} AS python-deps
 
 # ── Stage 2-ML: python dependencies (ML flavor) ───────────────────────────────
 FROM python-deps AS python-deps-ml

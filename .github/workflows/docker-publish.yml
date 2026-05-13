@@ -17,6 +17,14 @@ on:
         required: false
         type: string
         default: ''
+      python_deps_image:
+        description: >
+          Full reference to the pre-built python-deps base image
+          (e.g. ghcr.io/owner/lndg-python-deps:abc123).
+          Leave empty to use the latest tag derived from the repository owner.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -50,6 +58,15 @@ jobs:
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> $GITHUB_ENV
 
+          # Resolve the python-deps base image: use explicit input if given,
+          # otherwise fall back to the :latest tag of the sibling GHCR image.
+          DEPS_INPUT="${{ inputs.python_deps_image }}"
+          if [ -n "$DEPS_INPUT" ]; then
+            echo "DEPS_IMAGE=$DEPS_INPUT" >> $GITHUB_ENV
+          else
+            echo "DEPS_IMAGE=ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}-python-deps:latest" >> $GITHUB_ENV
+          fi
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -70,6 +87,8 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           target: ${{ inputs.build_target }}
+          build-args: |
+            PYTHON_DEPS_IMAGE=${{ env.DEPS_IMAGE }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
