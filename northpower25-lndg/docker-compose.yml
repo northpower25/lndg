@@ -10,7 +10,7 @@ services:
     image: ghcr.io/northpower25/lndg:latest
     restart: on-failure
     stop_grace_period: 1m
-    user: "0:0"
+    user: "1000:1000"
     volumes:
       - ${APP_LIGHTNING_NODE_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/lndg/data:rw
@@ -26,7 +26,6 @@ services:
       - >
         mkdir -p /lndg/data &&
         touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
-        chown lndg:lndg /lndg/data /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
         python initialize.py
         -tls /lnd/tls.cert
         -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
