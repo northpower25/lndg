@@ -335,7 +335,7 @@ def main():
     docker = args.docker
     debug = args.debug
     adminuser = args.adminuser
-    adminpw = args.adminpw
+    adminpw = args.adminpw if args.adminpw is not None else os.environ.get("APP_PASSWORD")
     csrftrusted = args.csrftrusted
     nologinrequired = args.nologinrequired
     force_new = args.force
