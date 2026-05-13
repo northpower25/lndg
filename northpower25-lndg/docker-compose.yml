@@ -25,6 +25,7 @@ services:
       - -c
       - >
         mkdir -p /lndg/data &&
+        test -w /lndg/data || (echo "ERROR: /lndg/data is not writable by uid $(id -u)." >&2; exit 1) &&
         touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
         python initialize.py
         -tls /lnd/tls.cert
