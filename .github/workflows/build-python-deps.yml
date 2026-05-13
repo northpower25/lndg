@@ -2,7 +2,7 @@ name: Build python-deps base image
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'requirements.txt'
       - 'Dockerfile'
