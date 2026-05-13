@@ -24,7 +24,7 @@ generate_password() {
     fi
   fi
   for _ in 1 2 3; do
-    pw="$(head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)"
+    pw="$(head -c 128 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)"
     if [ "${#pw}" -eq 24 ]; then
       echo "${pw}"
       return
@@ -43,10 +43,9 @@ fi
 if [ "${#APP_PASSWORD}" -ne 24 ]; then
   mkdir -p "${APP_DATA_DIR}"
   APP_PASSWORD="$(generate_password)"
-  tmp_file="$(mktemp "${APP_PASSWORD_FILE}.XXXXXX")"
+  tmp_file="$(mktemp -p "${APP_DATA_DIR}" .app_password.XXXXXX)"
   chmod 600 "${tmp_file}"
   printf '%s' "${APP_PASSWORD}" > "${tmp_file}"
-  [ "$(stat -c '%a' "${tmp_file}")" = "600" ] || chmod 600 "${tmp_file}"
   mv -f "${tmp_file}" "${APP_PASSWORD_FILE}"
 fi
 chmod 600 "${APP_PASSWORD_FILE}"
