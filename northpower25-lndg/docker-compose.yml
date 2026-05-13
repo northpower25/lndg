@@ -10,6 +10,7 @@ services:
     image: ghcr.io/northpower25/lndg:latest
     restart: on-failure
     stop_grace_period: 1m
+    user: "0:0"
     volumes:
       - ${APP_LIGHTNING_NODE_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/lndg/data:rw
@@ -22,12 +23,14 @@ services:
       - sh
       - -c
       - >
-        python initialize.py
+        mkdir -p /lndg/data &&
+        chown -R lndg:lndg /lndg/data &&
+        exec su lndg -s /bin/sh -c "python initialize.py
         -tls /lnd/tls.cert
         -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
         -rpc ${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
-        -net '${APP_BITCOIN_NETWORK}'
-        -pw '${APP_PASSWORD}'
+        -net ${APP_BITCOIN_NETWORK}
+        -pw \"${APP_PASSWORD}\"
         -wn &&
-        python controller.py runserver 0.0.0.0:8000 > /lndg/data/lndg-controller.log 2>&1
+        python controller.py runserver 0.0.0.0:8000 > /lndg/data/lndg-controller.log 2>&1"
     ports: []
