@@ -25,7 +25,7 @@ services:
       - -c
       - >
         mkdir -p /lndg/data &&
-        if ! (touch /lndg/data/.lndg-write-test && rm -f /lndg/data/.lndg-write-test); then
+        if ! (touch /lndg/data/.write-permission-check && rm -f /lndg/data/.write-permission-check); then
           echo "ERROR: /lndg/data is not writable; ensure host volume ownership/permissions allow uid:gid 1000:1000 writes." >&2;
           exit 1;
         fi &&
