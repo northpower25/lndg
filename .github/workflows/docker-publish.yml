@@ -71,23 +71,29 @@ jobs:
       - name: Setup Docker buildx action
         uses: docker/setup-buildx-action@v3
 
+      - name: Normalize python-deps image input
+        id: deps_image
+        run: |
+          value="$(printf '%s' '${{ inputs.python_deps_image }}' | xargs)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
       - name: Build and push architecture image by digest (cached python-deps image)
         id: build_cached
-        if: inputs.python_deps_image != ''
+        if: steps.deps_image.outputs.value != ''
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
           target: ${{ inputs.build_target }}
           build-args: |
-            PYTHON_DEPS_IMAGE=${{ inputs.python_deps_image }}
+            PYTHON_DEPS_IMAGE=${{ steps.deps_image.outputs.value }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
 
       - name: Build and push architecture image by digest (Dockerfile fallback)
         id: build_local
-        if: inputs.python_deps_image == ''
+        if: steps.deps_image.outputs.value == ''
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -100,7 +106,7 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build_cached.outputs.digest != '' && steps.build_cached.outputs.digest || steps.build_local.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
+          echo "${{ steps.build_cached.outcome == 'success' && steps.build_cached.outputs.digest || steps.build_local.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
