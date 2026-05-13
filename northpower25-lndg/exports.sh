@@ -10,14 +10,28 @@ generate_password() {
   # Keep APP_PASSWORD strictly alphanumeric to avoid escaping issues when the
   # value is rendered in Umbrel compose/templates and login metadata.
   if command -v python3 >/dev/null 2>&1; then
-    python3 -c "import secrets,string; chars=string.ascii_letters+string.digits; print(''.join(secrets.choice(chars) for _ in range(24)))"
-    return
+    pw="$(python3 -c "import secrets,string; chars=string.ascii_letters+string.digits; print(''.join(secrets.choice(chars) for _ in range(24)))")"
+    if [ "${#pw}" -eq 24 ]; then
+      echo "${pw}"
+      return
+    fi
   fi
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24
-    return
+    pw="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24)"
+    if [ "${#pw}" -eq 24 ]; then
+      echo "${pw}"
+      return
+    fi
   fi
-  head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24
+  for _ in 1 2 3; do
+    pw="$(head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)"
+    if [ "${#pw}" -eq 24 ]; then
+      echo "${pw}"
+      return
+    fi
+  done
+  echo "Failed to generate a 24-char APP_PASSWORD" >&2
+  exit 1
 }
 
 if [ -f "${APP_PASSWORD_FILE}" ]; then
@@ -32,6 +46,7 @@ if [ "${#APP_PASSWORD}" -ne 24 ]; then
   tmp_file="$(mktemp "${APP_PASSWORD_FILE}.XXXXXX")"
   chmod 600 "${tmp_file}"
   printf '%s' "${APP_PASSWORD}" > "${tmp_file}"
+  [ "$(stat -c '%a' "${tmp_file}")" = "600" ] || chmod 600 "${tmp_file}"
   mv -f "${tmp_file}" "${APP_PASSWORD_FILE}"
 fi
 chmod 600 "${APP_PASSWORD_FILE}"
