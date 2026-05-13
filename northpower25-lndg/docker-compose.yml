@@ -25,8 +25,10 @@ services:
       - -c
       - >
         mkdir -p /lndg/data &&
-        (touch /lndg/data/.lndg-write-test && rm -f /lndg/data/.lndg-write-test) ||
-        (echo "ERROR: /lndg/data is not writable; ensure host volume ownership/permissions allow uid:gid 1000:1000 writes." >&2; exit 1) &&
+        if ! (touch /lndg/data/.lndg-write-test && rm -f /lndg/data/.lndg-write-test); then
+          echo "ERROR: /lndg/data is not writable; ensure host volume ownership/permissions allow uid:gid 1000:1000 writes." >&2;
+          exit 1;
+        fi &&
         touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
         python initialize.py
         -tls /lnd/tls.cert
