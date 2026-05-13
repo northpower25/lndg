@@ -55,17 +55,8 @@ jobs:
         run: |
           RAW_IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
           IMAGE_NAME="${RAW_IMAGE_NAME//docker-/}"
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> $GITHUB_ENV
-
-          # Resolve the python-deps base image: use explicit input if given,
-          # otherwise fall back to the :latest tag of the sibling GHCR image.
-          DEPS_INPUT="${{ inputs.python_deps_image }}"
-          if [ -n "$DEPS_INPUT" ]; then
-            echo "DEPS_IMAGE=$DEPS_INPUT" >> $GITHUB_ENV
-          else
-            echo "DEPS_IMAGE=ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}-python-deps:latest" >> $GITHUB_ENV
-          fi
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
+          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -80,15 +71,34 @@ jobs:
       - name: Setup Docker buildx action
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push architecture image by digest
-        id: build
+      - name: Normalize python-deps image input
+        id: deps_image
+        run: |
+          value="$(printf '%s' '${{ inputs.python_deps_image }}' | xargs)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push architecture image by digest (cached python-deps image)
+        id: build_cached
+        if: steps.deps_image.outputs.value != ''
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
           target: ${{ inputs.build_target }}
           build-args: |
-            PYTHON_DEPS_IMAGE=${{ env.DEPS_IMAGE }}
+            PYTHON_DEPS_IMAGE=${{ steps.deps_image.outputs.value }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
+
+      - name: Build and push architecture image by digest (Dockerfile fallback)
+        id: build_local
+        if: steps.deps_image.outputs.value == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          target: ${{ inputs.build_target }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -96,7 +106,7 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
+          echo "${{ steps.build_cached.outcome == 'success' && steps.build_cached.outputs.digest || steps.build_local.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
@@ -116,8 +126,8 @@ jobs:
         run: |
           RAW_IMAGE_NAME="${GITHUB_REPOSITORY#*/}"
           IMAGE_NAME="${RAW_IMAGE_NAME//docker-/}"
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
+          echo "IMAGE=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -175,7 +185,7 @@ jobs:
       - name: Make package public
         continue-on-error: true
         run: |
-          gh api --method PATCH /user/packages/container/$IMAGE_NAME \
+          gh api --method PATCH "/user/packages/container/${IMAGE_NAME}" \
             -f visibility=public
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
