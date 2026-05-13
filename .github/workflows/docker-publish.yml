@@ -73,7 +73,7 @@ jobs:
 
       - name: Build and push architecture image by digest (cached python-deps image)
         id: build_cached
-        if: ${{ inputs.python_deps_image != '' }}
+        if: inputs.python_deps_image != ''
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -87,7 +87,7 @@ jobs:
 
       - name: Build and push architecture image by digest (Dockerfile fallback)
         id: build_local
-        if: ${{ inputs.python_deps_image == '' }}
+        if: inputs.python_deps_image == ''
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -100,7 +100,7 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build_cached.outputs.digest || steps.build_local.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
+          echo "${{ steps.build_cached.outputs.digest != '' && steps.build_cached.outputs.digest || steps.build_local.outputs.digest }}" > /tmp/digests/${{ matrix.suffix }}
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
