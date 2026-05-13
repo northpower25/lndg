@@ -2,21 +2,22 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.11.2"
+version: "1.12.0"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
-  LNDg is a lite GUI web interface designed to assist users with operating their LND node
-  and automating common tasks. It provides a dashboard, channel management, auto-fee logic
-  (autopilot), auto-rebalancing, payment/invoice tracking, and much more.
+  LNDg is an advanced GUI web interface designed to operate and automate modern Lightning node
+  workflows. It includes dashboard analytics, channel and fee management, policy automation,
+  recommendations, backup/restore and cleaner tooling, CLN capability-based foundations, and
+  optional ML shadow-mode signals.
 
   Key features:
-  - Dashboard with real-time channel statistics and liquidity overview
-  - Automated fee management (Autofees) based on routing activity
-  - Automated channel rebalancing
-  - Forward, payment, and invoice history
-  - Failed HTLC analysis for routing optimization
-  - Peer event tracking
-  - Onchain balance management and batch channel opening
+  - Cockpit dashboard with charts, snapshots, and liquidity overview
+  - API v2 foundations (capabilities, cleaner, backup, recommendations, policies, splice, ML)
+  - Automated fee management and policy-bound execution via audit-aware executor
+  - Recommendation engine with rationale and confidence labels
+  - Guided splice workflow and CLN plugin/capability panel
+  - Retention/maintenance cleaner and backup workflows
+  - Optional ML approaches (shadow predictions and auto-fee suggestions with ML flavor image)
 developer: northpower25
 website: https://github.com/northpower25/lndg
 dependencies:
@@ -30,9 +31,11 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.11.2: Fix missing naturaltime template filter (resolves 500 errors on /fees/, /advanced/,
-  /autopilot/, /opens/, /keysends/ and template errors on /closures/, /autofees/, /inbound-fee-log/).
-  Fix log file path for Docker deployments. Always write initial password to data/lndg-admin.txt.
+  v1.12.0: Umbrel metadata updated to reflect the current refactoring status (LNDg Next).
+  Includes capability-based backend architecture foundations, API v2 expansion (cleaner/backup/
+  recommendations/policies/splice/ML), policy executor with audit trail integration, periodic
+  collector/aggregator/cleaner/policy jobs, and Phase-6 ML approaches (shadow-mode predictions,
+  per-channel ML toggles, optional ML image support).
 path: ""
 defaultUsername: "lndg-admin"
 defaultPassword: "See /lndg/data/lndg-admin.txt"
