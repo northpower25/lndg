@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       build_target:
-        description: Dockerfile target stage to build (default: final)
+        description: 'Dockerfile target stage to build (default: final)'
         required: false
         type: string
         default: final
