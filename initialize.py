@@ -293,9 +293,9 @@ def initialize_django(adminuser, adminpw):
                     with open(pw_file, 'w') as f:
                         f.write(login_pw)
                     os.chmod(pw_file, 0o600)
+                    print(f'FIRST TIME LOGIN PASSWORD WRITTEN TO: {pw_file}')
                 except Exception as e:
                     print('Error writing password file:', str(e))
-                print('FIRST TIME LOGIN PASSWORD:' + login_pw)
             except Exception as e:
                 print('Error setting up initial user:', str(e))
     except Exception as e:
@@ -335,7 +335,7 @@ def main():
     docker = args.docker
     debug = args.debug
     adminuser = args.adminuser
-    adminpw = args.adminpw
+    adminpw = args.adminpw if args.adminpw is not None else os.environ.get("APP_PASSWORD")
     csrftrusted = args.csrftrusted
     nologinrequired = args.nologinrequired
     force_new = args.force
