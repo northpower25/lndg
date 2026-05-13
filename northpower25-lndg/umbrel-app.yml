@@ -38,6 +38,6 @@ releaseNotes: >-
   per-channel ML toggles, optional ML image support).
 path: ""
 defaultUsername: "lndg-admin"
-defaultPassword: "See /lndg/data/lndg-admin.txt"
+defaultPassword: $APP_PASSWORD
 submitter: northpower25
 submission: https://github.com/northpower25/lndg
