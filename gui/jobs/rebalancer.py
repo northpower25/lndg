@@ -99,8 +99,7 @@ def record_rebalance_spend(fees_paid_sats):
         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error recording budget spend: {str(e)}")
 
 
-@sync_to_async
-def save_change_log(
+def _save_change_log_sync(
     *,
     change_type: str,
     target_channel_id: str,
@@ -108,7 +107,7 @@ def save_change_log(
     old_value: dict,
     new_value: dict,
     rationale: dict | None = None,
-):
+) -> None:
     try:
         ChangeLog.objects.create(
             change_type=change_type,
@@ -120,6 +119,26 @@ def save_change_log(
         )
     except Exception as e:
         print(f"{datetime.now().strftime('%c')} : [Rebalancer] : Error writing ChangeLog: {str(e)}")
+
+
+@sync_to_async
+def save_change_log(
+    *,
+    change_type: str,
+    target_channel_id: str,
+    actor: str,
+    old_value: dict,
+    new_value: dict,
+    rationale: dict | None = None,
+) -> None:
+    _save_change_log_sync(
+        change_type=change_type,
+        target_channel_id=target_channel_id,
+        actor=actor,
+        old_value=old_value,
+        new_value=new_value,
+        rationale=rationale,
+    )
 
 @sync_to_async
 def check_budget():
@@ -463,7 +482,7 @@ def auto_schedule() -> List[Rebalancer]:
         return to_schedule
 
 @sync_to_async
-def auto_enable():
+def auto_enable() -> None:
     try:
         if LocalSettings.objects.filter(key='AR-Autopilot').exists():
             enabled = int(LocalSettings.objects.filter(key='AR-Autopilot')[0].value)
@@ -501,7 +520,7 @@ def auto_enable():
                         peer_channel.auto_rebalance = True
                         peer_channel.save()
                         Autopilot(chan_id=peer_channel.chan_id, peer_alias=peer_channel.alias, setting='Enabled', old_value=0, new_value=1).save()
-                        await save_change_log(
+                        _save_change_log_sync(
                             change_type='autopilot_toggle',
                             target_channel_id=peer_channel.chan_id,
                             actor='policy:autopilot',
@@ -515,7 +534,7 @@ def auto_enable():
                         peer_channel.auto_rebalance = False
                         peer_channel.save()
                         Autopilot(chan_id=peer_channel.chan_id, peer_alias=peer_channel.alias, setting='Enabled', old_value=1, new_value=0).save()
-                        await save_change_log(
+                        _save_change_log_sync(
                             change_type='autopilot_toggle',
                             target_channel_id=peer_channel.chan_id,
                             actor='policy:autopilot',
