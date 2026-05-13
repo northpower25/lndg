@@ -1,0 +1,7 @@
+# ML-specific optional dependencies for LNDg.
+# Run `pip-compile requirements-ml.in` to generate a pinned requirements-ml.txt.
+# These are NOT included in the base Docker image.
+# Use the ':latest-ml' image tag or install manually:
+#   pip install -r requirements-ml.txt
+scikit-learn>=1.4,<2
+joblib>=1.3,<2

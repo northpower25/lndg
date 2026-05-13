@@ -7,6 +7,16 @@ on:
         description: Image tag to publish
         required: true
         type: string
+      build_target:
+        description: Dockerfile target stage to build (default: final)
+        required: false
+        type: string
+        default: final
+      tag_suffix:
+        description: Suffix appended to image tags (e.g. '-ml' for the ML flavor)
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -27,7 +37,7 @@ jobs:
           - platform: linux/arm/v7
             suffix: armv7
     env:
-      CACHE_SCOPE: docker-${{ github.repository_id }}-${{ matrix.suffix }}
+      CACHE_SCOPE: docker-${{ github.repository_id }}-${{ matrix.suffix }}${{ inputs.tag_suffix }}
 
     steps:
       - name: Checkout project
@@ -59,6 +69,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          target: ${{ inputs.build_target }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -138,8 +149,8 @@ jobs:
           done
 
           docker buildx imagetools create \
-            --tag "${IMAGE}:${{ inputs.tag }}" \
-            --tag "${IMAGE}:latest" \
+            --tag "${IMAGE}:${{ inputs.tag }}${{ inputs.tag_suffix }}" \
+            --tag "${IMAGE}:latest${{ inputs.tag_suffix }}" \
             "${DIGEST_ARGS[@]}"
 
       - name: Make package public

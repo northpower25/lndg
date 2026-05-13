@@ -25,6 +25,32 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Optional-dependency guard
+# ---------------------------------------------------------------------------
+
+def _require_sklearn() -> None:
+    """Raise ImportError with actionable message if scikit-learn/joblib are not installed."""
+    try:
+        import sklearn  # noqa: F401
+        import joblib   # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "scikit-learn and joblib are required for ML features. "
+            "Install them with: pip install -r requirements-ml.txt  "
+            "or use the ':latest-ml' Docker image."
+        ) from exc
+
+
+def _ml_available() -> bool:
+    """Return True if scikit-learn and joblib are importable."""
+    try:
+        _require_sklearn()
+        return True
+    except ImportError:
+        return False
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -479,6 +505,7 @@ def get_ml_status() -> dict[str, Any]:
     user_mode = UserMode.load()
 
     return {
+        "ml_available": _ml_available(),
         "ai_mode": user_mode.ai_mode,
         "rebalance_events_30d": rebalance_count,
         "autofee_events_30d": autofee_count,
