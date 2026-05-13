@@ -25,14 +25,14 @@ jobs:
         id: hash
         run: |
           DEPS_HASH=$(sha256sum requirements.txt Dockerfile | sha256sum | cut -c1-16)
-          echo "deps_hash=$DEPS_HASH" >> $GITHUB_OUTPUT
+          echo "deps_hash=$DEPS_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Set image name
         id: image
         run: |
           RAW="${GITHUB_REPOSITORY#*/}"
           DEPS_IMAGE="ghcr.io/${{ github.repository_owner }}/${RAW//docker-/}-python-deps"
-          echo "deps_image=$DEPS_IMAGE" >> $GITHUB_OUTPUT
+          echo "deps_image=$DEPS_IMAGE" >> "$GITHUB_OUTPUT"
 
   build:
     needs: setup
@@ -146,7 +146,7 @@ jobs:
         run: |
           DEPS_IMAGE="${{ needs.setup.outputs.deps_image }}"
           DEPS_HASH="${{ needs.setup.outputs.deps_hash }}"
-          echo "python-deps image: \`${DEPS_IMAGE}:${DEPS_HASH}\`" >> $GITHUB_STEP_SUMMARY
+          echo "python-deps image: \`${DEPS_IMAGE}:${DEPS_HASH}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Make package public
         continue-on-error: true
