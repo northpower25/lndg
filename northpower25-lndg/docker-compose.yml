@@ -26,7 +26,7 @@ services:
       - >
         set -ex &&
         mkdir -p /lndg/data &&
-        touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log /lndg/data/lndg-init.log &&
+        touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
         if ! python initialize.py
         -tls /lnd/tls.cert
         -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
