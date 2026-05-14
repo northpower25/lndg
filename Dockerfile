@@ -31,9 +31,8 @@ RUN apk add --no-cache gfortran openblas-dev lapack-dev && \
 
 # ── Stage 3: final (rootless, base – no ML) ───────────────────────────────────
 FROM python:3.13-alpine AS final
-# Note: any volume mounted at /lndg/data must be writable by the 'lndg' user
-# (UID/GID created here). Adjust host ownership accordingly before first start.
-RUN apk add --no-cache libffi openssl && \
+# su-exec is used to drop from root to the lndg user after fixing volume ownership at runtime.
+RUN apk add --no-cache libffi openssl su-exec && \
     adduser -D -h /lndg lndg
 COPY --from=python-deps /install /usr/local
 WORKDIR /lndg
@@ -45,7 +44,7 @@ ENV PYTHONUNBUFFERED=1
 # ── Stage 4: final-ml (ML flavor – includes scikit-learn + joblib) ────────────
 # Use: docker build --target final-ml -t lndg:latest-ml .
 FROM python:3.13-alpine AS final-ml
-RUN apk add --no-cache openblas && \
+RUN apk add --no-cache openblas su-exec && \
     adduser -D -h /lndg lndg
 COPY --from=python-deps-ml /install /usr/local
 WORKDIR /lndg
