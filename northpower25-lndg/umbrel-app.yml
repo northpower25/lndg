@@ -2,7 +2,7 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.12.2"
+version: "1.12.3"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is an advanced GUI web interface designed to operate and automate modern Lightning node
@@ -31,11 +31,13 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.12.0: Umbrel metadata updated to reflect the current refactoring status (LNDg Next).
-  Includes capability-based backend architecture foundations, API v2 expansion (cleaner/backup/
-  recommendations/policies/splice/ML), policy executor with audit trail integration, periodic
-  collector/aggregator/cleaner/policy jobs, and Phase-6 ML approaches (shadow-mode predictions,
-  per-channel ML toggles, optional ML image support).
+  v1.12.3: Fix persistent Umbrel installation failure. The container now starts
+  as root (uid 0) so it can always write to the Docker-created data volume
+  (which Docker daemon creates as root-owned on first install). Removes the
+  fatal write-permission check introduced in v1.12.2 that caused an immediate
+  exit-1 on clean installs. Also fixes incorrect backslash-escaping of the
+  network argument. su-exec added to the Docker image for future
+  privilege-dropping support.
 path: ""
 defaultUsername: "lndg-admin"
 defaultPassword: $APP_PASSWORD
