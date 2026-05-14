@@ -24,7 +24,7 @@ services:
       - sh
       - -c
       - >
-        set -ex &&
+        set -x &&
         mkdir -p /lndg/data &&
         touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
         if ! python initialize.py
@@ -34,7 +34,7 @@ services:
         -net ${APP_BITCOIN_NETWORK}
         -wn > /lndg/data/lndg-init.log 2>&1; then
         echo '[lndg] initialize.py failed - dumping /lndg/data/lndg-init.log' &&
-        cat /lndg/data/lndg-init.log &&
+        if [ -f /lndg/data/lndg-init.log ]; then cat /lndg/data/lndg-init.log; else echo '[lndg] init log file missing'; fi &&
         exit 1;
         fi &&
         python controller.py runserver 0.0.0.0:8000 > /lndg/data/lndg-controller.log 2>&1
