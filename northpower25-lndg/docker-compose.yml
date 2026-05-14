@@ -24,13 +24,18 @@ services:
       - sh
       - -c
       - >
+        set -x &&
         mkdir -p /lndg/data &&
         touch /lndg/data/db.sqlite3 /lndg/data/lndg-controller.log &&
-        python initialize.py
+        if ! python initialize.py
         -tls /lnd/tls.cert
         -mcrn /lnd/data/chain/bitcoin/${APP_BITCOIN_NETWORK}/admin.macaroon
         -rpc ${APP_LIGHTNING_NODE_IP}:${APP_LIGHTNING_NODE_GRPC_PORT}
         -net ${APP_BITCOIN_NETWORK}
-        -wn &&
+        -wn > /lndg/data/lndg-init.log 2>&1; then
+        echo '[lndg] initialize.py failed - dumping /lndg/data/lndg-init.log' &&
+        if [ -f /lndg/data/lndg-init.log ]; then cat /lndg/data/lndg-init.log; else echo '[lndg] init log file missing'; fi &&
+        exit 1;
+        fi &&
         python controller.py runserver 0.0.0.0:8000 > /lndg/data/lndg-controller.log 2>&1
     ports: []
