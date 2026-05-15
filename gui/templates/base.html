@@ -100,7 +100,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="LNDg">
   </head>
-  <body {% if request.COOKIES.darkmode == 'true' %}class="dark-mode"{% endif %}>
+  <body data-ui-mode="{{ user_mode|default:'advanced' }}" {% if request.COOKIES.darkmode == 'true' %}class="dark-mode"{% endif %}>
     <div id="content">
       {% if messages %}
       <div id="messages" class="w3-container w3-padding-small">
@@ -149,6 +149,15 @@
           </select>
         </span>
       </nav>
+      <div class="w3-container w3-small w3-padding-small w3-theme-l5" style="border-top:1px solid rgba(0,0,0,0.08)">
+        {% if user_mode == 'guided' %}
+          <strong>{% trans "Guided mode" %}</strong> · {% trans "Focused view with recommended next actions and reduced complexity." %}
+        {% elif user_mode == 'expert' %}
+          <strong>{% trans "Expert mode" %}</strong> · {% trans "Full low-level controls and operational maintenance features." %}
+        {% else %}
+          <strong>{% trans "Advanced mode" %}</strong> · {% trans "Balanced operational view with diagnostics and safe defaults." %}
+        {% endif %}
+      </div>
       {% block content %}{% endblock %}
     </div>
   </body>

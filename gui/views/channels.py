@@ -24,6 +24,12 @@ from gui.jobs.external_integrations import get_amboss_peer_context
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_view_error_response(request, exc):
+    logger.exception("Unhandled channel view error: %s", exc)
+    return render(request, 'error.html', {'error': grpc_error_message(exc)})
+
+
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channels(request):
     if request.method == 'GET':
@@ -139,8 +145,18 @@ def fees(request):
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def channel(request):
-    if request.method == 'GET':
-        chan_id = request.GET.urlencode()[1:]
+    if request.method != 'GET':
+        return redirect('home')
+    try:
+        chan_id = (
+            request.GET.get('chan_id')
+            or request.GET.get('channel_id')
+            or request.GET.get('id')
+            or request.GET.get('')
+            or next(iter(request.GET.values()), '')
+        ).strip()
+        if not chan_id or not chan_id.isdigit():
+            return redirect('channels')
         if Channels.objects.filter(chan_id=chan_id).exists():
             filter_1day = datetime.now() - timedelta(days=1)
             filter_7day = datetime.now() - timedelta(days=7)
@@ -503,13 +519,9 @@ def channel(request):
             'network_links': network_links(),
             'autofees': [] if autofees_df.empty else autofees_df.to_dict(orient='records'),
         }
-        try:
-            return render(request, 'channel.html', context)
-        except Exception as e:
-            error = grpc_error_message(e)
-            return render(request, 'error.html', {'error': error})
-    else:
-        return redirect('home')
+        return render(request, 'channel.html', context)
+    except Exception as exc:
+        return _safe_view_error_response(request, exc)
 
 
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)

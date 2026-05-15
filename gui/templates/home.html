@@ -179,6 +179,33 @@
 </script>
 <noscript><p class="w3-small w3-text-grey w3-container">{% trans "Cockpit" %}: {% trans "No data available" %}</p></noscript>
 <!-- ── End Cockpit Tiles ──────────────────────────────────────────────────── -->
+{% if user_mode == 'guided' %}
+<div class="w3-container w3-padding-small">
+  <div class="w3-row-padding">
+    <div class="w3-third">
+      <div class="w3-card w3-padding">
+        <h4>{% trans "Status" %}</h4>
+        <p class="w3-small w3-text-grey">{% trans "Review node health, liquidity, and currently open channels first." %}</p>
+        <a class="w3-button w3-theme" href="/channels/">{% trans "Open Channel Overview" %}</a>
+      </div>
+    </div>
+    <div class="w3-third">
+      <div class="w3-card w3-padding">
+        <h4>{% trans "Recommended next action" %}</h4>
+        <p class="w3-small w3-text-grey">{% trans "Use dry-run recommendations before applying any live policy changes." %}</p>
+        <a class="w3-button w3-theme" href="/actions/">{% trans "Review Recommendations" %}</a>
+      </div>
+    </div>
+    <div class="w3-third">
+      <div class="w3-card w3-padding">
+        <h4>{% trans "Safe automations (dry-run)" %}</h4>
+        <p class="w3-small w3-text-grey">{% trans "Keep automation in dry-run until impact and risk labels stay stable." %}</p>
+        <a class="w3-button w3-theme" href="/onboarding/">{% trans "Open Setup Wizard" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 <span style="position: absolute;top: 0;right: 0;padding: 5px;">{% trans "Dashboard last updated" %}: <span id='datetime'></span> <label title="{% trans 'Auto Page Refresh' %}" class="switch"><input type="checkbox" {% if request.COOKIES.refresh != 'false' %}checked="true"{% endif %}><span onclick="toggleAutoRefresh()" class="slider round"></span></label></span>
 <div class="w3-container w3-padding-small">
   <script language="Javascript">

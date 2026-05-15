@@ -64,6 +64,24 @@
       <canvas id="feeVolumeChart" style="max-height:400px"></canvas>
     </div>
   </div>
+
+  <!-- Chart 4: Flow dependencies (Sankey) -->
+  <div class="w3-card w3-margin-bottom">
+    <div class="w3-container w3-padding">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>{% trans "Flow Dependencies (Sankey)" %}</strong>
+        <span class="w3-small w3-text-grey" style="cursor:help" title="{% trans 'Routing and rebalancing flows between channel partners. Use node/channel filter in the embedded view to inspect dependencies.' %}">❓</span>
+      </div>
+      <p class="w3-small w3-text-grey">
+        {% trans "Select routing/rebalancing mode and a specific node/channel partner directly in the embedded Sankey view." %}
+      </p>
+      <iframe
+        src="/sankey/?embedded=1"
+        title="{% trans 'Flow Dependencies (Sankey)' %}"
+        style="width:100%;min-height:760px;border:1px solid rgba(0,0,0,0.12);border-radius:6px"
+      ></iframe>
+    </div>
+  </div>
 </div>
 
 <script>
