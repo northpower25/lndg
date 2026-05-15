@@ -1081,3 +1081,69 @@ msgstr "Bitte eine gültige Policy-ID angeben."
 
 msgid "This action requires manual confirmation. Execute now?"
 msgstr "Diese Aktion erfordert manuelle Bestätigung. Jetzt ausführen?"
+
+msgid "Selected language: German"
+msgstr "Ausgewählte Sprache: Deutsch"
+
+msgid "Selected language: English"
+msgstr "Ausgewählte Sprache: Englisch"
+
+msgid "Flow Dependencies (Sankey)"
+msgstr "Flow-Abhängigkeiten (Sankey)"
+
+msgid "Routing and rebalancing flows between channel partners. Use node/channel filter in the embedded view to inspect dependencies."
+msgstr "Routing- und Rebalancing-Flüsse zwischen Kanalpartnern. Verwenden Sie den Node/Kanal-Filter in der eingebetteten Ansicht, um Abhängigkeiten zu prüfen."
+
+msgid "Select routing/rebalancing mode and a specific node/channel partner directly in the embedded Sankey view."
+msgstr "Wählen Sie Routing-/Rebalancing-Modus und einen bestimmten Node/Kanalpartner direkt in der eingebetteten Sankey-Ansicht."
+
+msgid "Filter by one specific channel/node partner in the flow graph."
+msgstr "Nach einem bestimmten Kanal-/Node-Partner im Flussdiagramm filtern."
+
+msgid "Node/Channel"
+msgstr "Node/Kanal"
+
+msgid "Show only flows connected to the selected partner."
+msgstr "Nur Flüsse anzeigen, die mit dem ausgewählten Partner verbunden sind."
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Guided mode"
+msgstr "Geführter Modus"
+
+msgid "Focused view with recommended next actions and reduced complexity."
+msgstr "Fokussierte Ansicht mit empfohlenen nächsten Aktionen und reduzierter Komplexität."
+
+msgid "Expert mode"
+msgstr "Expertenmodus"
+
+msgid "Full low-level controls and operational maintenance features."
+msgstr "Vollständige Low-Level-Steuerung und Betriebs-/Wartungsfunktionen."
+
+msgid "Advanced mode"
+msgstr "Erweiterter Modus"
+
+msgid "Balanced operational view with diagnostics and safe defaults."
+msgstr "Ausgewogene Betriebsansicht mit Diagnosen und sicheren Standardwerten."
+
+msgid "Review node health, liquidity, and currently open channels first."
+msgstr "Prüfen Sie zuerst Node-Zustand, Liquidität und aktuell offene Kanäle."
+
+msgid "Open Channel Overview"
+msgstr "Kanalübersicht öffnen"
+
+msgid "Recommended next action"
+msgstr "Empfohlene nächste Aktion"
+
+msgid "Use dry-run recommendations before applying any live policy changes."
+msgstr "Verwenden Sie Dry-Run-Empfehlungen, bevor Sie Live-Policy-Änderungen anwenden."
+
+msgid "Review Recommendations"
+msgstr "Empfehlungen prüfen"
+
+msgid "Safe automations (dry-run)"
+msgstr "Sichere Automatisierungen (Dry-Run)"
+
+msgid "Keep automation in dry-run until impact and risk labels stay stable."
+msgstr "Lassen Sie die Automatisierung im Dry-Run, bis Auswirkungs- und Risikolabel stabil bleiben."

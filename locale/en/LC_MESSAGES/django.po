@@ -1078,3 +1078,69 @@ msgstr "Please provide a valid Policy ID."
 
 msgid "This action requires manual confirmation. Execute now?"
 msgstr "This action requires manual confirmation. Execute now?"
+
+msgid "Selected language: German"
+msgstr "Selected language: German"
+
+msgid "Selected language: English"
+msgstr "Selected language: English"
+
+msgid "Flow Dependencies (Sankey)"
+msgstr "Flow Dependencies (Sankey)"
+
+msgid "Routing and rebalancing flows between channel partners. Use node/channel filter in the embedded view to inspect dependencies."
+msgstr "Routing and rebalancing flows between channel partners. Use node/channel filter in the embedded view to inspect dependencies."
+
+msgid "Select routing/rebalancing mode and a specific node/channel partner directly in the embedded Sankey view."
+msgstr "Select routing/rebalancing mode and a specific node/channel partner directly in the embedded Sankey view."
+
+msgid "Filter by one specific channel/node partner in the flow graph."
+msgstr "Filter by one specific channel/node partner in the flow graph."
+
+msgid "Node/Channel"
+msgstr "Node/Channel"
+
+msgid "Show only flows connected to the selected partner."
+msgstr "Show only flows connected to the selected partner."
+
+msgid "All"
+msgstr "All"
+
+msgid "Guided mode"
+msgstr "Guided mode"
+
+msgid "Focused view with recommended next actions and reduced complexity."
+msgstr "Focused view with recommended next actions and reduced complexity."
+
+msgid "Expert mode"
+msgstr "Expert mode"
+
+msgid "Full low-level controls and operational maintenance features."
+msgstr "Full low-level controls and operational maintenance features."
+
+msgid "Advanced mode"
+msgstr "Advanced mode"
+
+msgid "Balanced operational view with diagnostics and safe defaults."
+msgstr "Balanced operational view with diagnostics and safe defaults."
+
+msgid "Review node health, liquidity, and currently open channels first."
+msgstr "Review node health, liquidity, and currently open channels first."
+
+msgid "Open Channel Overview"
+msgstr "Open Channel Overview"
+
+msgid "Recommended next action"
+msgstr "Recommended next action"
+
+msgid "Use dry-run recommendations before applying any live policy changes."
+msgstr "Use dry-run recommendations before applying any live policy changes."
+
+msgid "Review Recommendations"
+msgstr "Review Recommendations"
+
+msgid "Safe automations (dry-run)"
+msgstr "Safe automations (dry-run)"
+
+msgid "Keep automation in dry-run until impact and risk labels stay stable."
+msgstr "Keep automation in dry-run until impact and risk labels stay stable."
