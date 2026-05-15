@@ -71,6 +71,7 @@ Full rule details with rationale and code examples: [`ENTWICKLUNGSREGELN.md`](..
 - **R-CODE-3**: New API endpoints go under `/api/v2/`. No breaking changes to existing `/api/v1/` or `/api/` endpoints.
 - **R-CODE-4**: Existing views are not deleted. They are marked `[Expert/Legacy]` in navigation.
 - **R-CODE-5**: `python manage.py migrate --check` must pass before every commit.
+- **R-CODE-6**: After any Umbrel-facing change (`northpower25-lndg/*` or install/version metadata), bump the mirrored release versions in `northpower25-lndg/umbrel-app.yml`, `frontend/package.json` + `frontend/package-lock.json`, and `gui/templates/base.html` so Umbrel detects and downloads the new release.
 
 ---
 
