@@ -1144,3 +1144,195 @@ msgstr "Safe automations (dry-run)"
 
 msgid "Keep automation in dry-run until impact and risk labels stay stable."
 msgstr "Keep automation in dry-run until impact and risk labels stay stable."
+
+msgid "ML Settings"
+msgstr "ML Settings"
+
+msgid "Configure machine learning shadow recommendations and per-channel ML toggles."
+msgstr "Configure machine learning shadow recommendations and per-channel ML toggles."
+
+msgid "ML Infrastructure Status"
+msgstr "ML Infrastructure Status"
+
+msgid "scikit-learn available"
+msgstr "scikit-learn available"
+
+msgid "Install the"
+msgstr "Install the"
+
+msgid "Docker image or run"
+msgstr "Docker image or run"
+
+msgid "AI mode"
+msgstr "AI mode"
+
+msgid "Shadow mode active"
+msgstr "Shadow mode active"
+
+msgid "Data gate passed"
+msgstr "Data gate passed"
+
+msgid "Rebalance events (30d)"
+msgstr "Rebalance events (30d)"
+
+msgid "Auto-fee events (30d)"
+msgstr "Auto-fee events (30d)"
+
+msgid "Oldest data (days)"
+msgstr "Oldest data (days)"
+
+msgid "Rebalance model version"
+msgstr "Rebalance model version"
+
+msgid "Model CV AUC"
+msgstr "Model CV AUC"
+
+msgid "Trigger Model Retraining"
+msgstr "Trigger Model Retraining"
+
+msgid "Global AI / ML Settings"
+msgstr "Global AI / ML Settings"
+
+msgid "These settings control the overall ML behaviour across all channels."
+msgstr "These settings control the overall ML behaviour across all channels."
+
+msgid "Setting"
+msgstr "Setting"
+
+msgid "AI Mode"
+msgstr "AI Mode"
+
+msgid "Controls how ML recommendations interact with the system. Off = disabled. Advisory = show only. Shadow = log + show. Policy-Bound = execute with confirmation."
+msgstr "Controls how ML recommendations interact with the system. Off = disabled. Advisory = show only. Shadow = log + show. Policy-Bound = execute with confirmation."
+
+msgid "Require manual confirmation (Policy-Bound)"
+msgstr "Require manual confirmation (Policy-Bound)"
+
+msgid "When enabled, every ML-triggered action in policy_bound mode requires explicit user confirmation."
+msgstr "When enabled, every ML-triggered action in policy_bound mode requires explicit user confirmation."
+
+msgid "Enable shadow prediction logging"
+msgstr "Enable shadow prediction logging"
+
+msgid "Log every ML shadow prediction to the database for later review."
+msgstr "Log every ML shadow prediction to the database for later review."
+
+msgid "Minimum data days"
+msgstr "Minimum data days"
+
+msgid "Minimum number of days of historical data required before ML predictions are used."
+msgstr "Minimum number of days of historical data required before ML predictions are used."
+
+msgid "Max automatic actions per day"
+msgstr "Max automatic actions per day"
+
+msgid "0 = unlimited (expert only). Limits how many ML-triggered actions run per day."
+msgstr "0 = unlimited (expert only). Limits how many ML-triggered actions run per day."
+
+msgid "Action cooldown (minutes)"
+msgstr "Action cooldown (minutes)"
+
+msgid "Minimum wait time between consecutive ML-triggered actions."
+msgstr "Minimum wait time between consecutive ML-triggered actions."
+
+msgid "Save Global Settings"
+msgstr "Save Global Settings"
+
+msgid "Escalation &amp; Training Config"
+msgstr "Escalation &amp; Training Config"
+
+msgid "Fine-tune ML training intervals and fee escalation factors stored in Local Settings."
+msgstr "Fine-tune ML training intervals and fee escalation factors stored in Local Settings."
+
+msgid "Training enabled"
+msgstr "Training enabled"
+
+msgid "Enable or disable periodic ML model retraining."
+msgstr "Enable or disable periodic ML model retraining."
+
+msgid "Training interval (hours)"
+msgstr "Training interval (hours)"
+
+msgid "How often the ML rebalance model is retrained. Default 24h."
+msgstr "How often the ML rebalance model is retrained. Default 24h."
+
+msgid "Escalation cooldown (minutes)"
+msgstr "Escalation cooldown (minutes)"
+
+msgid "Minimum minutes between fee escalation steps per channel."
+msgstr "Minimum minutes between fee escalation steps per channel."
+
+msgid "Max escalation levels"
+msgstr "Max escalation levels"
+
+msgid "Maximum number of consecutive fee escalation steps before resetting."
+msgstr "Maximum number of consecutive fee escalation steps before resetting."
+
+msgid "Fee rate escalation factor (up)"
+msgstr "Fee rate escalation factor (up)"
+
+msgid "Multiply fee rate by this factor when routing revenue increases. E.g. 1.15 = +15%."
+msgstr "Multiply fee rate by this factor when routing revenue increases. E.g. 1.15 = +15%."
+
+msgid "Fee rate escalation factor (down)"
+msgstr "Fee rate escalation factor (down)"
+
+msgid "Multiply fee rate by this factor when routing revenue decreases. E.g. 0.90 = -10%."
+msgstr "Multiply fee rate by this factor when routing revenue decreases. E.g. 0.90 = -10%."
+
+msgid "Save Escalation Config"
+msgstr "Save Escalation Config"
+
+msgid "Per-Channel ML Toggles"
+msgstr "Per-Channel ML Toggles"
+
+msgid "Enable or disable ML shadow recommendations independently per channel. ML Rebalancing suggests optimal rebalance attempts. ML Auto-Fee suggests fee adjustments. Both are shadow mode only – no automatic execution without Policy-Bound mode."
+msgstr "Enable or disable ML shadow recommendations independently per channel. ML Rebalancing suggests optimal rebalance attempts. ML Auto-Fee suggests fee adjustments. Both are shadow mode only – no automatic execution without Policy-Bound mode."
+
+msgid "Local / Remote balance as percentage of capacity"
+msgstr "Local / Remote balance as percentage of capacity"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Enable ML shadow rebalancing suggestions for this channel."
+msgstr "Enable ML shadow rebalancing suggestions for this channel."
+
+msgid "ML Rebalancing"
+msgstr "ML Rebalancing"
+
+msgid "Enable ML shadow auto-fee suggestions for this channel."
+msgstr "Enable ML shadow auto-fee suggestions for this channel."
+
+msgid "ML Auto-Fee"
+msgstr "ML Auto-Fee"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "No open channels found."
+msgstr "No open channels found."
+
+msgid "Toggling these flags reloads the page to reflect the current state."
+msgstr "Toggling these flags reloads the page to reflect the current state."
+
+msgid "ML Settings are only available in Advanced or Expert mode."
+msgstr "ML Settings are only available in Advanced or Expert mode."
+
+msgid "Saving..."
+msgstr "Saving..."
+
+msgid "Saved"
+msgstr "Saved"
+
+msgid "Network error"
+msgstr "Network error"
+
+msgid "Triggering..."
+msgstr "Triggering..."
+
+msgid "Training scheduled."
+msgstr "Training scheduled."
+
+msgid "Training could not start."
+msgstr "Training could not start."

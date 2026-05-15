@@ -1147,3 +1147,195 @@ msgstr "Sichere Automatisierungen (Dry-Run)"
 
 msgid "Keep automation in dry-run until impact and risk labels stay stable."
 msgstr "Lassen Sie die Automatisierung im Dry-Run, bis Auswirkungs- und Risikolabel stabil bleiben."
+
+msgid "ML Settings"
+msgstr "ML-Einstellungen"
+
+msgid "Configure machine learning shadow recommendations and per-channel ML toggles."
+msgstr "Konfigurieren Sie ML-Schattenempfehlungen und kanal-individuelle ML-Schalter."
+
+msgid "ML Infrastructure Status"
+msgstr "ML-Infrastruktur-Status"
+
+msgid "scikit-learn available"
+msgstr "scikit-learn verfügbar"
+
+msgid "Install the"
+msgstr "Installieren Sie das"
+
+msgid "Docker image or run"
+msgstr "Docker-Image oder führen Sie aus"
+
+msgid "AI mode"
+msgstr "KI-Modus"
+
+msgid "Shadow mode active"
+msgstr "Schattenmodus aktiv"
+
+msgid "Data gate passed"
+msgstr "Datenmindestmenge erreicht"
+
+msgid "Rebalance events (30d)"
+msgstr "Rebalance-Ereignisse (30T)"
+
+msgid "Auto-fee events (30d)"
+msgstr "Auto-Gebühren-Ereignisse (30T)"
+
+msgid "Oldest data (days)"
+msgstr "Älteste Daten (Tage)"
+
+msgid "Rebalance model version"
+msgstr "Rebalance-Modellversion"
+
+msgid "Model CV AUC"
+msgstr "Modell CV AUC"
+
+msgid "Trigger Model Retraining"
+msgstr "Modell-Neutraining anstoßen"
+
+msgid "Global AI / ML Settings"
+msgstr "Globale KI / ML-Einstellungen"
+
+msgid "These settings control the overall ML behaviour across all channels."
+msgstr "Diese Einstellungen steuern das ML-Verhalten über alle Kanäle."
+
+msgid "Setting"
+msgstr "Einstellung"
+
+msgid "AI Mode"
+msgstr "KI-Modus"
+
+msgid "Controls how ML recommendations interact with the system. Off = disabled. Advisory = show only. Shadow = log + show. Policy-Bound = execute with confirmation."
+msgstr "Steuert, wie ML-Empfehlungen mit dem System interagieren. Aus = deaktiviert. Beratend = nur anzeigen. Schatten = protokollieren + anzeigen. Policy-gebunden = ausführen mit Bestätigung."
+
+msgid "Require manual confirmation (Policy-Bound)"
+msgstr "Manuelle Bestätigung erforderlich (Policy-gebunden)"
+
+msgid "When enabled, every ML-triggered action in policy_bound mode requires explicit user confirmation."
+msgstr "Wenn aktiviert, erfordert jede ML-ausgelöste Aktion im policy_bound-Modus eine explizite Benutzerbestätigung."
+
+msgid "Enable shadow prediction logging"
+msgstr "Schatten-Vorhersage-Protokollierung aktivieren"
+
+msgid "Log every ML shadow prediction to the database for later review."
+msgstr "Jede ML-Schattenvorhersage in der Datenbank für spätere Überprüfung protokollieren."
+
+msgid "Minimum data days"
+msgstr "Mindest-Datentage"
+
+msgid "Minimum number of days of historical data required before ML predictions are used."
+msgstr "Mindestanzahl an Tagen mit historischen Daten, bevor ML-Vorhersagen verwendet werden."
+
+msgid "Max automatic actions per day"
+msgstr "Maximale automatische Aktionen pro Tag"
+
+msgid "0 = unlimited (expert only). Limits how many ML-triggered actions run per day."
+msgstr "0 = unbegrenzt (nur Experten). Begrenzt die Anzahl ML-ausgelöster Aktionen pro Tag."
+
+msgid "Action cooldown (minutes)"
+msgstr "Aktions-Abkühlzeit (Minuten)"
+
+msgid "Minimum wait time between consecutive ML-triggered actions."
+msgstr "Mindestwartezeit zwischen aufeinanderfolgenden ML-ausgelösten Aktionen."
+
+msgid "Save Global Settings"
+msgstr "Globale Einstellungen speichern"
+
+msgid "Escalation &amp; Training Config"
+msgstr "Eskalation &amp; Trainings-Konfiguration"
+
+msgid "Fine-tune ML training intervals and fee escalation factors stored in Local Settings."
+msgstr "Trainingsintervalle und Gebühren-Eskalationsfaktoren in den lokalen Einstellungen feinjustieren."
+
+msgid "Training enabled"
+msgstr "Training aktiviert"
+
+msgid "Enable or disable periodic ML model retraining."
+msgstr "Periodisches ML-Modell-Neutraining aktivieren oder deaktivieren."
+
+msgid "Training interval (hours)"
+msgstr "Trainingsintervall (Stunden)"
+
+msgid "How often the ML rebalance model is retrained. Default 24h."
+msgstr "Wie oft das ML-Rebalance-Modell neu trainiert wird. Standard 24h."
+
+msgid "Escalation cooldown (minutes)"
+msgstr "Eskalations-Abkühlzeit (Minuten)"
+
+msgid "Minimum minutes between fee escalation steps per channel."
+msgstr "Mindestminuten zwischen Gebühren-Eskalationsschritten pro Kanal."
+
+msgid "Max escalation levels"
+msgstr "Maximale Eskalationsstufen"
+
+msgid "Maximum number of consecutive fee escalation steps before resetting."
+msgstr "Maximale Anzahl aufeinanderfolgender Gebühren-Eskalationsschritte vor dem Zurücksetzen."
+
+msgid "Fee rate escalation factor (up)"
+msgstr "Gebührenrate-Eskalationsfaktor (aufwärts)"
+
+msgid "Multiply fee rate by this factor when routing revenue increases. E.g. 1.15 = +15%."
+msgstr "Gebührenrate mit diesem Faktor multiplizieren, wenn Routing-Einnahmen steigen. Z.B. 1,15 = +15 %."
+
+msgid "Fee rate escalation factor (down)"
+msgstr "Gebührenrate-Eskalationsfaktor (abwärts)"
+
+msgid "Multiply fee rate by this factor when routing revenue decreases. E.g. 0.90 = -10%."
+msgstr "Gebührenrate mit diesem Faktor multiplizieren, wenn Routing-Einnahmen sinken. Z.B. 0,90 = -10 %."
+
+msgid "Save Escalation Config"
+msgstr "Eskalations-Konfiguration speichern"
+
+msgid "Per-Channel ML Toggles"
+msgstr "ML-Schalter pro Kanal"
+
+msgid "Enable or disable ML shadow recommendations independently per channel. ML Rebalancing suggests optimal rebalance attempts. ML Auto-Fee suggests fee adjustments. Both are shadow mode only – no automatic execution without Policy-Bound mode."
+msgstr "ML-Schattenempfehlungen pro Kanal unabhängig aktivieren oder deaktivieren. ML-Rebalancing schlägt optimale Rebalance-Versuche vor. ML-Auto-Gebühr schlägt Gebührenanpassungen vor. Beide sind nur im Schattenmodus – keine automatische Ausführung ohne Policy-gebundenen Modus."
+
+msgid "Local / Remote balance as percentage of capacity"
+msgstr "Lokale / Remote-Balance als Prozentsatz der Kapazität"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Enable ML shadow rebalancing suggestions for this channel."
+msgstr "ML-Schatten-Rebalancing-Vorschläge für diesen Kanal aktivieren."
+
+msgid "ML Rebalancing"
+msgstr "ML-Rebalancing"
+
+msgid "Enable ML shadow auto-fee suggestions for this channel."
+msgstr "ML-Schatten-Auto-Gebühren-Vorschläge für diesen Kanal aktivieren."
+
+msgid "ML Auto-Fee"
+msgstr "ML-Auto-Gebühr"
+
+msgid "Alias"
+msgstr "Alias"
+
+msgid "No open channels found."
+msgstr "Keine offenen Kanäle gefunden."
+
+msgid "Toggling these flags reloads the page to reflect the current state."
+msgstr "Das Umschalten dieser Flags lädt die Seite neu, um den aktuellen Status widerzuspiegeln."
+
+msgid "ML Settings are only available in Advanced or Expert mode."
+msgstr "ML-Einstellungen sind nur im Erweitert- oder Experten-Modus verfügbar."
+
+msgid "Saving..."
+msgstr "Speichern..."
+
+msgid "Saved"
+msgstr "Gespeichert"
+
+msgid "Network error"
+msgstr "Netzwerkfehler"
+
+msgid "Triggering..."
+msgstr "Starten..."
+
+msgid "Training scheduled."
+msgstr "Training eingeplant."
+
+msgid "Training could not start."
+msgstr "Training konnte nicht gestartet werden."

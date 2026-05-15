@@ -2,13 +2,13 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.12.8"
+version: "1.12.9"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is an advanced GUI web interface designed to operate and automate modern Lightning node
   workflows. It includes dashboard analytics, channel and fee management, policy automation,
   recommendations, backup/restore and cleaner tooling, CLN capability-based foundations, and
-  optional ML shadow-mode signals.
+  full ML features (shadow predictions and auto-fee suggestions) now built in by default.
 
   Key features:
   - Cockpit dashboard with charts, snapshots, and liquidity overview
@@ -17,7 +17,8 @@ description: >-
   - Recommendation engine with rationale and confidence labels
   - Guided splice workflow and CLN plugin/capability panel
   - Retention/maintenance cleaner and backup workflows
-  - Optional ML approaches (shadow predictions and auto-fee suggestions with ML flavor image)
+  - Dedicated ML Settings page: global AI mode, escalation config, per-channel ML toggles
+  - ML dependencies (scikit-learn/joblib) now included in the default Umbrel image
 developer: northpower25
 website: https://github.com/northpower25/lndg
 dependencies:
@@ -31,9 +32,10 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.12.8: Fix Umbrel login modal credentials by using deterministic password
-  display so the initial password is shown correctly instead of a literal
-  variable placeholder.
+  v1.12.9: ML features are now built in by default for Umbrel (using the latest-ml image).
+  Added a dedicated ML Settings page under Advanced/Expert mode where you can configure
+  the global AI mode, escalation parameters, training intervals, and toggle ML
+  rebalancing/auto-fee per channel – no API calls required.
 path: ""
 defaultUsername: "lndg-admin"
 deterministicPassword: true
