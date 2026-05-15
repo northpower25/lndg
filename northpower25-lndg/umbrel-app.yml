@@ -2,7 +2,7 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.12.6"
+version: "1.12.7"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is an advanced GUI web interface designed to operate and automate modern Lightning node
@@ -31,13 +31,11 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.12.5: Fix Umbrel installation failure caused by missing exports.sh.
-  Umbreld's legacy-compat layer sources exports.sh to resolve APP_DATA_DIR
-  before starting the app. Without this file, umbreld auto-generates one that
-  expects APP_DATA_DIR to already be set — a circular dependency that exits
-  with code 1 on every install attempt. The new exports.sh derives
-  APP_DATA_DIR from the UMBREL_APP_DATA_DIR variable that umbreld provides,
-  breaking the cycle and allowing installation to succeed.
+  v1.12.7: Harden Umbrel installation compatibility by preserving APP_DATA_DIR
+  when Umbrel already exports it and only falling back to UMBREL_APP_DATA_DIR
+  for legacy-compat startup paths. This avoids clobbering APP_DATA_DIR to an
+  empty value on Umbrel variants that do not expose UMBREL_APP_DATA_DIR, which
+  previously broke docker-compose volume resolution during installation.
 path: ""
 defaultUsername: "lndg-admin"
 defaultPassword: $APP_PASSWORD
