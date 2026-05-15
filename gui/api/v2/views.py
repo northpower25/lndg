@@ -273,7 +273,7 @@ def chart_channel_health(request) -> Response:
             ]
         }
     """
-    from gui.models import ChannelSnapshot
+    from gui.models import ChannelSnapshot, Channels
 
     days = int(request.query_params.get("days", 7))
     since = timezone.now() - datetime.timedelta(days=days)
@@ -287,8 +287,13 @@ def chart_channel_health(request) -> Response:
             "remote_balance_sat", "capacity_sat", "is_active",
         )
     )
+    aliases = {
+        str(ch["chan_id"]): (ch["alias"] or str(ch["chan_id"])[:8])
+        for ch in Channels.objects.filter(is_open=True).values("chan_id", "alias")
+    }
     for s in snapshots:
         s["timestamp"] = s["timestamp"].isoformat()
+        s["alias"] = aliases.get(str(s["channel_id"]), str(s["channel_id"])[:8])
     return Response({"snapshots": snapshots})
 
 
@@ -1375,4 +1380,3 @@ def network_peers(request):
         if len(rows) >= limit:
             break
     return Response({"peers": rows, "count": len(rows)})
-

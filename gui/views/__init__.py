@@ -13,4 +13,5 @@ from .charts_view import charts_view as charts_view
 from .cleaner_view import cleaner_view as cleaner_view
 from .splice_view import splice_view as splice_view, cln_plugins_view as cln_plugins_view
 from .learning import learning_center as learning_center
+from .ml_view import ml_settings_view as ml_settings_view
 from .api import PaymentsViewSet as PaymentsViewSet, PaymentHopsViewSet as PaymentHopsViewSet, InvoicesViewSet as InvoicesViewSet, ForwardsFilter as ForwardsFilter, ForwardsViewSet as ForwardsViewSet, PeersViewSet as PeersViewSet, OnchainViewSet as OnchainViewSet, ClosuresViewSet as ClosuresViewSet, ResolutionsViewSet as ResolutionsViewSet, PendingHTLCViewSet as PendingHTLCViewSet, PeerEventsViewSet as PeerEventsViewSet, TradeSalesViewSet as TradeSalesViewSet, FeeLogViewSet as FeeLogViewSet, InboundFeeLogViewSet as InboundFeeLogViewSet, FailedHTLCFilter as FailedHTLCFilter, FailedHTLCViewSet as FailedHTLCViewSet, LocalSettingsViewSet as LocalSettingsViewSet, ChannelsViewSet as ChannelsViewSet, RebalancerViewSet as RebalancerViewSet

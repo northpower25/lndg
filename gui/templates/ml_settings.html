@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %} {{ block.super }} - {% trans "ML Settings" %}{% endblock %}
+{% block content %}
+{% if user_mode == 'expert' or user_mode == 'advanced' %}
+<div class="w3-container w3-padding">
+
+  <h2>{% trans "ML Settings" %}
+    <span class="w3-small w3-text-grey" style="cursor:help"
+          title="{% trans 'Configure machine learning shadow recommendations and per-channel ML toggles.' %}">❓</span>
+  </h2>
+
+  <!-- ── ML Status Banner ─────────────────────────────────────────────── -->
+  <div id="ml-status-banner" class="w3-card w3-padding w3-margin-bottom
+    {% if ml_status.ml_available %}w3-pale-green{% else %}w3-pale-yellow{% endif %}" style="max-width:800px">
+    <strong>{% trans "ML Infrastructure Status" %}</strong>
+    <ul class="w3-ul w3-small" style="margin-top:6px">
+      <li>{% trans "scikit-learn available" %}: <strong>{{ ml_status.ml_available|yesno:"✅ Yes,❌ No" }}</strong>
+        {% if not ml_status.ml_available %}
+        <span class="w3-text-grey"> – {% trans "Install the" %} <code>latest-ml</code> {% trans "Docker image or run" %} <code>pip install -r requirements-ml.txt</code></span>
+        {% endif %}
+      </li>
+      {% if ml_status.ml_available %}
+      <li>{% trans "AI mode" %}: <strong>{{ ml_status.ai_mode }}</strong></li>
+      <li>{% trans "Shadow mode active" %}: <strong>{{ ml_status.shadow_mode_active|yesno:"✅ Yes,❌ No" }}</strong></li>
+      <li>{% trans "Data gate passed" %}: <strong>{{ ml_status.data_gate_ok|yesno:"✅ Yes,❌ No" }}</strong>
+        {% if not ml_status.data_gate_ok %}
+        – <span class="w3-text-grey">{{ ml_status.data_gate_reason }}</span>
+        {% endif %}
+      </li>
+      <li>{% trans "Rebalance events (30d)" %}: <strong>{{ ml_status.rebalance_events_30d|default:"0" }}</strong></li>
+      <li>{% trans "Auto-fee events (30d)" %}: <strong>{{ ml_status.autofee_events_30d|default:"0" }}</strong></li>
+      <li>{% trans "Oldest data (days)" %}: <strong>{{ ml_status.oldest_data_days|default:"—" }}</strong></li>
+      <li>{% trans "Rebalance model version" %}: <strong>{{ ml_status.rebalance_model_version|default:"—" }}</strong></li>
+      {% if ml_status.rebalance_model_cv_auc %}
+      <li>{% trans "Model CV AUC" %}: <strong>{{ ml_status.rebalance_model_cv_auc }}</strong></li>
+      {% endif %}
+      {% endif %}
+    </ul>
+    {% if ml_status.ml_available %}
+    <button type="button" class="w3-button w3-small w3-blue w3-margin-top"
+            onclick="triggerMlRetrain()" style="min-height:44px">
+      {% trans "Trigger Model Retraining" %}
+    </button>
+    <span id="retrain-result" class="w3-small w3-text-grey" style="margin-left:8px"></span>
+    {% endif %}
+  </div>
+
+  <!-- ── Global AI / ML Settings ─────────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom" style="max-width:800px">
+    <h3>{% trans "Global AI / ML Settings" %}</h3>
+    <p class="w3-small w3-text-grey">{% trans "These settings control the overall ML behaviour across all channels." %}</p>
+
+    <form id="global-ml-form">
+      <table class="w3-table w3-bordered w3-small w3-margin-top" style="max-width:700px">
+        <thead>
+          <tr>
+            <th style="width:55%">{% trans "Setting" %}</th>
+            <th>{% trans "Value" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- AI mode -->
+          <tr>
+            <td>
+              <strong>{% trans "AI Mode" %}</strong>
+              <span title="{% trans 'Controls how ML recommendations interact with the system. Off = disabled. Advisory = show only. Shadow = log + show. Policy-Bound = execute with confirmation.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <select id="ai-mode" name="ai_mode" class="w3-select w3-small" style="min-height:44px">
+                {% for val, label in ai_mode_choices %}
+                <option value="{{ val }}"{% if ai_mode == val %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+          <!-- Policy-bound confirm -->
+          <tr>
+            <td>
+              <strong>{% trans "Require manual confirmation (Policy-Bound)" %}</strong>
+              <span title="{% trans 'When enabled, every ML-triggered action in policy_bound mode requires explicit user confirmation.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <select id="ai-policy-bound-confirm" name="ai_policy_bound_confirm" class="w3-select w3-small" style="min-height:44px">
+                <option value="true"{% if ai_policy_bound_confirm %} selected{% endif %}>{% trans "Yes" %}</option>
+                <option value="false"{% if not ai_policy_bound_confirm %} selected{% endif %}>{% trans "No" %}</option>
+              </select>
+            </td>
+          </tr>
+          <!-- Shadow log -->
+          <tr>
+            <td>
+              <strong>{% trans "Enable shadow prediction logging" %}</strong>
+              <span title="{% trans 'Log every ML shadow prediction to the database for later review.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <select id="ai-shadow-log" name="ai_shadow_log_enabled" class="w3-select w3-small" style="min-height:44px">
+                <option value="true"{% if ai_shadow_log_enabled %} selected{% endif %}>{% trans "Yes" %}</option>
+                <option value="false"{% if not ai_shadow_log_enabled %} selected{% endif %}>{% trans "No" %}</option>
+              </select>
+            </td>
+          </tr>
+          <!-- Min data days -->
+          <tr>
+            <td>
+              <strong>{% trans "Minimum data days" %}</strong>
+              <span title="{% trans 'Minimum number of days of historical data required before ML predictions are used.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input id="ai-min-data-days" name="ai_min_data_days" type="number"
+                     min="1" max="365" value="{{ ai_min_data_days }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <!-- Max auto actions per day -->
+          <tr>
+            <td>
+              <strong>{% trans "Max automatic actions per day" %}</strong>
+              <span title="{% trans '0 = unlimited (expert only). Limits how many ML-triggered actions run per day.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input id="ai-max-auto-actions" name="ai_max_auto_actions_day" type="number"
+                     min="0" max="1000" value="{{ ai_max_auto_actions_day }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <!-- Cooldown minutes -->
+          <tr>
+            <td>
+              <strong>{% trans "Action cooldown (minutes)" %}</strong>
+              <span title="{% trans 'Minimum wait time between consecutive ML-triggered actions.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input id="ai-cooldown" name="ai_cooldown_minutes" type="number"
+                     min="0" max="10080" value="{{ ai_cooldown_minutes }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button type="button" class="w3-button w3-green w3-margin-top" style="min-height:44px"
+              onclick="saveGlobalMLSettings()">
+        {% trans "Save Global Settings" %}
+      </button>
+      <span id="global-save-result" class="w3-small w3-text-grey" style="margin-left:8px"></span>
+    </form>
+  </div>
+
+  <!-- ── Escalation / Training Config ──────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom" style="max-width:800px">
+    <h3>{% trans "Escalation &amp; Training Config" %}</h3>
+    <p class="w3-small w3-text-grey">{% trans "Fine-tune ML training intervals and fee escalation factors stored in Local Settings." %}</p>
+
+    <form id="esc-config-form">
+      <table class="w3-table w3-bordered w3-small w3-margin-top" style="max-width:700px">
+        <thead>
+          <tr>
+            <th style="width:55%">{% trans "Setting" %}</th>
+            <th>{% trans "Value" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>{% trans "Training enabled" %}</strong>
+              <span title="{% trans 'Enable or disable periodic ML model retraining.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <select name="ML-TrainingEnabled" class="w3-select w3-small" style="min-height:44px">
+                <option value="true"{% if escalation_config.ML-TrainingEnabled != "false" %} selected{% endif %}>{% trans "Yes" %}</option>
+                <option value="false"{% if escalation_config.ML-TrainingEnabled == "false" %} selected{% endif %}>{% trans "No" %}</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>{% trans "Training interval (hours)" %}</strong>
+              <span title="{% trans 'How often the ML rebalance model is retrained. Default 24h.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input name="ML-TrainingIntervalHours" type="number" min="1" max="720"
+                     value="{{ escalation_config.ML-TrainingIntervalHours|default:'24' }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>{% trans "Escalation cooldown (minutes)" %}</strong>
+              <span title="{% trans 'Minimum minutes between fee escalation steps per channel.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input name="ML-EscalationCooldown" type="number" min="1" max="10080"
+                     value="{{ escalation_config.ML-EscalationCooldown|default:'60' }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>{% trans "Max escalation levels" %}</strong>
+              <span title="{% trans 'Maximum number of consecutive fee escalation steps before resetting.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input name="ML-EscalationMaxLevels" type="number" min="1" max="20"
+                     value="{{ escalation_config.ML-EscalationMaxLevels|default:'5' }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>{% trans "Fee rate escalation factor (up)" %}</strong>
+              <span title="{% trans 'Multiply fee rate by this factor when routing revenue increases. E.g. 1.15 = +15%.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input name="ML-EscalationFeeRateUp" type="number" min="1.0" max="3.0" step="0.01"
+                     value="{{ escalation_config.ML-EscalationFeeRateUp|default:'1.15' }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>{% trans "Fee rate escalation factor (down)" %}</strong>
+              <span title="{% trans 'Multiply fee rate by this factor when routing revenue decreases. E.g. 0.90 = -10%.' %}" style="cursor:help"> ❓</span>
+            </td>
+            <td>
+              <input name="ML-EscalationFeeRateDown" type="number" min="0.1" max="1.0" step="0.01"
+                     value="{{ escalation_config.ML-EscalationFeeRateDown|default:'0.90' }}"
+                     class="w3-input w3-border w3-small" style="width:90px;min-height:44px">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button type="button" class="w3-button w3-green w3-margin-top" style="min-height:44px"
+              onclick="saveEscalationConfig()">
+        {% trans "Save Escalation Config" %}
+      </button>
+      <span id="esc-save-result" class="w3-small w3-text-grey" style="margin-left:8px"></span>
+    </form>
+  </div>
+
+  <!-- ── Per-Channel ML Toggles ─────────────────────────────────────────────── -->
+  <div class="w3-card w3-padding w3-margin-bottom">
+    <h3>{% trans "Per-Channel ML Toggles" %}</h3>
+    <details class="w3-small w3-text-grey" style="margin-bottom:8px">
+      <summary>{% trans "Why?" %}</summary>
+      {% trans "Enable or disable ML shadow recommendations independently per channel. ML Rebalancing suggests optimal rebalance attempts. ML Auto-Fee suggests fee adjustments. Both are shadow mode only – no automatic execution without Policy-Bound mode." %}
+    </details>
+    <div style="overflow-x:auto">
+      <table class="w3-table-all w3-small w3-hoverable" style="min-width:700px">
+        <thead>
+          <tr>
+            <th>{% trans "Channel" %}</th>
+            <th>{% trans "Alias" %}</th>
+            <th title="{% trans 'Local / Remote balance as percentage of capacity' %}">{% trans "Balance" %}</th>
+            <th title="{% trans 'Enable ML shadow rebalancing suggestions for this channel.' %}">{% trans "ML Rebalancing" %}</th>
+            <th title="{% trans 'Enable ML shadow auto-fee suggestions for this channel.' %}">{% trans "ML Auto-Fee" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ch in channels %}
+          <tr>
+            <td class="w3-small">{{ ch.chan_id }}</td>
+            <td>{{ ch.alias|default:ch.chan_id|slice:":16" }}</td>
+            <td class="w3-small">
+              {% widthratio ch.local_balance ch.capacity 100 %}% /
+              {% widthratio ch.remote_balance ch.capacity 100 %}%
+            </td>
+            <!-- ML Rebalancing toggle -->
+            <td style="background-color: {% if ch.ml_rebalance_enabled %}rgba(56,139,253,0.10){% else %}rgba(248,81,73,0.10){% endif %}">
+              <form action="/update_channel/" method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="submit" style="min-height:44px"
+                       value="{% if ch.ml_rebalance_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}"
+                       class="w3-button w3-small {% if ch.ml_rebalance_enabled %}w3-blue{% else %}w3-grey{% endif %}">
+                <input type="hidden" name="chan_id" value="{{ ch.chan_id }}">
+                <input type="hidden" name="update_target" value="14">
+                <input type="hidden" name="target" value="0">
+              </form>
+              <span class="w3-small w3-text-grey">
+                {% if ch.ml_rebalance_enabled %}{% trans "ON" %}{% else %}{% trans "OFF" %}{% endif %}
+              </span>
+            </td>
+            <!-- ML Auto-Fee toggle -->
+            <td style="background-color: {% if ch.ml_autofee_enabled %}rgba(56,139,253,0.10){% else %}rgba(248,81,73,0.10){% endif %}">
+              <form action="/update_channel/" method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="submit" style="min-height:44px"
+                       value="{% if ch.ml_autofee_enabled %}{% trans 'Disable' %}{% else %}{% trans 'Enable' %}{% endif %}"
+                       class="w3-button w3-small {% if ch.ml_autofee_enabled %}w3-blue{% else %}w3-grey{% endif %}">
+                <input type="hidden" name="chan_id" value="{{ ch.chan_id }}">
+                <input type="hidden" name="update_target" value="15">
+                <input type="hidden" name="target" value="0">
+              </form>
+              <span class="w3-small w3-text-grey">
+                {% if ch.ml_autofee_enabled %}{% trans "ON" %}{% else %}{% trans "OFF" %}{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="w3-center w3-text-grey">{% trans "No open channels found." %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="w3-small w3-text-grey w3-margin-top">
+      {% trans "Toggling these flags reloads the page to reflect the current state." %}
+    </p>
+  </div>
+
+</div>
+{% else %}
+<div class="w3-container w3-padding">
+  <p class="w3-text-grey">{% trans "ML Settings are only available in Advanced or Expert mode." %}</p>
+</div>
+{% endif %}
+
+<script>
+const _csrfToken = document.getElementById('api')?.dataset?.token || '';
+
+async function _apiPut(url, payload) {
+  const resp = await fetch(url, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': _csrfToken,
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return resp.json();
+}
+
+async function _apiPost(url, payload) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': _csrfToken,
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return resp.json();
+}
+
+async function saveGlobalMLSettings() {
+  const resultEl = document.getElementById('global-save-result');
+  resultEl.textContent = '{% trans "Saving..." %}';
+  const payload = {
+    ai_mode: document.getElementById('ai-mode').value,
+    ai_policy_bound_confirm: document.getElementById('ai-policy-bound-confirm').value === 'true',
+    ai_shadow_log_enabled: document.getElementById('ai-shadow-log').value === 'true',
+    ai_min_data_days: parseInt(document.getElementById('ai-min-data-days').value, 10),
+    ai_max_auto_actions_day: parseInt(document.getElementById('ai-max-auto-actions').value, 10),
+    ai_cooldown_minutes: parseInt(document.getElementById('ai-cooldown').value, 10),
+  };
+  try {
+    const data = await _apiPut('/api/v2/user/settings/', payload);
+    if (data.errors) {
+      resultEl.textContent = '{% trans "Error" %}: ' + JSON.stringify(data.errors);
+    } else {
+      resultEl.textContent = '✅ {% trans "Saved" %}';
+      setTimeout(() => resultEl.textContent = '', 3000);
+    }
+  } catch (e) {
+    resultEl.textContent = '{% trans "Network error" %}: ' + e.message;
+  }
+}
+
+async function saveEscalationConfig() {
+  const resultEl = document.getElementById('esc-save-result');
+  resultEl.textContent = '{% trans "Saving..." %}';
+  const form = document.getElementById('esc-config-form');
+  const payload = {};
+  form.querySelectorAll('[name]').forEach(el => {
+    payload[el.name] = el.value;
+  });
+  try {
+    const data = await _apiPut('/api/v2/ml/escalation/config/', payload);
+    if (data.errors && Object.keys(data.errors).length > 0) {
+      resultEl.textContent = '{% trans "Error" %}: ' + JSON.stringify(data.errors);
+    } else {
+      resultEl.textContent = '✅ {% trans "Saved" %}';
+      setTimeout(() => resultEl.textContent = '', 3000);
+    }
+  } catch (e) {
+    resultEl.textContent = '{% trans "Network error" %}: ' + e.message;
+  }
+}
+
+async function triggerMlRetrain() {
+  const resultEl = document.getElementById('retrain-result');
+  resultEl.textContent = '{% trans "Triggering..." %}';
+  try {
+    const data = await _apiPost('/api/v2/ml/rebalance/train/', {});
+    if (data.ok) {
+      resultEl.textContent = '✅ ' + (data.reason || '{% trans "Training scheduled." %}');
+    } else {
+      resultEl.textContent = '⚠️ ' + (data.reason || '{% trans "Training could not start." %}');
+    }
+  } catch (e) {
+    resultEl.textContent = '{% trans "Network error" %}: ' + e.message;
+  }
+}
+</script>
+{% endblock %}

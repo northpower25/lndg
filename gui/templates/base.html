@@ -100,7 +100,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="LNDg">
   </head>
-  <body {% if request.COOKIES.darkmode == 'true' %}class="dark-mode"{% endif %}>
+  <body data-ui-mode="{{ user_mode|default:'advanced' }}" {% if request.COOKIES.darkmode == 'true' %}class="dark-mode"{% endif %}>
     <div id="content">
       {% if messages %}
       <div id="messages" class="w3-container w3-padding-small">
@@ -127,6 +127,7 @@
         {% endif %}
         {% if user_mode == 'advanced' or user_mode == 'expert' %}
         <a href="/maintenance/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'maintenance' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "Maintenance" %}</a>
+        <a href="/ml-settings/" class="w3-bar-item w3-button{% if request.resolver_match.url_name == 'ml-settings' %} w3-theme{% endif %}" style="min-height:44px;">{% trans "ML Settings" %}</a>
         {% endif %}
         {% if user_mode == 'expert' %}
           {% if capabilities.supports_plugins %}
@@ -149,6 +150,15 @@
           </select>
         </span>
       </nav>
+      <div class="w3-container w3-small w3-padding-small w3-theme-l5" style="border-top:1px solid rgba(0,0,0,0.08)">
+        {% if user_mode == 'guided' %}
+          <strong>{% trans "Guided mode" %}</strong> · {% trans "Focused view with recommended next actions and reduced complexity." %}
+        {% elif user_mode == 'expert' %}
+          <strong>{% trans "Expert mode" %}</strong> · {% trans "Full low-level controls and operational maintenance features." %}
+        {% else %}
+          <strong>{% trans "Advanced mode" %}</strong> · {% trans "Balanced operational view with diagnostics and safe defaults." %}
+        {% endif %}
+      </div>
       {% block content %}{% endblock %}
     </div>
   </body>
@@ -158,7 +168,7 @@
         <center><button id="toggleTheme" onclick="toggleTheme()">{% if request.COOKIES.darkmode == 'true' %}Light{%else%}Dark{% endif %} Theme</button></center>
       </div>
       <div class="w3-container w3-padding-small">
-        <center>LNDg v1.12.8</center>
+        <center>LNDg v1.12.9</center>
         <center><a href="{% url 'logout' %}">Logout</a></center>
       </div>
     </div>

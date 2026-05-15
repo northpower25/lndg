@@ -114,6 +114,7 @@ urlpatterns = [
     path('splice/', views.splice_view, name='splice'),
     path('cln-plugins/', views.cln_plugins_view, name='cln-plugins'),
     path('learning/', views.learning_center, name='learning-center'),
+    path('ml-settings/', views.ml_settings_view, name='ml-settings'),
     # Notifications
     path('notification_settings/', views.notification_settings, name='notification-settings'),
     path('api/test_notification/', views.test_notification, name='test-notification'),

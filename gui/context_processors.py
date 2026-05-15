@@ -6,10 +6,13 @@ def user_mode(request):
     from gui.models import UserMode
 
     try:
-        mode = UserMode.load().mode
+        user_mode = UserMode.load()
+        mode = user_mode.mode
+        language = user_mode.language or "en"
     except Exception:
         mode = UserMode.MODE_ADVANCED
-    return {"user_mode": mode}
+        language = "en"
+    return {"user_mode": mode, "user_language": language}
 
 
 def backend_capabilities(request):

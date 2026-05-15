@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block title %} {{ block.super }} - Flow Diagram{% endblock %}
 {% block content %}
 <div class="w3-container w3-padding-small">
@@ -28,6 +28,11 @@
       title="Sankey diagram: channel nodes are shown on the left (source) and right (target). The width of each ribbon is proportional to the total sats that flowed along that path. Click a node to highlight only its ribbons; click again to reset.">Diagram</button>
     <button id="btnTable" class="w3-button w3-light-grey" onclick="switchView('table')"
       title="Matrix table: rows = source channels, columns = destination channels. Each cell shows the total sats that flowed from that source to that destination. Cell colour intensity scales with the flow size. Hover a cell for the exact amount.">Matrix Table</button>
+    &nbsp;&nbsp;
+    <label title="{% trans 'Filter by one specific channel/node partner in the flow graph.' %}" style="margin-right:4px;font-weight:bold">{% trans "Node/Channel" %}:</label>
+    <select id="nodeFilterSelect" class="w3-select" style="width:auto;height:30px;" title="{% trans 'Show only flows connected to the selected partner.' %}">
+      <option value="all">{% trans "All" %}</option>
+    </select>
     &nbsp;&nbsp;
     <span id="loadingIndicator" style="display:none;color:#888;">Loading...</span>
   </div>
@@ -67,6 +72,7 @@
 
 <script>
   let currentView = 'diagram';
+  let rawData = null;
   let currentData = null;
   let selectedNode = null;
 
@@ -90,6 +96,57 @@
     return n.toString();
   }
 
+  function populateNodeFilter(nodes) {
+    const select = document.getElementById('nodeFilterSelect');
+    if (!select) return;
+    const selected = select.value || 'all';
+    select.innerHTML = '';
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = "{% trans 'All' %}";
+    select.appendChild(allOption);
+    (nodes || []).forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = n.name || n.id;
+      select.appendChild(opt);
+    });
+    select.value = (nodes || []).some(n => n.id === selected) ? selected : 'all';
+  }
+
+  function getFilteredData(data) {
+    const select = document.getElementById('nodeFilterSelect');
+    const filterNode = select ? select.value : 'all';
+    if (!data || filterNode === 'all') return data;
+    const links = (data.links || []).filter(l => l.source === filterNode || l.target === filterNode);
+    const nodesInLinks = new Set();
+    links.forEach(l => {
+      nodesInLinks.add(l.source);
+      nodesInLinks.add(l.target);
+    });
+    const nodes = (data.nodes || []).filter(n => nodesInLinks.has(n.id));
+    return {nodes, links};
+  }
+
+  function renderCurrentData() {
+    if (!currentData || !currentData.nodes || currentData.nodes.length === 0) {
+      document.getElementById('sankeyContainer').innerHTML = '';
+      document.getElementById('matrixHead').innerHTML = '';
+      document.getElementById('matrixBody').innerHTML = '';
+      document.getElementById('noDataMsg').style.display = '';
+      return;
+    }
+    document.getElementById('noDataMsg').style.display = 'none';
+    if (currentView === 'diagram') renderSankey(currentData);
+    else renderMatrix(currentData);
+  }
+
+  function applyNodeFilter() {
+    currentData = getFilteredData(rawData);
+    selectedNode = null;
+    renderCurrentData();
+  }
+
   async function loadData() {
     const mode = document.getElementById('modeSelect').value;
     const days = document.getElementById('daysSelect').value;
@@ -97,17 +154,11 @@
     document.getElementById('noDataMsg').style.display = 'none';
     try {
       const resp = await GET('sankey_data', {data: {mode, days}});
-      currentData = resp;
+      rawData = resp;
+      populateNodeFilter(resp.nodes || []);
+      currentData = getFilteredData(resp);
       document.getElementById('loadingIndicator').style.display = 'none';
-      if (!resp.nodes || resp.nodes.length === 0) {
-        document.getElementById('sankeyContainer').innerHTML = '';
-        document.getElementById('matrixHead').innerHTML = '';
-        document.getElementById('matrixBody').innerHTML = '';
-        document.getElementById('noDataMsg').style.display = '';
-        return;
-      }
-      if (currentView === 'diagram') renderSankey(resp);
-      else renderMatrix(resp);
+      renderCurrentData();
     } catch(e) {
       document.getElementById('loadingIndicator').style.display = 'none';
       document.getElementById('sankeyContainer').innerHTML = '<p style="color:red">Error loading data.</p>';
@@ -368,6 +419,7 @@
   // ── Event listeners ───────────────────────────────────────────────────────
   document.getElementById('modeSelect').addEventListener('change', loadData);
   document.getElementById('daysSelect').addEventListener('change', loadData);
+  document.getElementById('nodeFilterSelect').addEventListener('change', applyNodeFilter);
   document.addEventListener('mousemove', evt => {
     if (tooltip && tooltip.style.display !== 'none') {
       tooltip.style.left = (evt.clientX + 12) + 'px';
