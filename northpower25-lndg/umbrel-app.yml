@@ -2,7 +2,7 @@ manifestVersion: 1
 id: northpower25-lndg
 category: lightning
 name: LNDg advanced
-version: "1.12.9"
+version: "1.12.10"
 tagline: Lite GUI web interface to interact with your LND node
 description: >-
   LNDg is an advanced GUI web interface designed to operate and automate modern Lightning node
@@ -32,10 +32,8 @@ gallery:
   - https://user-images.githubusercontent.com/38626122/148699209-667936fd-c56f-484f-8dd4-75e052c8c14f.png
   - https://user-images.githubusercontent.com/38626122/150556928-bb8772fb-14c4-4b7a-865e-a8350aac7f83.png
 releaseNotes: >-
-  v1.12.9: ML features are now built in by default for Umbrel (using the latest-ml image).
-  Added a dedicated ML Settings page under Advanced/Expert mode where you can configure
-  the global AI mode, escalation parameters, training intervals, and toggle ML
-  rebalancing/auto-fee per channel – no API calls required.
+  v1.12.10: Umbrel metadata/version bump to ensure the app update is detected and offered
+  reliably in the custom app store.
 path: ""
 defaultUsername: "lndg-admin"
 deterministicPassword: true
