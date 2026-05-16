@@ -15,3 +15,11 @@ jobs:
     with:
       tag: ${{ github.event.release.tag_name || 'latest' }}
     secrets: inherit
+
+  build_ml:
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ github.event.release.tag_name || 'latest' }}
+      build_target: final-ml
+      tag_suffix: '-ml'
+    secrets: inherit

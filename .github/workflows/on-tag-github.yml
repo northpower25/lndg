@@ -17,3 +17,11 @@ jobs:
     with:
       tag: ${{ github.event.inputs.tag || github.ref_name }}
     secrets: inherit
+
+  build_ml:
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ github.event.inputs.tag || github.ref_name }}
+      build_target: final-ml
+      tag_suffix: '-ml'
+    secrets: inherit
