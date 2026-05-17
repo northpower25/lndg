@@ -39,17 +39,9 @@ jobs:
   build-platform:
     name: Build ${{ matrix.platform }}
     runs-on: ubuntu-22.04
-    if: ${{ matrix.platform != 'linux/arm/v7' || !inputs.exclude_armv7 }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            suffix: amd64
-          - platform: linux/arm64
-            suffix: arm64
-          - platform: linux/arm/v7
-            suffix: armv7
+      matrix: ${{ fromJSON(inputs.exclude_armv7 && '{"include":[{"platform":"linux/amd64","suffix":"amd64"},{"platform":"linux/arm64","suffix":"arm64"}]}' || '{"include":[{"platform":"linux/amd64","suffix":"amd64"},{"platform":"linux/arm64","suffix":"arm64"},{"platform":"linux/arm/v7","suffix":"armv7"}]}') }}
     env:
       CACHE_SCOPE: docker-${{ github.repository_id }}-${{ matrix.suffix }}${{ inputs.tag_suffix }}
 
