@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.views.decorators.clickjacking import xframe_options_exempt
 from ..serializers import BroadcastTXSerializer, BumpFeeSerializer, ProbeRouteSerializer, SignMessageSerializer
 from ..models import Channels, FailedHTLCs, Forwards, Invoices, PaymentHops, Payments, Peers, PendingHTLCs
 from gui.lnd_deps import lightning_pb2 as ln
@@ -222,6 +223,7 @@ def broadcast_tx(request):
         return Response({'error': 'Invalid request!'})
 
 
+@xframe_options_exempt
 @is_login_required(login_required(login_url='/lndg-admin/login/?next=/'), settings.LOGIN_REQUIRED)
 def sankey(request):
     return render(request, 'sankey.html', {

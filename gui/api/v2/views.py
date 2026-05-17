@@ -5,10 +5,11 @@ import time as _time
 from datetime import timedelta
 from statistics import median as _median
 
+from django.conf import settings as django_settings
 from django.db.models import Count, Sum
 from django.http import StreamingHttpResponse
-from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.utils import timezone, translation
+from django.utils.translation import LANGUAGE_SESSION_KEY, gettext as _
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -76,6 +77,7 @@ def user_settings(request):
     allowed_choices = {
         "mode": [c[0] for c in UserMode.MODE_CHOICES],
         "ai_mode": [c[0] for c in UserMode.AI_MODE_CHOICES],
+        "language": [code for code, _label in getattr(django_settings, "LANGUAGES", [("en", "English")])],
     }
     errors: dict = {}
     for field in _fields:
@@ -89,7 +91,20 @@ def user_settings(request):
     if errors:
         return Response({"errors": errors}, status=400)
     instance.save()
-    return Response({f: getattr(instance, f) for f in _fields})
+
+    response = Response({f: getattr(instance, f) for f in _fields})
+    if "language" in request.data:
+        language = instance.language or "en"
+        translation.activate(language)
+        if hasattr(request, "session"):
+            request.session[LANGUAGE_SESSION_KEY] = language
+        response.set_cookie(
+            getattr(django_settings, "LANGUAGE_COOKIE_NAME", "django_language"),
+            language,
+            max_age=31536000,
+            samesite="Lax",
+        )
+    return response
 
 
 @api_view(["GET"])

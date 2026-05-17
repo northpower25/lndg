@@ -9,6 +9,7 @@ Provides:
 from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
+from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import render
 
 from lndg import settings
@@ -51,19 +52,35 @@ def ml_settings_view(request):
         escalation_config[key] = row.value if row else default
 
     # ── Per-channel table ─────────────────────────────────────────────────────
-    open_channels = (
-        Channels.objects.filter(is_open=True)
-        .order_by("alias", "chan_id")
-        .values(
-            "chan_id",
-            "alias",
-            "local_balance",
-            "remote_balance",
-            "capacity",
-            "ml_rebalance_enabled",
-            "ml_autofee_enabled",
+    try:
+        open_channels = (
+            Channels.objects.filter(is_open=True)
+            .order_by("alias", "chan_id")
+            .values(
+                "chan_id",
+                "alias",
+                "local_balance",
+                "remote_balance",
+                "capacity",
+                "ml_rebalance_enabled",
+                "ml_autofee_enabled",
+            )
         )
-    )
+        channels = list(open_channels)
+    except (OperationalError, ProgrammingError):
+        legacy_channels = (
+            Channels.objects.filter(is_open=True)
+            .order_by("alias", "chan_id")
+            .values("chan_id", "alias", "local_balance", "remote_balance", "capacity")
+        )
+        channels = [
+            {
+                **row,
+                "ml_rebalance_enabled": True,
+                "ml_autofee_enabled": True,
+            }
+            for row in legacy_channels
+        ]
 
     context = {
         "user_mode": user_mode_obj.mode,
@@ -81,6 +98,6 @@ def ml_settings_view(request):
         ],
         "escalation_config": escalation_config,
         "ml_status": ml_status,
-        "channels": list(open_channels),
+        "channels": channels,
     }
     return render(request, "ml_settings.html", context)
