@@ -19,5 +19,6 @@ def onboarding(request):
         },
         'onboarding_step': start_step,
         'onboarding_completed': mode.onboarding_completed,
+        'user_language': mode.language or 'en',
     }
     return render(request, 'onboarding.html', context)

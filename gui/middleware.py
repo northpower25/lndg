@@ -9,14 +9,12 @@ class UserLanguageMiddleware:
 
     def __call__(self, request):
         language = None
-        user = getattr(request, "user", None)
-        if user is not None and user.is_authenticated:
-            try:
-                from gui.models import UserMode
+        try:
+            from gui.models import UserMode
 
-                language = UserMode.load().language
-            except Exception:
-                language = None
+            language = UserMode.load().language
+        except Exception:
+            language = None
         if not language:
             language = translation.get_language_from_request(request) or "en"
         translation.activate(language)

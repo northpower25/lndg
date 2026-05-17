@@ -15,8 +15,13 @@
     <h2>🌍 {% trans "Language Selection" %}</h2>
     <p>{% trans "Choose your preferred language for the UI." %}</p>
     <div class="w3-row-padding">
-      <div class="w3-half"><button id="lang-en" class="w3-button w3-border w3-round" style="min-height:44px;width:100%" onclick="setLanguage('en')">{% trans "English" %}</button></div>
-      <div class="w3-half"><button id="lang-de" class="w3-button w3-border w3-round" style="min-height:44px;width:100%" onclick="setLanguage('de')">{% trans "German" %}</button></div>
+      <div class="w3-col s12 m6">
+        <label for="language-select" class="w3-small w3-text-grey">{% trans "Language" %}</label>
+        <select id="language-select" class="w3-select w3-border w3-round" style="min-height:44px" onchange="setLanguage(this.value)">
+          <option value="en">{% trans "English" %}</option>
+          <option value="de">{% trans "German" %}</option>
+        </select>
+      </div>
     </div>
     <p id="language-selected-hint" class="w3-small w3-text-grey w3-margin-top"></p>
     <div class="w3-bar w3-margin-top">
@@ -141,15 +146,9 @@ function goStep(next) {
   window.scrollTo(0, 0);
 }
 
-function updateLanguageButtons(activeLanguage) {
-  ['en', 'de'].forEach(function(lang) {
-    const btn = document.getElementById(`lang-${lang}`);
-    if (!btn) return;
-    const isActive = lang === activeLanguage;
-    btn.classList.toggle('w3-theme', isActive);
-    btn.classList.toggle('w3-text-white', isActive);
-    btn.classList.toggle('w3-border', !isActive);
-  });
+function updateLanguageSelector(activeLanguage) {
+  const selector = document.getElementById('language-select');
+  if (selector) selector.value = activeLanguage;
   const hint = document.getElementById('language-selected-hint');
   if (hint) {
     hint.textContent = activeLanguage === 'de'
@@ -159,7 +158,7 @@ function updateLanguageButtons(activeLanguage) {
 }
 
 async function setLanguage(language) {
-  updateLanguageButtons(language);
+  updateLanguageSelector(language);
   try {
     const token = document.getElementById('api').dataset.token;
     const resp = await fetch('/api/v2/user/settings/', {
@@ -168,6 +167,7 @@ async function setLanguage(language) {
       body: JSON.stringify({language}),
     });
     if (resp.ok) {
+      document.cookie = `django_language=${language};path=/;max-age=31536000`;
       window.location.reload();
     }
   } catch (e) {}
@@ -198,7 +198,7 @@ document.querySelector('a.w3-button.w3-green')?.addEventListener('click', async 
   window.location.href = '/';
 });
 
-updateLanguageButtons('{{ user_language|default:"en" }}');
+updateLanguageSelector('{{ user_language|default:"en" }}');
 if (currentStep === 3) loadCockpit();
 </script>
 {% endblock %}
