@@ -24,4 +24,5 @@ jobs:
       tag: ${{ github.event.inputs.tag || github.ref_name }}
       build_target: final-ml
       tag_suffix: '-ml'
+      exclude_armv7: true
     secrets: inherit

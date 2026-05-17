@@ -22,4 +22,5 @@ jobs:
       tag: ${{ github.event.release.tag_name || 'latest' }}
       build_target: final-ml
       tag_suffix: '-ml'
+      exclude_armv7: true
     secrets: inherit

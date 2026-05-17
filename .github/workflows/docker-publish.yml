@@ -25,6 +25,11 @@ on:
         required: false
         type: string
         default: ''
+      exclude_armv7:
+        description: Skip linux/arm/v7 platform build in the matrix.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,6 +39,7 @@ jobs:
   build-platform:
     name: Build ${{ matrix.platform }}
     runs-on: ubuntu-22.04
+    if: ${{ matrix.platform != 'linux/arm/v7' || !inputs.exclude_armv7 }}
     strategy:
       fail-fast: false
       matrix:
