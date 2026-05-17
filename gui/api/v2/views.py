@@ -9,7 +9,7 @@ from django.conf import settings as django_settings
 from django.db.models import Count, Sum
 from django.http import StreamingHttpResponse
 from django.utils import timezone, translation
-from django.utils.translation import LANGUAGE_SESSION_KEY, gettext as _
+from django.utils.translation import gettext as _
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -97,7 +97,7 @@ def user_settings(request):
         language = instance.language or "en"
         translation.activate(language)
         if hasattr(request, "session"):
-            request.session[LANGUAGE_SESSION_KEY] = language
+            request.session["django_language"] = language
         response.set_cookie(
             getattr(django_settings, "LANGUAGE_COOKIE_NAME", "django_language"),
             language,
